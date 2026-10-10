@@ -32,12 +32,13 @@
                                Foreground="{StaticResource TextPrimaryBrush}"/>
                   </StackPanel>
 
-                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
+                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center"
+                                HorizontalAlignment="Left">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:BuildValueChange">
-                        <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                        <Grid ColumnDefinitions="150,Auto" Margin="0,1">
                           <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"/>
-                          <TextBlock Grid.Column="1" Text="{Binding Summary}" Margin="12,0,0,0"
+                          <TextBlock Grid.Column="1" Text="{Binding Summary}"
                                      Foreground="{StaticResource AccentBrush}"/>
                         </Grid>
                       </DataTemplate>

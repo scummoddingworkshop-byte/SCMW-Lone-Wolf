@@ -27,6 +27,14 @@ public class SettingsViewTests
     }
 
     [AvaloniaFact]
+    public void The_game_status_is_a_sentence_not_a_chip()
+    {
+        var view = ShownView();
+
+        Assert.NotNull(view.FindControl<TextBlock>("GameStatusText"));
+    }
+
+    [AvaloniaFact]
     public void Settings_shows_every_card()
     {
         var view = ShownView();

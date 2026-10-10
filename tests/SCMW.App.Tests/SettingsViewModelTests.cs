@@ -230,6 +230,29 @@ public class SettingsViewModelTests
     }
 
     [AvaloniaFact]
+    public void A_set_but_unverified_folder_is_flagged_bad()
+    {
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources());
+
+        vm.GamePath = @"D:\Games\SCUM";     // not a verified install in this fake
+
+        Assert.False(vm.GameFound);
+        Assert.True(vm.GameStatusBad);
+    }
+
+    [AvaloniaFact]
+    public void A_verified_folder_is_not_flagged_bad()
+    {
+        var exe = @"D:\Games\SCUM/SCUM/Binaries/Win64/SCUM.exe";
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources((exe, true)));
+
+        vm.GamePath = @"D:\Games\SCUM";
+
+        Assert.True(vm.GameFound);
+        Assert.False(vm.GameStatusBad);
+    }
+
+    [AvaloniaFact]
     public void Detect_again_reports_honestly_when_nothing_is_found()
     {
         var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources());

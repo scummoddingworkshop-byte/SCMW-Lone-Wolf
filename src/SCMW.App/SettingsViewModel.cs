@@ -117,6 +117,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _gameStatus = "SCUM not found";
     [ObservableProperty] private bool _gameFound;
 
+    /// <summary>True when a folder is set but it is not a verified SCUM install (shown in red).</summary>
+    public bool GameStatusBad => !GameFound && !string.IsNullOrWhiteSpace(GamePath);
+
     /// <summary>The engine's plain hint when detection found nothing (empty when all is well).</summary>
     [ObservableProperty] private string _gameHint = "";
 
@@ -149,6 +152,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         GameChanged?.Invoke();
+        OnPropertyChanged(nameof(GameStatusBad));
     }
 
     [RelayCommand]

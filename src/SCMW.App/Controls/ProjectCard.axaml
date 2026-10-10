@@ -4,8 +4,9 @@
   <Button Name="Inner" Classes="projectcard" HorizontalAlignment="Stretch"
           HorizontalContentAlignment="Stretch">
     <StackPanel Spacing="10">
-      <!-- Picture slot: a square, so a square picture is never stretched or cropped. -->
-      <Border Name="PictureSlot" Classes="thumb" Width="110" Height="110" HorizontalAlignment="Left">
+      <!-- Picture slot: a wide banner, shaped like the SCUM panorama strips (about 4.6:1). -->
+      <Border Name="PictureSlot" Classes="thumb" HorizontalAlignment="Stretch"
+              Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.218}">
         <Panel>
           <TextBlock Name="DefaultMark" Text="SCMW" FontSize="18" FontWeight="SemiBold"
                      Foreground="{StaticResource TextDimBrush}"

@@ -42,10 +42,10 @@
           </Grid>
           <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
             <StackPanel Grid.Column="1" Spacing="6">
-              <Border Classes="chip" HorizontalAlignment="Left"
-                      Classes.success="{Binding GameFound}" Classes.warning="{Binding !GameFound}">
-                <TextBlock Text="{Binding GameStatus}" Classes="dim"/>
-              </Border>
+              <TextBlock Name="GameStatusText" Text="{Binding GameStatus}" Classes="dim"
+                         TextWrapping="Wrap"
+                         Classes.good="{Binding GameFound}"
+                         Classes.bad="{Binding GameStatusBad}"/>
               <TextBlock Text="{Binding GameFolderNote}" Classes="dim" TextWrapping="Wrap"
                          IsVisible="{Binding GameFolderNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
               <TextBlock Text="{Binding GameHint}" Classes="dim" TextWrapping="Wrap"

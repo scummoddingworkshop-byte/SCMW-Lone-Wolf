@@ -38,13 +38,15 @@ public class ProjectTileTests
     }
 
     [AvaloniaFact]
-    public void The_picture_slot_is_square_so_pictures_are_never_cropped()
+    public void The_picture_slot_is_a_wide_banner_not_square()
     {
         var tile = new ProjectTile { Project = new ProjectSummary("n", "d", "w") };
-        tile.Measure(new Size(300, 320));
+        var window = new Window { Content = tile, Width = 300, Height = 320 };
+        window.Show();
 
         var slot = tile.FindControl<Border>("PictureSlot")!;
-        Assert.Equal(slot.Width, slot.Height);
+        Assert.True(slot.Bounds.Height > 0);
+        Assert.True(slot.Bounds.Width > slot.Bounds.Height);   // a wide banner, not a square
     }
 
     [AvaloniaFact]
