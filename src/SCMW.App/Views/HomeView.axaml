@@ -1,0 +1,128 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="20" Margin="24,8,24,24">
+
+      <!-- Hero band: the artwork (its title is baked in) sits in the border's background, so it clips
+           to the rounded corners. Its height follows its width so the title always fits. -->
+      <Border Name="Hero" Classes="hero"
+              Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.36}">
+        <Border.Background>
+          <ImageBrush Source="avares://SCMW-Lone-Wolf/Assets/hero.png" Stretch="UniformToFill"/>
+        </Border.Background>
+      </Border>
+
+      <!-- First-run card: points a new player at Settings (game folder + unlock key). -->
+      <Border Name="WelcomeCard" Classes="card" IsVisible="{Binding ShowWelcome}">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock Text="Set up SCUM first" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Tell SCMW — Lone Wolf where SCUM is, and add your unlock key — then you're ready to start modding."
+                       Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="primary" Content="Open Settings" Command="{Binding StartWelcomeCommand}"/>
+            <Button Content="✕" ToolTip.Tip="Dismiss" Command="{Binding DismissWelcomeCommand}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Quick actions. -->
+      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+        <Button Grid.Column="0" Classes="quickaction" HorizontalAlignment="Stretch"
+                Command="{Binding NewProjectCommand}">
+          <StackPanel Spacing="6">
+            <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
+                    Background="{StaticResource AccentSoftBrush}">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/new.png" Width="26" Height="26"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Start a new project" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Begin a fresh mod from scratch" Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1" Classes="quickaction" HorizontalAlignment="Stretch"
+                Command="{Binding OpenProjectCommand}">
+          <StackPanel Spacing="6">
+            <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
+                    Background="{StaticResource AccentSoftBrush}">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/open.png" Width="26" Height="26"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Open a project" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Continue working on an existing mod" Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Classes="quickaction" HorizontalAlignment="Stretch"
+                Command="{Binding BrowseItemsCommand}">
+          <StackPanel Spacing="6">
+            <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
+                    Background="{StaticResource AccentSoftBrush}">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/items.png" Width="26" Height="26"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Browse items" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Explore and search SCUM content" Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3" Classes="quickaction" HorizontalAlignment="Stretch"
+                Command="{Binding BuildPlayCommand}">
+          <StackPanel Spacing="6">
+            <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
+                    Background="{StaticResource AccentSoftBrush}">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/build.png" Width="26" Height="26"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Build &amp; play" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Package your mod and launch SCUM" Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <!-- Recent projects. -->
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Text="Recent projects" Classes="section" VerticalAlignment="Center"/>
+          <Button Grid.Column="1" Classes="secondary" Content="View all"
+                  Command="{Binding ViewAllProjectsCommand}"/>
+        </Grid>
+
+        <ItemsControl Name="ProjectList" ItemsSource="{Binding RecentProjects}"
+                      IsVisible="{Binding HasProjects}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="4" ColumnSpacing="12"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ProjectSummary">
+              <controls:ProjectCard Project="{Binding}"
+                                    Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).OpenRecentProjectCommand}"
+                                    CommandParameter="{Binding}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Name="EmptyState" Classes="card" IsVisible="{Binding !HasProjects}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="No projects yet — start one" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Create a project and your changes will have somewhere to live." Classes="dim"/>
+            <Button Classes="primary" Content="Start a project" HorizontalAlignment="Left"
+                    Command="{Binding ViewAllProjectsCommand}"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

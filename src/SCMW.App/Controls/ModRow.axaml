@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Controls.ModRow"
+             x:DataType="vm:InstalledMod">
+  <Border Classes="modrow">
+    <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Name="NameText" Text="{Binding Name}" FontSize="14"
+                     Classes="modname" Classes.off="{Binding !IsOn}" VerticalAlignment="Center"/>
+          <Border Classes="chip" VerticalAlignment="Center">
+            <TextBlock Name="BadgeText" Text="{Binding Badge}" Classes="dim"/>
+          </Border>
+        </StackPanel>
+
+        <ToggleSwitch Grid.Column="1" Name="Switch" VerticalAlignment="Center"
+                      IsChecked="{Binding IsOn, Mode=TwoWay}"/>
+
+        <Button Grid.Column="2" Name="RemoveButton" Classes="secondary" Content="Remove"
+                VerticalAlignment="Center"
+                Command="{Binding $parent[controls:ModRow].RequestRemoveCommand}"
+                CommandParameter="{Binding}"/>
+      </Grid>
+
+      <StackPanel Name="ConfirmBar" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingRemove}">
+        <TextBlock Text="Remove this mod?" Classes="dim" VerticalAlignment="Center"/>
+        <Button Name="ConfirmRemoveButton" Classes="primary" Content="Remove"
+                Command="{Binding $parent[controls:ModRow].ConfirmRemoveCommand}"
+                CommandParameter="{Binding}"/>
+        <Button Name="CancelRemoveButton" Classes="secondary" Content="Cancel"
+                Command="{Binding $parent[controls:ModRow].CancelRemoveCommand}"
+                CommandParameter="{Binding}"/>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

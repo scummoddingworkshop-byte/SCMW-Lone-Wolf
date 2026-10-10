@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>SCMW-Lone-Wolf</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <Version>1.30.3</Version>
+    <Product>SCMW — Lone Wolf</Product>
+    <AssemblyTitle>SCMW — Lone Wolf</AssemblyTitle>
+    <ApplicationIcon>Assets\scmw.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\scmw.png" />
+    <AvaloniaResource Include="Assets\hero.png" />
+    <AvaloniaResource Include="Assets\sidebar.png" />
+    <AvaloniaResource Include="Assets\launch\*.png" />
+    <AvaloniaResource Include="Assets\rail\*.png" />
+    <AvaloniaResource Include="Assets\quick\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SCMW.Core\SCMW.Core.csproj" />
+    <ProjectReference Include="..\SCMW.Backend.Pak\SCMW.Backend.Pak.csproj" />
+    <ProjectReference Include="..\SCMW.Backend.Build\SCMW.Backend.Build.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SCMW.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\tools\repak\repak.exe" Link="tools\repak\repak.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tools\repak\LICENSE-MIT" Link="tools\repak\LICENSE-MIT" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tools\repak\LICENSE-APACHE" Link="tools\repak\LICENSE-APACHE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\README.txt" Link="README.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE" Link="NOTICE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\licenses\*" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

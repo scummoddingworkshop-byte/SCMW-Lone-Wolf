@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SCMW.App.Controls.ProjectCard">
+  <Button Name="Inner" Classes="projectcard" HorizontalAlignment="Stretch"
+          HorizontalContentAlignment="Stretch">
+    <StackPanel Spacing="10">
+      <!-- Picture slot: a square, so a square picture is never stretched or cropped. -->
+      <Border Name="PictureSlot" Classes="thumb" Width="110" Height="110" HorizontalAlignment="Left">
+        <Panel>
+          <TextBlock Name="DefaultMark" Text="SCMW" FontSize="18" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextDimBrush}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <Image Name="Picture" Stretch="UniformToFill" IsVisible="False"/>
+        </Panel>
+      </Border>
+      <TextBlock Name="NameText" FontSize="14" FontWeight="SemiBold"
+                 Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+      <TextBlock Name="WhenText" Classes="dim"/>
+      <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"/>
+    </StackPanel>
+  </Button>
+</UserControl>

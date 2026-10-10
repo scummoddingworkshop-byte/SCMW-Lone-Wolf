@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Controls.ItemValueRow"
+             x:DataType="vm:ItemValue">
+  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+               Foreground="{StaticResource TextPrimaryBrush}"/>
+
+    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+      <Button Name="ValueButton" Classes="valuefield"
+              IsVisible="{Binding ShowValueButton}"
+              Command="{Binding $parent[controls:ItemValueRow].BeginEditCommand}"
+              CommandParameter="{Binding}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="{Binding Value}" Classes.changed="{Binding IsChanged}"/>
+          <TextBlock Text="✎" Classes="dim"/>
+        </StackPanel>
+      </Button>
+
+      <TextBlock Name="ReadOnlyText" Text="{Binding Value}" Classes="dim" VerticalAlignment="Center"
+                 IsVisible="{Binding !Editable}"/>
+
+      <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
+              IsVisible="{Binding IsChanged}">
+        <TextBlock Text="changed" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+      </Border>
+    </StackPanel>
+
+    <TextBox Grid.Row="0" Grid.Column="1" Name="Editor" Classes="field" Width="140"
+             IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
+             KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus"/>
+
+    <TextBlock Grid.Row="1" Grid.Column="1" Name="WasText" Classes="dim"
+               HorizontalAlignment="Right" Text="{Binding WasText}"
+               IsVisible="{Binding IsChanged}"/>
+  </Grid>
+</UserControl>

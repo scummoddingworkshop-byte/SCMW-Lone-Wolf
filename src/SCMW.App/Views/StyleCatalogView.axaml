@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SCMW.App.Views.StyleCatalogView">
+  <!-- Review-only page: every design-system component, side by side. Not a normal screen. -->
+  <ScrollViewer Background="{StaticResource BgBaseBrush}">
+    <StackPanel Margin="24" Spacing="24">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Style Catalogue" Classes="h1"/>
+        <TextBlock Text="Every component, one page. For visual review only." Classes="dim"/>
+      </StackPanel>
+
+      <!-- Type -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Type" Classes="section"/>
+        <TextBlock Text="Screen title (h1)" Classes="h1"/>
+        <TextBlock Text="Body text sits at thirteen pixels." FontSize="13"
+                   Foreground="{StaticResource TextPrimaryBrush}"/>
+        <TextBlock Text="Small / meta text" Classes="dim"/>
+      </StackPanel>
+
+      <!-- Header preview -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Header preview" Classes="section"/>
+        <Border Classes="panel" Height="64" Padding="16,0"
+                HorizontalAlignment="Left" Width="640">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <TextBlock Text="SCMW" FontSize="18" FontWeight="SemiBold"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="LONE WOLF" Classes="dim" VerticalAlignment="Center"
+                         Foreground="{StaticResource AccentBrush}"/>
+            </StackPanel>
+            <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="No project open" Classes="dim"/>
+            </Border>
+            <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center">
+              <TextBlock Text="SCUM not found" Classes="dim"/>
+            </Border>
+          </Grid>
+        </Border>
+      </StackPanel>
+
+      <!-- Rail rows -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Rail rows (normal / hover / selected)" Classes="section"/>
+        <StackPanel Spacing="4" Width="200" HorizontalAlignment="Left">
+          <Border CornerRadius="8" Padding="12,9" Margin="0,1">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Width="16" Height="16" CornerRadius="3" Background="{StaticResource BorderBrush}"/>
+              <TextBlock Text="Normal" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+          </Border>
+          <Border CornerRadius="8" Padding="12,9" Margin="0,1"
+                  Background="{StaticResource BgCardBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Width="16" Height="16" CornerRadius="3" Background="{StaticResource BorderBrush}"/>
+              <TextBlock Text="Hover" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+          </Border>
+          <Border CornerRadius="8" Padding="12,9" Margin="0,1"
+                  Background="{StaticResource AccentBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Width="16" Height="16" CornerRadius="3" Background="{StaticResource OnAccentBrush}"/>
+              <TextBlock Text="Selected" VerticalAlignment="Center" FontSize="14"
+                         Foreground="{StaticResource OnAccentBrush}"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Buttons -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Buttons" Classes="section"/>
+        <StackPanel Orientation="Horizontal" Spacing="20">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Primary button" Classes="dim"/>
+            <Button Classes="primary">
+              <TextBlock Text="Save"/>
+            </Button>
+          </StackPanel>
+          <StackPanel Spacing="6">
+            <TextBlock Text="Secondary button" Classes="dim"/>
+            <Button Classes="secondary">
+              <TextBlock Text="Cancel"/>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Card -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Card" Classes="section"/>
+        <Border Classes="card" Width="320" HorizontalAlignment="Left">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Card title" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Card body text wraps to a second line when it needs to."
+                       Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- Quick action -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Quick action" Classes="section"/>
+        <Border Classes="quickaction" Width="260" HorizontalAlignment="Left">
+          <StackPanel Spacing="6">
+            <Border Width="24" Height="24" CornerRadius="4"
+                    HorizontalAlignment="Left"
+                    Background="{StaticResource AccentSoftBrush}"/>
+            <TextBlock Text="New project" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Start a fresh modded setup." Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- Stat strip -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Stat strip" Classes="section"/>
+        <Border Classes="panel" Width="360" HorizontalAlignment="Left">
+          <Grid ColumnDefinitions="*,Auto,*">
+            <StackPanel Grid.Column="0" Margin="16" Spacing="2">
+              <TextBlock Text="12" FontSize="24" FontWeight="Bold"
+                         Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="Mods" Classes="dim"/>
+            </StackPanel>
+            <Border Grid.Column="1" Width="1" Background="{StaticResource BorderBrush}"/>
+            <StackPanel Grid.Column="2" Margin="16" Spacing="2">
+              <TextBlock Text="Ready" FontSize="24" FontWeight="Bold"
+                         Foreground="{StaticResource SuccessBrush}"/>
+              <TextBlock Text="Status" Classes="dim"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </StackPanel>
+
+      <!-- Chips -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Chip" Classes="section"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Border Classes="chip">
+            <TextBlock Text="v0.1.0" Classes="dim"/>
+          </Border>
+          <Border Classes="chip success">
+            <TextBlock Text="SCUM detected"/>
+          </Border>
+          <Border Classes="chip warning">
+            <TextBlock Text="Missing"/>
+          </Border>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Input -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="Input" Classes="section"/>
+        <TextBox Classes="field" Width="300" HorizontalAlignment="Left" Watermark="Type here…"/>
+      </StackPanel>
+
+      <!-- List row -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="List row" Classes="section"/>
+        <Border Classes="listrow" Width="320" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="16" Height="16" CornerRadius="3" Background="{StaticResource BorderBrush}"/>
+            <TextBlock Text="Example row" VerticalAlignment="Center"/>
+            <TextBlock Text="›" Classes="dim" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

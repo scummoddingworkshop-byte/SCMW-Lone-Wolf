@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Views.ModsView"
+             x:DataType="vm:ModsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="20" Margin="24,8,24,24">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="Mods" Classes="h1"/>
+        <TextBlock Name="SummaryText" Text="{Binding Summary}" Classes="dim"/>
+      </StackPanel>
+
+      <TextBlock Name="MessageText" Text="{Binding Message}" Classes="dim" TextWrapping="Wrap"
+                 IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+      <Button Name="RestartAdminButton" Classes="primary" Content="Restart as administrator"
+              HorizontalAlignment="Left"
+              IsVisible="{Binding CanRestartAsAdmin}"
+              Command="{Binding RestartAsAdminCommand}"/>
+
+      <Border Name="DropZone" Classes="dropzone" DragDrop.AllowDrop="True">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <TextBlock Grid.Column="0" Text="Drag a .pak here to add an external mod" Classes="dim"
+                     VerticalAlignment="Center"/>
+          <Button Grid.Column="1" Name="AddModButton" Classes="secondary" Content="Add a mod…"
+                  Command="{Binding AddModCommand}"/>
+        </Grid>
+      </Border>
+
+      <ItemsControl Name="ModList" ItemsSource="{Binding Mods}" IsVisible="{Binding HasMods}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:InstalledMod">
+            <controls:ModRow Margin="0,0,0,8"
+                             RequestRemoveCommand="{Binding $parent[UserControl].((vm:ModsViewModel)DataContext).RequestRemoveCommand}"
+                             ConfirmRemoveCommand="{Binding $parent[UserControl].((vm:ModsViewModel)DataContext).ConfirmRemoveCommand}"
+                             CancelRemoveCommand="{Binding $parent[UserControl].((vm:ModsViewModel)DataContext).CancelRemoveCommand}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Name="EmptyState" Classes="card" IsVisible="{Binding ShowEmptyState}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="No mods installed yet" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Text="Mods arrive two ways: build one, or drag a .pak into the window."
+                     Classes="dim"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="primary" Content="Go to Build" Command="{Binding GoToBuildCommand}"/>
+            <Button Classes="secondary" Content="Add a mod…" Command="{Binding AddModCommand}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

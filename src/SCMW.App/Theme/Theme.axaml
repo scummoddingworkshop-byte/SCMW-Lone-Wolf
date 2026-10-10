@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- SCMW — Lone Wolf palette: dark, warm orange. Change here, changes everywhere. -->
+  <SolidColorBrush x:Key="BgBaseBrush"      Color="#12100E"/>
+  <SolidColorBrush x:Key="BgPanelBrush"     Color="#1A1714"/>
+  <SolidColorBrush x:Key="BgCardBrush"      Color="#211D19"/>
+  <SolidColorBrush x:Key="BorderBrush"      Color="#33302B"/>
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2EDE6"/>
+  <SolidColorBrush x:Key="TextDimBrush"     Color="#A79E92"/>
+  <SolidColorBrush x:Key="AccentBrush"      Color="#E07B39"/>
+  <SolidColorBrush x:Key="AccentHoverBrush" Color="#F0924F"/>
+  <SolidColorBrush x:Key="OnAccentBrush"    Color="#12100E"/>
+  <SolidColorBrush x:Key="SuccessBrush"     Color="#4CAF6A"/>
+  <SolidColorBrush x:Key="WarningBrush"     Color="#D0563F"/>
+  <SolidColorBrush x:Key="AccentSoftBrush"  Color="#3A2A1C"/>
+
+  <!-- Hero band: a subtle warm gradient built from the palette. -->
+  <LinearGradientBrush x:Key="HeroBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#1A1714" Offset="0"/>
+    <GradientStop Color="#241C15" Offset="0.55"/>
+    <GradientStop Color="#2E2014" Offset="1"/>
+  </LinearGradientBrush>
+</ResourceDictionary>

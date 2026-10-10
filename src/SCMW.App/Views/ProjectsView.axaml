@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Views.ProjectsView"
+             x:DataType="vm:ProjectsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="20" Margin="24,8,24,24">
+
+      <!-- Header: title, search, new project. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <TextBlock Grid.Column="0" Text="Projects" Classes="h1" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="1" Name="SearchBox" Classes="field" MaxWidth="320"
+                 HorizontalAlignment="Right" Watermark="Search projects…"
+                 Text="{Binding Search, Mode=TwoWay}"/>
+        <Button Grid.Column="2" Classes="primary" Content="New project"
+                Command="{Binding NewProjectCommand}"/>
+      </Grid>
+
+      <TextBlock Name="ListMessageText" Text="{Binding ListMessage}" TextWrapping="Wrap"
+                 Foreground="{StaticResource WarningBrush}"
+                 IsVisible="{Binding ShowListMessage}"/>
+
+      <!-- Create / rename panel. -->
+      <Border Name="Panel" Classes="card" IsVisible="{Binding IsPanelOpen}">
+        <StackPanel Spacing="12">
+          <TextBlock Name="PanelTitleText" Text="{Binding PanelTitle}" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="0" Grid.Column="1" Classes="field" Text="{Binding DraftName, Mode=TwoWay}"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Description" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" Grid.Column="1" Classes="field"
+                     Text="{Binding DraftDescription, Mode=TwoWay}"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Picture" Classes="dim" VerticalAlignment="Top"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Border Name="PanelPicture" Classes="thumb" Width="64" Height="64">
+                  <Panel>
+                    <TextBlock Text="SCMW" FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Image Source="{Binding DraftPicture}" Stretch="UniformToFill"/>
+                  </Panel>
+                </Border>
+                <StackPanel Spacing="6" VerticalAlignment="Center">
+                  <Button Name="ChoosePictureButton" Classes="secondary" Content="Choose picture…"
+                          Click="OnChoosePicture"/>
+                  <Button Name="RemovePictureButton" Classes="secondary" Content="Remove picture"
+                          Command="{Binding RemovePictureCommand}"/>
+                </StackPanel>
+              </StackPanel>
+              <TextBlock Text="Recommended: a square image, 512 × 512 px (PNG or JPG, under 4 MB)."
+                         Classes="dim" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="PanelActionButton" Classes="primary" Content="{Binding PanelAction}"
+                    Command="{Binding CommitEditCommand}"/>
+            <Button Classes="secondary" Content="Cancel" Command="{Binding CancelEditCommand}"/>
+          </StackPanel>
+          <TextBlock Name="PanelErrorText" Text="{Binding PanelError}" TextWrapping="Wrap"
+                     Foreground="{StaticResource WarningBrush}"
+                     IsVisible="{Binding PanelError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Grid of projects. -->
+      <ItemsControl Name="Grid" ItemsSource="{Binding VisibleProjects}" IsVisible="{Binding ShowGrid}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="3" ColumnSpacing="12" RowSpacing="12"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProjectSummary">
+            <controls:ProjectTile Project="{Binding}"
+                                  OpenCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).OpenProjectCommand}"
+                                  RenameCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).RenameProjectCommand}"
+                                  DuplicateCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).DuplicateProjectCommand}"
+                                  RequestDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).RequestDeleteCommand}"
+                                  ConfirmDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).ConfirmDeleteCommand}"
+                                  CancelDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).CancelDeleteCommand}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- No matches. -->
+      <Border Name="NoMatches" Classes="card" IsVisible="{Binding ShowNoMatches}">
+        <TextBlock Text="No projects match that" Classes="dim"/>
+      </Border>
+
+      <!-- Empty state. -->
+      <Border Name="EmptyState" Classes="card" IsVisible="{Binding ShowEmptyState}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="No projects yet" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Text="Create a project and your changes will have somewhere to live." Classes="dim"/>
+          <Button Classes="primary" Content="New project" HorizontalAlignment="Left"
+                  Command="{Binding NewProjectCommand}"/>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

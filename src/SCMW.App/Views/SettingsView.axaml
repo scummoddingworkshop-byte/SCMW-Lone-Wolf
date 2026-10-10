@@ -1,0 +1,215 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <UserControl.Styles>
+    <!-- The key-test answer: green when it works, red when it doesn't. -->
+    <Style Selector="TextBlock.dim.good">
+      <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.dim.bad">
+      <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+    </Style>
+  </UserControl.Styles>
+  <ScrollViewer>
+    <StackPanel Spacing="16" Margin="24,8,24,24">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="Settings" Classes="h1"/>
+        <TextBlock Text="{Binding StorageNote}" TextWrapping="Wrap"
+                   Foreground="{StaticResource WarningBrush}"
+                   IsVisible="{Binding StorageNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+      </StackPanel>
+
+      <!-- Game (the mods folder lives under the game, so it belongs here too).
+           Every row uses the same three columns: label, field, actions — so things line up. -->
+      <Border Name="GameCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Game" Classes="section"/>
+
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="SCUM folder" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="GamePathBox" Classes="field"
+                     Text="{Binding GamePath, Mode=TwoWay}"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Classes="secondary rowaction" Content="Open folder"
+                      ToolTip.Tip="Open this folder in File Explorer"
+                      Command="{Binding OpenGameFolderCommand}"/>
+              <Button Classes="secondary rowaction" Content="Detect"
+                      Command="{Binding DetectGameCommand}"/>
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <StackPanel Grid.Column="1" Spacing="6">
+              <Border Classes="chip" HorizontalAlignment="Left"
+                      Classes.success="{Binding GameFound}" Classes.warning="{Binding !GameFound}">
+                <TextBlock Text="{Binding GameStatus}" Classes="dim"/>
+              </Border>
+              <TextBlock Text="{Binding GameFolderNote}" Classes="dim" TextWrapping="Wrap"
+                         IsVisible="{Binding GameFolderNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Text="{Binding GameHint}" Classes="dim" TextWrapping="Wrap"
+                         IsVisible="{Binding GameHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Text="SCMW — Lone Wolf re-checks this before writing into the game folder."
+                         Classes="dim" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Mods folder" Classes="dim" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Name="ModsPathText" Text="{Binding ModsPath}" Classes="dim"
+                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <Button Grid.Column="2" Classes="secondary rowaction" Content="Open folder"
+                    ToolTip.Tip="Open SCUM's mods folder in File Explorer"
+                    Command="{Binding OpenModsFolderCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <StackPanel Grid.Column="1" Spacing="6">
+              <TextBlock Text="{Binding ModsNote}" Classes="dim" TextWrapping="Wrap"
+                         IsVisible="{Binding ModsNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Text="Where SCMW — Lone Wolf installs your mods, and where SCUM loads them from."
+                         Classes="dim" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Unlock key -->
+      <Border Name="KeyCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Unlock key" Classes="section"/>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Key" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="KeyBox" Classes="field"
+                     Watermark="Paste your key here"
+                     Text="{Binding UnlockKey, Mode=TwoWay}"/>
+            <Button Grid.Column="2" Classes="secondary rowaction" Content="Test" Command="{Binding TestKeyCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <StackPanel Grid.Column="1" Spacing="6">
+              <TextBlock Text="This key lets SCMW — Lone Wolf read SCUM's game files. It isn't a Steam or product key."
+                         Classes="dim" TextWrapping="Wrap"/>
+              <TextBlock Name="KeyStatusText" Text="{Binding KeyStatus}" Classes="dim" TextWrapping="Wrap"
+                         Classes.good="{Binding KeyTestGood}" Classes.bad="{Binding KeyTestBad}"
+                         IsVisible="{Binding KeyStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <Button Classes="secondary" Content="Where do I get this?" HorizontalAlignment="Left"
+                      Command="{Binding WhereKeyCommand}"/>
+              <StackPanel Spacing="8"
+                          IsVisible="{Binding KeyHelpNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding KeyHelpNote}" Classes="dim" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="primary" Content="Open the key list"
+                          ToolTip.Tip="A public page of Unreal Engine keys — no download or sign-up"
+                          Command="{Binding OpenKeyListCommand}"/>
+                  <Button Classes="secondary" Content="FModel website"
+                          ToolTip.Tip="If the list is out of date — their Discord has the current key"
+                          Command="{Binding OpenKeyFallbackCommand}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding KeyLinkNote}" Classes="dim" TextWrapping="Wrap"
+                           IsVisible="{Binding KeyLinkNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Workspace -->
+      <Border Name="WorkspaceCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Workspace" Classes="section"/>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Folder" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="WorkspaceBox" Classes="field"
+                     Text="{Binding WorkspacePath, Mode=TwoWay}"/>
+            <Button Grid.Column="2" Classes="secondary rowaction" Content="Open folder"
+                    Command="{Binding OpenWorkspaceCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Saved game data" Classes="dim" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding StorageUsed}" VerticalAlignment="Center"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <Button Grid.Column="2" Classes="secondary rowaction" Content="Re-read Game Data"
+                    ToolTip.Tip="Forget the item list and pictures so they're read fresh from SCUM"
+                    IsEnabled="{Binding !IsRefreshing}"
+                    Command="{Binding ClearCacheCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <StackPanel Grid.Column="1" Spacing="6">
+              <TextBlock Text="{Binding WorkspaceNote}" Classes="dim" TextWrapping="Wrap"
+                         IsVisible="{Binding WorkspaceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <TextBlock Text="The item list and pictures read from SCUM. Reading again takes a fresh copy — your projects aren't affected."
+                         Classes="dim" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding CacheNote}" Classes="dim" TextWrapping="Wrap"
+                         Classes.good="{Binding CacheNoteGood}"
+                         IsVisible="{Binding CacheNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Settings folder" Classes="dim" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="Your settings and unlock key are kept here" Classes="dim"
+                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <Button Grid.Column="2" Classes="secondary rowaction" Content="Open folder"
+                    ToolTip.Tip="Open the folder holding your settings and unlock key"
+                    Command="{Binding OpenSettingsFolderCommand}"/>
+          </Grid>
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="1" Text="{Binding SettingsFolderNote}" Classes="dim" TextWrapping="Wrap"
+                       IsVisible="{Binding SettingsFolderNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- About -->
+      <Border Name="AboutCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="About" Classes="section"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+              <TextBlock Text="SCMW — Lone Wolf" Foreground="{StaticResource TextPrimaryBrush}"/>
+              <TextBlock Text="{Binding Version}" Classes="dim" VerticalAlignment="Center"/>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="secondary" Content="Help" Command="{Binding OpenHelpCommand}"/>
+          </Grid>
+          <TextBlock Text="An unofficial, fan-made tool — not affiliated with Gamepires or Steam. Use at your own risk; your mods are your own responsibility."
+                     Classes="dim" TextWrapping="Wrap"/>
+          <TextBlock Text="Free software under the GNU GPL v3. The name 'SCMW — Lone Wolf' and its branding are reserved (see the NOTICE file) — forks are welcome, but must use their own name."
+                     Classes="dim" TextWrapping="Wrap"/>
+          <TextBlock Text="SCMW — Lone Wolf is free, and always will be. If you'd like to say thanks, you can leave a tip — it helps keep the wolf fed."
+                     Classes="dim" TextWrapping="Wrap"/>
+          <Button Name="SupportButton" Classes="primary" Content="Support on Ko-fi"
+                  HorizontalAlignment="Left"
+                  ToolTip.Tip="Open the Ko-fi page in your browser"
+                  IsVisible="{Binding ShowSupport}"
+                  Command="{Binding OpenSupportCommand}"/>
+          <TextBlock Text="{Binding SupportNote}" Classes="dim" TextWrapping="Wrap"
+                     IsVisible="{Binding SupportNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Logs, troubleshooting and the licence files (collapsed, at the foot of the page) -->
+      <Expander Name="Support" Classes="card" Header="Logs &amp; troubleshooting" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="10">
+          <TextBlock Text="If something goes wrong, this is the best thing to share when you report it. The log just records what the app did — it's safe to send."
+                     Classes="dim" TextWrapping="Wrap"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Name="LogPathText" Text="{Binding LogPath}" Classes="dim"
+                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Classes="secondary" Content="Open folder"
+                    ToolTip.Tip="Open the folder the log is written to"
+                    Command="{Binding OpenLogsFolderCommand}"/>
+          </Grid>
+          <TextBlock Text="{Binding LogNote}" Classes="dim" TextWrapping="Wrap"
+                     IsVisible="{Binding LogNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          <TextBlock Text="Licence files. SCMW — Lone Wolf bundles open-source parts; their notices and licence texts ship beside the app."
+                     Classes="dim" TextWrapping="Wrap"/>
+          <Button Classes="secondary" Content="Open licence files" HorizontalAlignment="Left"
+                  ToolTip.Tip="Open the folder beside the app that holds the notices and licence texts"
+                  Command="{Binding OpenLicenceFilesCommand}"/>
+          <TextBlock Text="{Binding LicenceNote}" Classes="dim" TextWrapping="Wrap"
+                     IsVisible="{Binding LicenceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+      </Expander>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Views.BackupsView"
+             x:DataType="vm:BackupsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="20" Margin="24,8,24,24">
+
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Text="Backups" Classes="h1"/>
+          <TextBlock Name="SummaryText" Text="{Binding Summary}" Classes="dim"/>
+        </StackPanel>
+        <Button Grid.Column="1" Classes="secondary" Content="Open backups folder"
+                VerticalAlignment="Center" Command="{Binding OpenFolderCommand}"/>
+      </Grid>
+
+      <TextBlock Text="When you remove a mod or delete a project, SCMW — Lone Wolf keeps a copy here — nothing is lost. Restore puts it back."
+                 Classes="dim" TextWrapping="Wrap"/>
+
+      <TextBlock Name="MessageText" Text="{Binding Message}" Classes="dim" TextWrapping="Wrap"
+                 IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+      <ItemsControl Name="BackupList" ItemsSource="{Binding Backups}" IsVisible="{Binding HasBackups}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:BackupRow">
+            <Border Classes="listrow" Margin="0,0,0,8">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Border Grid.Column="0" Classes="chip" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding KindText}" Classes="dim"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                  <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                  <TextBlock Text="{Binding When}" Classes="dim"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Button Classes="primary" Content="Restore"
+                          Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).RestoreCommand}"
+                          CommandParameter="{Binding}"/>
+                  <Button Classes="secondary" Content="Delete"
+                          IsVisible="{Binding !IsConfirmingDelete}"
+                          Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).RequestDeleteCommand}"
+                          CommandParameter="{Binding}"/>
+                  <Button Classes="secondary" Content="Cancel"
+                          IsVisible="{Binding IsConfirmingDelete}"
+                          Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).CancelDeleteCommand}"
+                          CommandParameter="{Binding}"/>
+                  <Button Classes="primary" Content="Delete for good"
+                          IsVisible="{Binding IsConfirmingDelete}"
+                          Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).ConfirmDeleteCommand}"
+                          CommandParameter="{Binding}"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Name="EmptyState" Classes="card" IsVisible="{Binding ShowEmptyState}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="No backups yet" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Text="Removed mods and deleted projects will show up here, ready to restore."
+                     Classes="dim"/>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

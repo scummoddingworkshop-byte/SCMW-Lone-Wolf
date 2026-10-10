@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:app="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SCMW-Lone-Wolf/Theme/Theme.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Keeps the Home hero's shape: its height follows its width. -->
+            <app:ScaleConverter x:Key="ScaleConverter"/>
+
+            <!-- Make Fluent's default (blue) switches use the app's warm accent instead. -->
+            <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#E07B39"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#F0924F"/>
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#E07B39"/>
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#F0924F"/>
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#F2EDE6"/>
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#F2EDE6"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#33302B"/>
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#A79E92"/>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://SCMW-Lone-Wolf/Theme/DesignSystem.axaml"/>
+    </Application.Styles>
+</Application>

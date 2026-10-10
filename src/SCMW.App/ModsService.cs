@@ -1,0 +1,293 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using SCMW.Backend.Build;
+
+namespace SCMW.App;
+
+/// <summary>One mod on disk: its file name, a friendly name, whether it is switched on, and whether
+/// SCMW built it (SCMW badge) or it came from elsewhere (External).</summary>
+public sealed record ModsEntry(string FileName, string DisplayName, bool IsOn, bool IsExternal);
+
+/// <summary>Whether a change worked; one plain reason if not.</summary>
+public sealed record ModsResult(bool Ok, string? Error, WriteFailureKind Failure = WriteFailureKind.None);
+
+/// <summary>How an import went: how many were added, skipped for each reason.</summary>
+public sealed record ImportOutcome(bool Ok, string? Error, int Imported, int Skipped, int SkippedNotPak = 0,
+    WriteFailureKind Failure = WriteFailureKind.None);
+
+/// <summary>A mod we imported (no project), so removal is exact.</summary>
+internal sealed record ImportedMod(string FileName, string SourcePath, string InstalledPath, DateTime ImportedUtc);
+
+public interface IModsService
+{
+    bool IsAvailable { get; }
+    IReadOnlyList<ModsEntry> List();
+    ModsResult SetEnabled(string fileName, bool enabled);
+    ModsResult SetAllEnabled(bool enabled);
+    ModsResult Remove(string fileName);
+    ImportOutcome Import(IReadOnlyList<string> sourcePaths);
+}
+
+/// <summary>
+/// Everything the Mods screen does on disk. It only ever touches SCUM's <c>~mods</c> folder plus
+/// the workspace's records and backups — never the game's own files.
+/// </summary>
+public sealed class ModsService : IModsService
+{
+    private const string OffSuffix = ".pak.disabled";
+    private const string OnSuffix = ".pak";
+
+    private readonly string _modsFolder;
+    private readonly string _backupsRoot;
+    private readonly string _importedPath;
+    private readonly string _buildsRoot;
+
+    public ModsService(string? gameRoot, string workspaceRoot)
+    {
+        var root = (gameRoot ?? "").TrimEnd('\\', '/');
+        _modsFolder = root.Length == 0 ? "" : BuildNames.ModsFolder(root);
+        _backupsRoot = Path.Combine(workspaceRoot, "Backups", "mods");
+        _buildsRoot = Path.Combine(workspaceRoot, "Builds");
+        _importedPath = Path.Combine(workspaceRoot, "mods", "imported.json");
+    }
+
+    /// <summary>True when a SCUM folder is configured (its Paks folder exists). ~mods may be empty.</summary>
+    public bool IsAvailable =>
+        _modsFolder.Length > 0 && Directory.Exists(Path.GetDirectoryName(_modsFolder));
+
+    public IReadOnlyList<ModsEntry> List()
+    {
+        if (!Directory.Exists(_modsFolder)) return Array.Empty<ModsEntry>();
+
+        var ours = OurBaseNames();
+        var entries = new List<ModsEntry>();
+        foreach (var path in Directory.GetFiles(_modsFolder))
+        {
+            var name = Path.GetFileName(path);
+            var split = Split(name);
+            if (split is null) continue;
+            var (isOn, display) = split.Value;
+            entries.Add(new ModsEntry(name, display, isOn, IsExternal: !ours.Contains(display)));
+        }
+
+        return entries.OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static (bool IsOn, string Display)? Split(string fileName)
+    {
+        if (fileName.EndsWith(OffSuffix, StringComparison.OrdinalIgnoreCase))
+            return (false, fileName[..^OffSuffix.Length]);
+        if (fileName.EndsWith(OnSuffix, StringComparison.OrdinalIgnoreCase))
+            return (true, fileName[..^OnSuffix.Length]);
+        return null;
+    }
+
+    /// <summary>The display base-names of every mod we built (from Plan 13's per-project records),
+    /// so a switched-off copy is still badged SCMW.</summary>
+    private HashSet<string> OurBaseNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(_buildsRoot)) return names;
+
+        foreach (var dir in Directory.GetDirectories(_buildsRoot))
+        {
+            var file = Path.Combine(dir, "installed.json");
+            if (!File.Exists(file)) continue;
+            try
+            {
+                var record = JsonSerializer.Deserialize<InstallRecord>(File.ReadAllText(file));
+                if (record is null) continue;
+                var split = Split(Path.GetFileName(record.InstalledPath));
+                if (split is not null) names.Add(split.Value.Display);
+            }
+            catch { /* a corrupt record just means "not ours" */ }
+        }
+
+        return names;
+    }
+
+    public ModsResult SetEnabled(string fileName, bool enabled)
+    {
+        var path = Path.Combine(_modsFolder, fileName);
+        var isOff = fileName.EndsWith(OffSuffix, StringComparison.OrdinalIgnoreCase);
+        var isOn = !isOff && fileName.EndsWith(OnSuffix, StringComparison.OrdinalIgnoreCase);
+        if (!isOn && !isOff) return new ModsResult(false, "That file is not a SCUM mod.");
+
+        try
+        {
+            if (enabled && isOff)
+            {
+                var target = path[..^".disabled".Length];
+                if (File.Exists(target)) return new ModsResult(false, "A mod with that name is already switched on.");
+                File.Move(path, target);
+            }
+            else if (!enabled && isOn)
+            {
+                var target = path + ".disabled";
+                if (File.Exists(target)) return new ModsResult(false, "That mod is already switched off.");
+                File.Move(path, target);
+            }
+
+            return new ModsResult(true, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            var kind = WriteFailure.Classify(ex);
+            return new ModsResult(false, WriteFailure.Message(kind, "switch that mod"), kind);
+        }
+    }
+
+    public ModsResult SetAllEnabled(bool enabled)
+    {
+        foreach (var entry in List())
+        {
+            if (entry.IsOn == enabled) continue;
+            var result = SetEnabled(entry.FileName, enabled);
+            if (!result.Ok) return result;
+        }
+
+        return new ModsResult(true, null);
+    }
+    public ModsResult Remove(string fileName)
+    {
+        var path = Path.Combine(_modsFolder, fileName);
+        if (!File.Exists(path)) return new ModsResult(true, null);
+
+        try
+        {
+            Directory.CreateDirectory(_backupsRoot);
+            var backup = Path.Combine(_backupsRoot,
+                $"{Path.GetFileNameWithoutExtension(path)} ({DateTime.Now:yyyyMMdd-HHmmss}){Path.GetExtension(path)}");
+            File.Copy(path, backup, overwrite: true);     // back up FIRST
+            File.Delete(path);
+            ForgetImported(fileName);
+            ForgetBuiltRecord(fileName);
+            return new ModsResult(true, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            var kind = WriteFailure.Classify(ex);
+            return new ModsResult(false, WriteFailure.Message(kind, "remove that mod"), kind);
+        }
+    }
+
+    private void ForgetImported(string fileName)
+    {
+        try
+        {
+            var list = ReadImported();
+            if (list.RemoveAll(m => string.Equals(m.FileName, fileName, StringComparison.OrdinalIgnoreCase)) > 0)
+                WriteImported(list);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Losing the note is harmless: the file is gone and the folder scan is the truth.
+        }
+    }
+
+    /// <summary>
+    /// Clears a built mod's install record when its file is removed, so Build stops claiming it is
+    /// installed (and cannot resurrect it from an old backup).
+    /// </summary>
+    private void ForgetBuiltRecord(string fileName)
+    {
+        if (!Directory.Exists(_buildsRoot)) return;
+        var split = Split(fileName);
+        if (split is null) return;
+        var wanted = split.Value.Display;
+
+        foreach (var dir in Directory.GetDirectories(_buildsRoot))
+        {
+            var file = Path.Combine(dir, "installed.json");
+            if (!File.Exists(file)) continue;
+            try
+            {
+                var record = JsonSerializer.Deserialize<InstallRecord>(File.ReadAllText(file));
+                if (record is null) continue;
+                var recordSplit = Split(Path.GetFileName(record.InstalledPath));
+                if (recordSplit is not null &&
+                    string.Equals(recordSplit.Value.Display, wanted, StringComparison.OrdinalIgnoreCase))
+                    File.Delete(file);
+            }
+            catch { /* a corrupt/unreadable record is left alone */ }
+        }
+    }
+
+    internal List<ImportedMod> ReadImported()
+    {
+        if (!File.Exists(_importedPath)) return new List<ImportedMod>();
+        try { return JsonSerializer.Deserialize<List<ImportedMod>>(File.ReadAllText(_importedPath)) ?? new(); }
+        catch { return new List<ImportedMod>(); }
+    }
+
+    internal void WriteImported(List<ImportedMod> list)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_importedPath)!);
+        File.WriteAllText(_importedPath, JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private void TryWriteImported(List<ImportedMod> list)
+    {
+        try { WriteImported(list); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The mod is still copied in and will list from the folder scan; only the note is lost.
+        }
+    }
+
+    public ImportOutcome Import(IReadOnlyList<string> sourcePaths)
+    {
+        if (!IsAvailable) return new ImportOutcome(false, "Set your SCUM folder in Settings first.", 0, 0);
+        Directory.CreateDirectory(_modsFolder);
+
+        var imported = 0;
+        var skipped = 0;
+        var notPak = 0;
+        var records = ReadImported();
+
+        foreach (var source in sourcePaths)
+        {
+            var name = Path.GetFileName(source);
+            if (!name.EndsWith(OnSuffix, StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith(OffSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                skipped++;
+                notPak++;
+                continue;
+            }
+
+            var dest = Path.Combine(_modsFolder, name);
+            if (File.Exists(dest) || File.Exists(dest + ".disabled"))   // already installed (on or off)
+            {
+                skipped++;
+                continue;
+            }
+
+            var temp = dest + "." + Guid.NewGuid().ToString("N") + ".adding";
+            try
+            {
+                // Copy to a temp name, then move into place — a failure mid-copy never leaves a
+                // half-copied .pak that the game would try to load.
+                File.Copy(source, temp, overwrite: false);
+                File.Move(temp, dest);
+                records.Add(new ImportedMod(name, source, dest, DateTime.UtcNow));
+                imported++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (File.Exists(temp)) { try { File.Delete(temp); } catch { /* best effort */ } }
+                if (imported > 0) TryWriteImported(records);
+                var kind = WriteFailure.Classify(ex);
+                return new ImportOutcome(false, WriteFailure.Message(kind, "add that mod"), imported, skipped,
+                    Failure: kind);
+            }
+        }
+
+        if (imported > 0) TryWriteImported(records);
+        // The view model builds the plain message from the counts; Error is only a fallback.
+        return new ImportOutcome(imported > 0, null, imported, skipped, notPak);
+    }
+}

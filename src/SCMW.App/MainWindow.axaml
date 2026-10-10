@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SCMW.App"
+        xmlns:controls="clr-namespace:SCMW.App.Controls"
+        x:Class="SCMW.App.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="{Binding WindowTitle}"
+        Background="{StaticResource BgBaseBrush}">
+  <Grid RowDefinitions="Auto,*">
+    <controls:HeaderBar x:Name="Header" Grid.Row="0"/>
+
+    <Grid Grid.Row="1" ColumnDefinitions="220,*">
+    <!-- Left rail -->
+    <Border Grid.Column="0" Background="{StaticResource BgPanelBrush}"
+            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+      <Panel>
+        <!-- A faint misty forest behind the rail; the panel colour stays as a fallback. -->
+        <Image Source="avares://SCMW-Lone-Wolf/Assets/sidebar.png" Stretch="UniformToFill"/>
+        <DockPanel>
+        <!-- Launch buttons, kept apart up from the bottom -->
+        <StackPanel DockPanel.Dock="Bottom" Margin="12,12,12,126" Spacing="8">
+          <Button Classes="primary launch" Command="{Binding LaunchModdedCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/launch/play-on.png" Width="18" Height="18"/>
+              <TextBlock Text="LAUNCH MODDED" FontSize="12" FontWeight="Bold" LetterSpacing="0.5"/>
+            </StackPanel>
+          </Button>
+          <Button Classes="secondary launch" Command="{Binding LaunchUnmoddedCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/launch/play.png" Width="18" Height="18"/>
+              <TextBlock Text="LAUNCH UNMODDED" FontSize="12" FontWeight="SemiBold" LetterSpacing="0.5"/>
+            </StackPanel>
+          </Button>
+          <TextBlock Text="{Binding LaunchNote}" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextDimBrush}"
+                     IsVisible="{Binding ShowLaunchNote}"/>
+        </StackPanel>
+
+        <!-- The six areas -->
+        <ListBox Classes="rail" Margin="8,20,8,0" ItemsSource="{Binding Sidebar}"
+                 SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:NavItem">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Panel Width="18" Height="18" VerticalAlignment="Center">
+                  <Image Source="{Binding Icon}" Width="18" Height="18" Stretch="Uniform"
+                         IsVisible="{Binding !$parent[ListBoxItem].IsSelected}"/>
+                  <Image Source="{Binding IconSelected}" Width="18" Height="18" Stretch="Uniform"
+                         IsVisible="{Binding $parent[ListBoxItem].IsSelected}"/>
+                </Panel>
+                <TextBlock Text="{Binding Label}" FontSize="14" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        </DockPanel>
+      </Panel>
+    </Border>
+
+    <!-- Content -->
+    <ContentControl Grid.Column="1" Content="{Binding ActiveView}" Margin="20"/>
+    </Grid>
+  </Grid>
+
+  <Window.Styles>
+    <Style Selector="ListBox.rail ListBoxItem">
+      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="Margin" Value="0,1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="ListBox.rail ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    </Style>
+    <Style Selector="ListBox.rail ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+      <Setter Property="TextElement.Foreground" Value="{StaticResource OnAccentBrush}"/>
+    </Style>
+  </Window.Styles>
+</Window>

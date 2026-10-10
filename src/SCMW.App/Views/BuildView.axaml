@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Views.BuildView"
+             x:DataType="vm:BuildViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="20" Margin="24,8,24,24">
+
+      <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" Classes="h1"/>
+      <TextBlock Name="ProjectFallbackText" Classes="dim"
+                 Text="No project selected — showing the most recent one."
+                 IsVisible="{Binding ShowProjectFallback}"/>
+
+      <!-- What's in this mod -->
+      <StackPanel Spacing="10">
+        <TextBlock Text="What's in this mod" Classes="section"/>
+
+        <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:BuildChange">
+              <Border Classes="changerow" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                    <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
+                      <Panel>
+                        <TextBlock Text="SCMW" FontSize="8" Foreground="{StaticResource TextDimBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding Picture}" Stretch="UniformToFill"/>
+                      </Panel>
+                    </Border>
+                    <TextBlock Text="{Binding ItemName}" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                  </StackPanel>
+
+                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BuildValueChange">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                          <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Summary}" Margin="12,0,0,0"
+                                     Foreground="{StaticResource AccentBrush}"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <Button Grid.Column="2" Classes="secondary" Content="Remove" VerticalAlignment="Center"
+                          ToolTip.Tip="Remove this item's changes"
+                          Command="{Binding $parent[UserControl].((vm:BuildViewModel)DataContext).RemoveItemCommand}"
+                          CommandParameter="{Binding}"/>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Name="Nudge" Classes="card" IsVisible="{Binding ShowNudge}">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Nothing to build yet — change an item first" FontSize="16"
+                       FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+            <Button Classes="primary" Content="Go to Items" HorizontalAlignment="Left"
+                    Command="{Binding GoToItemsCommand}"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <Button Name="BuildButton" Classes="primary" Content="Build" HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Center" Padding="16,12" FontSize="15"
+              Command="{Binding BuildCommand}"/>
+
+      <!-- Step bar -->
+      <StackPanel Name="StepBar" Spacing="10" IsVisible="{Binding ShowStepBar}">
+        <ItemsControl ItemsSource="{Binding Steps}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModBuildStep">
+              <Border Classes="step" Classes.active="{Binding IsActive}" Classes.done="{Binding IsDone}">
+                <TextBlock Text="{Binding Label}"/>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Name="StatusText" Text="{Binding StatusText}" Classes="dim"/>
+      </StackPanel>
+
+      <!-- Success: built, and (once you choose) installed -->
+      <Border Name="SuccessPanel" Classes="card" IsVisible="{Binding IsSucceeded}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{Binding SuccessMessage}" FontSize="16"
+                     FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}"/>
+          <TextBlock Name="BuiltPak" Text="{Binding BuiltPakPath}" Classes="dim" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Name="InstallButton" Classes="primary" Content="{Binding InstallButtonLabel}"
+                    Command="{Binding InstallCommand}" IsVisible="{Binding ShowInstallButton}"/>
+            <Button Name="RemoveButton" Content="Remove from SCUM"
+                    Command="{Binding RemoveCommand}" IsVisible="{Binding HasInstalled}"/>
+            <Button Classes="primary" Content="Launch SCUM" Command="{Binding LaunchCommand}"/>
+          </StackPanel>
+          <TextBlock Name="InstallHintText" Text="{Binding InstallHint}" Classes="dim"
+                     TextWrapping="Wrap" IsVisible="{Binding ShowInstallHint}"/>
+          <TextBlock Text="Set your SCUM folder in Settings to launch." Classes="dim"
+                     IsVisible="{Binding ShowLaunchNote}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Failure -->
+      <Border Name="FailurePanel" Classes="card" IsVisible="{Binding IsFailed}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding FailureWhat}" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource WarningBrush}"/>
+          <TextBlock Text="{Binding FailureMeaning}" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding FailureNext}" Classes="dim" TextWrapping="Wrap"/>
+          <Button Name="RestartAdminButton" Classes="primary" Content="Restart as administrator"
+                  HorizontalAlignment="Left"
+                  IsVisible="{Binding CanRestartAsAdmin}"
+                  Command="{Binding RestartAsAdminCommand}"/>
+          <Expander Header="Show details" IsVisible="{Binding HasFailureDetails}">
+            <TextBlock Text="{Binding FailureDetails}" Classes="dim" TextWrapping="Wrap"/>
+          </Expander>
+        </StackPanel>
+      </Border>
+
+      <!-- Advanced -->
+      <Expander Name="Advanced" Header="Advanced" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Mod version" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="VersionBox" Classes="field"
+                     Text="{Binding ModVersion, Mode=TwoWay}"/>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Rename" Classes="dim" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Name="RenameBox" Classes="field"
+                     Text="{Binding RenameDraft, Mode=TwoWay}"/>
+          </Grid>
+        </StackPanel>
+      </Expander>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

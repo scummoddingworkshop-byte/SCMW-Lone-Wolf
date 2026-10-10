@@ -1,0 +1,147 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SCMW.App.Views.HelpView">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.body">
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.step">
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer>
+    <StackPanel Spacing="16" Margin="24,8,24,24">
+
+      <TextBlock Text="Help" Classes="h1"/>
+      <TextBlock Classes="body"
+                 Text="Plain answers to the things people ask most. Nothing here changes anything — it's just guidance."/>
+
+      <Expander Header="First time here?" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="1.  In Settings, set your SCUM folder (press Detect if you're unsure where it is)."/>
+          <TextBlock Classes="step" Text="2.  Add the unlock key, then press Test. A green line means SCUM's files can be read."/>
+          <TextBlock Classes="step" Text="3.  If Test fails after a SCUM update, look for the refreshed key — the key can change with the game."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Getting your unlock key" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="step" Text="What it is: a decryption key that unlocks SCUM's game files, so tools like SCMW — Lone Wolf can read and change them."/>
+          <TextBlock Classes="step" Text="What it isn't: a Steam key or product key. It does not buy, activate, or install SCUM, and it has nothing to do with your Steam account."/>
+          <TextBlock Classes="step" Text="It's a shared key — the same one for everyone, and the same key other SCUM tools use. You don't need to download anything to get it."/>
+          <TextBlock Classes="step" Text="1.  Open the key list below — a public page of Unreal Engine keys. No download, no sign-up."/>
+          <TextBlock Classes="step" Text="2.  Press Ctrl+F, search for SCUM, and copy the long key it lists."/>
+          <TextBlock Classes="step" Text="3.  Paste it into Settings → Unlock key, then press Test."/>
+          <TextBlock Classes="step" Text="If Test fails after a SCUM update, the list may be out of date — the FModel website links to their Discord, where the current key is posted."/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="primary" Content="Open the key list" Click="OnOpenKeyList"/>
+            <Button Classes="secondary" Content="FModel website" Click="OnOpenKeyFallback"/>
+          </StackPanel>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="The whole journey, in four steps" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="1.  Create a project.  In Projects, press New project and give it a name. That project becomes the one you're working in. It's just a container for your changes — nothing in the game is touched yet."/>
+          <TextBlock Classes="step" Text="2.  Edit your items.  In Items, find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
+          <TextBlock Classes="step" Text="3.  Build your mod.  In Build you'll see a list of what's in your mod. Press Build, and SCMW — Lone Wolf writes a finished .pak file into your workspace — and shows you where it landed."/>
+          <TextBlock Classes="step" Text="4.  Add it to SCUM.  Press Install into SCUM to copy it into the game's mods folder, then use Launch modded to start SCUM and try it. From then on the Mods screen lists it, and you can switch it on or off."/>
+          <TextBlock Classes="step" Text="Changed your mind later? Edit your items again, press Build again, then press Update the copy in SCUM — there's no need to remove it first. To take it back out, press Remove from SCUM."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Make your first change" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="1.  Open Items and pick something (search, or use the category chips)."/>
+          <TextBlock Classes="step" Text="2.  Click a value, type a new one, and press Enter. Changed values show a 'changed' tag and 'was …'."/>
+          <TextBlock Classes="step" Text="Nothing touches your game yet — changes are saved to the project you're working in."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Build and install your mod" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="1.  Open Build and press Build. When it's ready, press Install into SCUM."/>
+          <TextBlock Classes="step" Text="2.  Changed something since? Build again, then press Update the copy in SCUM — there's no need to remove it first."/>
+          <TextBlock Classes="step" Text="Remove from SCUM takes your mod back out of the game."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Turn mods on or off, and play" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="The Mods screen lists everything in SCUM's mods folder. Each row has a switch: on means SCUM will load it, off means it won't."/>
+          <TextBlock Classes="step" Text="The two launch buttons start SCUM for you — and they also set every mod switch first: 'Launch modded' switches them all on, 'Launch unmodded' switches them all off."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Sandbox, servers and mods" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="SCMW — Lone Wolf is made for SCUM's Sandbox (local) mode, where your mods load straight away."/>
+          <TextBlock Classes="step" Text="On a server, mods only work if the server admin allows them — you can't add a mod to someone else's server."/>
+          <TextBlock Classes="step" Text="Server admins can still use SCMW — Lone Wolf to create mods, then add them to the server manually and share them with their players."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Switching a mod off, or removing it" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="Switching a mod off only renames its file — 'name.pak' becomes 'name.pak.disabled'. Nothing is deleted and nothing is changed inside it; SCUM simply skips it. Flip the switch to bring it back."/>
+          <TextBlock Classes="step" Text="Removing a mod (the Remove button on its row) does not throw it away. SCMW — Lone Wolf copies it into your workspace's Backups\mods folder first, then deletes it from SCUM's mods folder. You can drag it back in from those backups any time."/>
+          <TextBlock Classes="step" Text="If the mod was one you built here, removing it also clears its 'installed' record, so Build stops claiming it is installed."/>
+          <TextBlock Classes="step" Text="Adding a mod: drag a .pak onto the Mods screen. Anything that isn't a .pak, or that is already there, is skipped and it tells you so."/>
+          <TextBlock Classes="step" Text="SCUM loads mods from …\SCUM\Content\Paks\~mods — you can open that folder from Settings → Game."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Where your work is kept" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="SCMW — Lone Wolf keeps everything in your workspace folder — Settings → Workspace → Open folder. Inside are Projects, Builds, Backups and a Cache."/>
+          <TextBlock Classes="step" Text="The Cache is the item list and pictures read from the game. Settings → Re-read Game Data clears it and reads fresh from SCUM."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Updating" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="Updating is safe. Your work lives outside the app folder, so replacing it changes nothing."/>
+          <TextBlock Classes="step" Text="Your projects, built mods and backups are in Documents\SCMW. Your settings and unlock key are in %APPDATA%\SCMW."/>
+          <TextBlock Classes="step" Text="To update: download the new version and replace the app folder. Nothing else needs deleting."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Uninstalling" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="SCMW — Lone Wolf is portable — no installer, no registry entries, no services. Uninstalling is mostly just deleting its folder."/>
+          <TextBlock Classes="step" Text="1.  Optional: take your mods out of the game first (Build → Remove from SCUM, or the Mods screen)."/>
+          <TextBlock Classes="step" Text="2.  Close the app."/>
+          <TextBlock Classes="step" Text="3.  Delete the app folder."/>
+          <TextBlock Classes="step" Text="Your projects and settings are left behind, so reinstalling picks up where you left off."/>
+          <TextBlock Classes="step" Text="To remove everything too: your work is the workspace folder — open the app and use Settings → Workspace → Open folder. Your settings and key are in a folder you can find by pasting %APPDATA%\SCMW into File Explorer's address bar."/>
+          <TextBlock Classes="step" Text="⚠  Careful: deleting the workspace removes your projects and backups for good."
+                     Foreground="{StaticResource WarningBrush}"/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="When something looks wrong" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="'Couldn't open the game folder' — set your SCUM folder in Settings."/>
+          <TextBlock Classes="step" Text="Installing says to close the game — close SCUM, then try again."/>
+          <TextBlock Classes="step" Text="A write seems blocked (SCUM is often in Program Files) — run SCMW — Lone Wolf as administrator."/>
+          <TextBlock Classes="step" Text="The key Test fails — the key may have changed after a SCUM update."/>
+          <TextBlock Classes="step" Text="The item list looks out of date — Settings → Re-read Game Data."/>
+        </StackPanel>
+      </Expander>
+
+      <Expander Header="Word list" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="step" Text="Project — a mod you're building; a container for your changes."/>
+          <TextBlock Classes="step" Text="Pak (.pak) — the file format SCUM loads mods from."/>
+          <TextBlock Classes="step" Text="Unlock key — the shared key that lets tools read SCUM's files."/>
+          <TextBlock Classes="step" Text="Workspace — the folder where SCMW — Lone Wolf keeps your projects and scratch data."/>
+          <TextBlock Classes="step" Text="Vanilla — SCUM with no mods."/>
+        </StackPanel>
+      </Expander>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

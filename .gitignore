@@ -1,0 +1,14 @@
+﻿bin/
+obj/
+.vs/
+*.user
+.superpowers/
+artifacts/
+
+# Private / internal — these live in the separate private repo (SCMW-Lone-Wolf-Internal),
+# never in the public repository.
+AGENTS.md
+docs/
+Ideas/
+design-sources/
+/*.png

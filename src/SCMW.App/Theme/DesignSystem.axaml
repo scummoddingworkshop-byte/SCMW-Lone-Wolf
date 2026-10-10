@@ -1,0 +1,291 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:SCMW.App">
+  <!-- SCMW — Lone Wolf design system: control looks. Screens use these classes; they set no colours. -->
+
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="22"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.section">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
+    <Setter Property="app:UppercaseText.Enabled" Value="True"/>
+  </Style>
+  <Style Selector="TextBlock.dim">
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{StaticResource BgPanelBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16"/>
+  </Style>
+
+  <!-- Spec §5: quick-action card and list row light up on hover. -->
+  <Style Selector="Border.quickaction">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16"/>
+  </Style>
+  <Style Selector="Border.quickaction:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+  <Style Selector="Border.listrow">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,9"/>
+  </Style>
+  <Style Selector="Border.listrow:pointerover">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+  </Style>
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+
+  <!-- A setting row's action button: one size everywhere, so they line up in a column. -->
+  <Style Selector="Button.rowaction">
+    <Setter Property="Width" Value="160"/>
+    <Setter Property="HorizontalAlignment" Value="Right"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+  </Style>
+  <!-- The advanced section at the foot of Settings reads as a card like the rest. -->
+  <Style Selector="Expander.card">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="12"/>
+  </Style>
+
+  <!-- Launch buttons: taller, roomier, and easy to hit. -->
+  <Style Selector="Button.launch">
+    <Setter Property="Padding" Value="14,12"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+  </Style>
+
+  <Style Selector="Border.chip">
+    <Setter Property="Background" Value="#2A2520"/>
+    <Setter Property="BorderBrush" Value="#3D3831"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="999"/>
+    <Setter Property="Padding" Value="8,3"/>
+  </Style>
+  <!-- Raise chip label contrast (declared after .dim so it wins inside a chip). -->
+  <Style Selector="Border.chip TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
+  <Style Selector="Border.chip.success">
+    <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+  </Style>
+  <Style Selector="Border.chip.warning">
+    <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
+  </Style>
+
+  <Style Selector="TextBox.field">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="10,6"/>
+  </Style>
+  <Style Selector="TextBox.field:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <Style Selector="ListBox.rail">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+
+  <!-- Project card: a clickable tile whose hover lights the border. -->
+  <Style Selector="Border.thumb">
+    <Setter Property="Background" Value="{StaticResource BgPanelBrush}"/>
+    <Setter Property="CornerRadius" Value="8"/>
+  </Style>
+  <Style Selector="Button.projectcard">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="12"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Button.projectcard:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <!-- Home hero band (art slot ready on top). -->
+  <Style Selector="Border.hero">
+    <Setter Property="Background" Value="{StaticResource HeroBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+  </Style>
+  <!-- Quick-action tile: a button that lights its border on hover. -->
+  <Style Selector="Button.quickaction">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="VerticalContentAlignment" Value="Top"/>
+  </Style>
+  <Style Selector="Button.quickaction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <!-- Projects tile: a plain surface (never a button) that holds its own controls. -->
+  <Style Selector="Border.projecttile">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="12"/>
+  </Style>
+  <Style Selector="Border.projecttile:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <!-- Items list: plain rows in a ListBox (selection for free, no nested buttons). -->
+  <Style Selector="ListBox.items">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="ListBox.items ListBoxItem">
+    <Setter Property="Padding" Value="8,10"/>
+    <Setter Property="Margin" Value="0,1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
+  <Style Selector="ListBox.items ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+  </Style>
+  <Style Selector="ListBox.items ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="TextElement.Foreground" Value="{StaticResource OnAccentBrush}"/>
+  </Style>
+  <Style Selector="ListBox.items ListBoxItem:selected TextBlock.dim">
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}"/>
+  </Style>
+
+  <!-- A value that looks editable, and a changed value in the accent colour. -->
+  <Style Selector="Button.valuefield">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="6,2"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
+  <Style Selector="Button.valuefield:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.changed">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
+  <!-- Category chips: a single-select pill row. -->
+  <Style Selector="ListBox.chips">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="ListBox.chips ListBoxItem">
+    <Setter Property="Padding" Value="10,3"/>
+    <Setter Property="Margin" Value="0,0,6,6"/>
+    <Setter Property="CornerRadius" Value="999"/>
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <!-- Slightly smaller chip labels, so more fit without crowding. -->
+  <Style Selector="ListBox.chips ListBoxItem TextBlock">
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+  <Style Selector="ListBox.chips ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="TextElement.Foreground" Value="{StaticResource OnAccentBrush}"/>
+  </Style>
+
+  <!-- Build step pills and change rows. -->
+  <Style Selector="Border.step">
+    <Setter Property="Background" Value="{StaticResource BgPanelBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="999"/>
+    <Setter Property="Padding" Value="14,7"/>
+  </Style>
+  <Style Selector="Border.step.active">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+  </Style>
+  <Style Selector="Border.step.active TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}"/>
+  </Style>
+  <Style Selector="Border.step.done">
+    <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+  </Style>
+  <Style Selector="Border.changerow">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+
+  <!-- One installed mod. A plain surface holding a switch and buttons (never nested). -->
+  <Style Selector="Border.modrow">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,10"/>
+  </Style>
+  <Style Selector="Border.modrow TextBlock.modname">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
+  <Style Selector="Border.modrow TextBlock.modname.off">
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
+  </Style>
+
+  <!-- The "drag a .pak here" strip on Mods. -->
+  <Style Selector="Border.dropzone">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16,12"/>
+  </Style>
+</Styles>
