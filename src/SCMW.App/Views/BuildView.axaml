@@ -36,7 +36,8 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:BuildValueChange">
                         <Grid ColumnDefinitions="*,*" Margin="0,1">
-                          <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"/>
+                          <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"
+                                     HorizontalAlignment="Right" Margin="0,0,10,0"/>
                           <TextBlock Grid.Column="1" Text="{Binding Summary}"
                                      Foreground="{StaticResource AccentBrush}"/>
                         </Grid>
