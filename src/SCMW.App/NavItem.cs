@@ -7,4 +7,8 @@ namespace SCMW.App;
 /// dark one for the selected row (which sits on the copper accent).
 /// </summary>
 public sealed record NavItem(ScreenKey Key, string Label,
-                             IImage? Icon = null, IImage? IconSelected = null);
+                             IImage? Icon = null, IImage? IconSelected = null)
+{
+    /// <summary>Which band of the rail this row sits in.</summary>
+    public NavBand Band => NavBands.For(Key);
+}
