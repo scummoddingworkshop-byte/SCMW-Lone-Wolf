@@ -36,8 +36,10 @@ public sealed class ModInstaller
             string? backup = null;
             try
             {
-                // 2. Back up a same-name file we are about to replace.
-                if (File.Exists(target))
+                // 2. Back up a same-name file we are about to replace — but only a file that is NOT
+                //    ours. A previous build of the same project has the same name, and backing that
+                //    up would let "Remove mod" restore the mod it just deleted.
+                if (File.Exists(target) && !BuildNames.IsOurPak(Path.GetFileName(target)))
                 {
                     Directory.CreateDirectory(_backupsRoot);
                     backup = Path.Combine(_backupsRoot,
@@ -54,34 +56,44 @@ public sealed class ModInstaller
                 throw;
             }
 
-            // 4. Remove a switched-off same-name copy (the Mods screen renames files to disable
-            //    them): it is the same mod, so keep only the switched-on one.
-            var disabledTwin = target + ".disabled";
-            if (File.Exists(disabledTwin))
+            // From here the pak IS in place, so nothing below may report the install as failed —
+            // these are tidy-ups, and a hiccup is logged as a warning instead.
+            try
             {
-                Directory.CreateDirectory(_backupsRoot);
-                File.Copy(disabledTwin, Path.Combine(_backupsRoot,
-                    $"{Path.GetFileName(target)} ({DateTime.Now:yyyyMMdd-HHmmss}).disabled"), true);
-                File.Delete(disabledTwin);
+                // 4. Remove a switched-off same-name copy (the Mods screen renames files to disable
+                //    them): it is the same mod, so keep only the switched-on one.
+                var disabledTwin = target + ".disabled";
+                if (File.Exists(disabledTwin))
+                {
+                    Directory.CreateDirectory(_backupsRoot);
+                    File.Copy(disabledTwin, Path.Combine(_backupsRoot,
+                        $"{Path.GetFileName(target)} ({DateTime.Now:yyyyMMdd-HHmmss}).disabled"), true);
+                    File.Delete(disabledTwin);
+                }
+
+                // 5. Remove older versions of THIS project only (never the file we just wrote).
+                foreach (var file in Directory.GetFiles(mods))
+                {
+                    if (PathsEqual(file, target)) continue;
+                    if (BuildNames.IsOlderPakOfProject(Path.GetFileName(file), record.ProjectName))
+                        File.Delete(file);
+                }
+
+                // 6. Remove a previous install recorded under a different name (a project rename).
+                var previous = _store.Load(record.ProjectId);
+                if (previous is not null && !PathsEqual(previous.InstalledPath, target)
+                    && File.Exists(previous.InstalledPath))
+                {
+                    File.Delete(previous.InstalledPath);
+                }
+
+                _store.Save(record with { InstalledPath = target, BackupPath = backup });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                SCMW.Core.Logging.Log.Warn($"Installed the mod, but a tidy-up step failed ({ex.GetType().Name}).");
             }
 
-            // 5. Remove older versions of THIS project only (never the file we just wrote).
-            foreach (var file in Directory.GetFiles(mods))
-            {
-                if (PathsEqual(file, target)) continue;
-                if (BuildNames.IsOlderPakOfProject(Path.GetFileName(file), record.ProjectName))
-                    File.Delete(file);
-            }
-
-            // 6. Remove a previous install recorded under a different name (a project rename).
-            var previous = _store.Load(record.ProjectId);
-            if (previous is not null && !PathsEqual(previous.InstalledPath, target)
-                && File.Exists(previous.InstalledPath))
-            {
-                File.Delete(previous.InstalledPath);
-            }
-
-            _store.Save(record with { InstalledPath = target, BackupPath = backup });
             return new InstallOutcome(true, target, null);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

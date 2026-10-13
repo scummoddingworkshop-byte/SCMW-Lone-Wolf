@@ -39,4 +39,16 @@ public interface IPakMount : IDisposable
         exports = Array.Empty<UObject>();
         return false;
     }
+
+    /// <summary>
+    /// Reads a package's raw files (<c>.uasset</c>/<c>.uexp</c>/…) keyed by file name — the same
+    /// bytes the build writer edits. Used by the nested-value reader, which needs the writer's
+    /// library (UAssetAPI) to see inside structs. Default returns false so simple fakes need not
+    /// implement it; the real <see cref="PakMount"/> overrides it.
+    /// </summary>
+    bool TryReadPackage(string packagePath, out IReadOnlyDictionary<string, byte[]>? files)
+    {
+        files = null;
+        return false;
+    }
 }

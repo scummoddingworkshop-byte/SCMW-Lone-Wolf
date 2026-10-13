@@ -38,6 +38,22 @@ public class SettingsStoreTests
         Assert.Empty(Directory.GetFiles(dir, "*.tmp"));
     }
 
+    [Fact] // a locked settings file must not crash the app on save (it saves on every keystroke)
+    public void A_locked_settings_file_does_not_throw_on_save()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "scmw-set-" + Guid.NewGuid());
+        var store = new JsonSettingsStore(dir);
+        store.Save(new AppSettings(@"C:\w", @"C:\g"));
+
+        var path = Path.Combine(dir, "settings.json");
+        using (var hold = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            store.Save(new AppSettings(@"C:\w2", @"C:\g2"));   // must not throw
+        }
+
+        Assert.Equal(@"C:\w", store.Load().WorkspacePath);     // the previous file is intact
+    }
+
     [Fact] // Review Focus #3: corrupt settings -> defaults + warn, never crash
     public void Corrupt_json_falls_back_to_defaults()
     {

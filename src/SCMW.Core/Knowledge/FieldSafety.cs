@@ -28,7 +28,7 @@ public static class FieldSafety
             "MaxHealth", "MaxHealthRatioAfterReachingBadQuality", "BoundsRadius",
             "MaxRadiationAmountPerWeight", "DefaultDirtiness",
             // Stack size on an item's component object.
-            "MaxQuantity",
+            "MaxQuantity", "MaxStackSize",
             // Display text.
             "Caption", "Description",
         },
@@ -57,8 +57,7 @@ public static class FieldSafety
     {
         var name = string.IsNullOrWhiteSpace(technicalName) ? null : technicalName.Trim();
 
-        if (name is not null &&
-            StructuralKeywords.Any(k => name.Contains(k, StringComparison.OrdinalIgnoreCase)))
+        if (IsStructuralName(name))
             return EditSafety.Unsafe;
 
         if (name is not null && KnownSafeNames.Contains(name))
@@ -70,6 +69,20 @@ public static class FieldSafety
 
         return EditSafety.Unsafe;
     }
+
+    /// <summary>
+    /// True when the name carries a structural meaning (a mesh, an array, a reference, …) even
+    /// before the type is looked at. Shared with <see cref="ValueSafety"/> so both agree.
+    /// </summary>
+    internal static bool IsStructuralName(string? technicalName)
+    {
+        var name = string.IsNullOrWhiteSpace(technicalName) ? null : technicalName.Trim();
+        return name is not null &&
+               StructuralKeywords.Any(k => name.Contains(k, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The plain type core of a UE type hint ("FloatProperty" → "float"), or null.</summary>
+    internal static string? TypeCore(string? valueTypeHint) => Core(valueTypeHint);
 
     private static string? Core(string? valueTypeHint)
     {

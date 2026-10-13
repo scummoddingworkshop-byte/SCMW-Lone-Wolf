@@ -297,12 +297,27 @@ public partial class BuildViewModel : ObservableObject
         RemoveCommand.NotifyCanExecuteChanged();
     }
 
+    /// <summary>A game swap asked for while a build was running, applied when it ends.</summary>
+    private (IBuildService? Service, IGameLauncher? Launcher)? _pendingUseGame;
+
     /// <summary>
     /// Swaps in the real game engine once the player has configured SCUM — which may happen after
     /// this screen was built. Any practice build and stale state are cleared so the screen starts
     /// fresh against the real game.
     /// </summary>
     public void UseGame(IBuildService? service, IGameLauncher? launcher)
+    {
+        // Never swap the engine out from under a build that is still running; do it when it ends.
+        if (State == BuildState.Running)
+        {
+            _pendingUseGame = (service, launcher);
+            return;
+        }
+
+        ApplyGame(service, launcher);
+    }
+
+    private void ApplyGame(IBuildService? service, IGameLauncher? launcher)
     {
         _service = service;
         _launcher = launcher;
@@ -316,6 +331,16 @@ public partial class BuildViewModel : ObservableObject
         OnPropertyChanged(nameof(CanLaunch));
         OnPropertyChanged(nameof(ShowLaunchNote));
         LaunchCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Applies a game swap that was deferred because a build was running.</summary>
+    private void FlushPendingUseGame()
+    {
+        if (_pendingUseGame is { } pending)
+        {
+            _pendingUseGame = null;
+            ApplyGame(pending.Service, pending.Launcher);
+        }
     }
 
     public IReadOnlyList<ModBuildStep> Steps { get; }
@@ -360,6 +385,14 @@ public partial class BuildViewModel : ObservableObject
             return;
         }
 
+        if (!SCMW.Backend.Build.BuildNames.IsValidVersion(ModVersion))
+        {
+            ShowFailure("That version isn't usable.",
+                "The mod version should look like 1.0.0 — three numbers separated by dots.",
+                "Change the version on the Build screen, then press Build again.", "");
+            return;
+        }
+
         var projectId = project.Id;
         var records = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
         var token = RecordsToken(records);
@@ -369,7 +402,21 @@ public partial class BuildViewModel : ObservableObject
         UpdateSteps();
 
         var progress = new Progress<int>(i => { _stepIndex = Math.Clamp(i, 0, Steps.Count - 1); UpdateSteps(); });
-        var outcome = await _service.BuildAsync(project.Name, ModVersion, BuildItemsFrom(records), progress, CancellationToken.None);
+
+        SCMW.Backend.Build.BuildOutcome outcome;
+        try
+        {
+            outcome = await _service.BuildAsync(project.Name, ModVersion, BuildItemsFrom(records), progress, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // A backend surprise (a missing tool, a locked file) must be one plain message, not a crash.
+            SCMW.Core.Logging.Log.Warn($"Build failed unexpectedly ({ex.GetType().Name}).");
+            ShowFailure("The mod could not be made.",
+                "Something unexpected went wrong while reading or writing the game files.",
+                "Try again. If it keeps happening, close anything using SCUM's files and retry.", "");
+            return;
+        }
 
         // If the project or the changes moved while we were building, this outcome is stale.
         var currentRecords = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
@@ -389,24 +436,54 @@ public partial class BuildViewModel : ObservableObject
         }
         else
         {
-            ShowFailure("The mod could not be made.",
-                outcome.Error ?? "Something in the game files was not in the shape we expected.",
-                "Check your SCUM folder in Settings, then try again.", "");
+            var error = outcome.Error ?? "Something in the game files was not in the shape we expected.";
+
+            // Only offer the folder hint when the problem really is the game folder; otherwise the
+            // error itself is the actionable message (e.g. an item name that matches more than one).
+            var next = error.Contains("SCUM folder", StringComparison.OrdinalIgnoreCase)
+                       || error.Contains("SCUM's files", StringComparison.OrdinalIgnoreCase)
+                ? "Check your SCUM folder in Settings, then try again."
+                : "";
+
+            ShowFailure("The mod could not be made.", error, next, "");
         }
     }
 
-    /// <summary>One item per recorded asset, one value per field (the latest recorded value).</summary>
+    /// <summary>
+    /// One item per recorded asset. A list change (add/remove an entry) is kept in the order it was
+    /// recorded; a value edit collapses to the latest value per field. List changes run first, so a
+    /// value edit on a slot that a change just added or shifted lands on the right entry.
+    /// </summary>
     private static IReadOnlyList<BuildItem> BuildItemsFrom(IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
         => records
-            .GroupBy(r => r.AssetId, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new BuildItem(g.Key, g
-                .GroupBy(r => r.FieldTechnicalName, StringComparer.OrdinalIgnoreCase)
-                .Select(f => new FieldChange(f.Key, f.Last().NewValue)).ToList()))
+            // Resolve by the asset's own path when we have it; fall back to the friendly name only
+            // for records made before paths were kept. This is what keeps two same-named assets apart.
+            .GroupBy(r => r.AssetPath ?? r.AssetId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new BuildItem(g.Key, ChangesFor(g)))
             .ToList();
+
+    private static IReadOnlyList<FieldChange> ChangesFor(IEnumerable<SCMW.Core.Editing.ChangeRecord> records)
+    {
+        var listChanges = new List<FieldChange>();
+        var latestValue = new Dictionary<string, SCMW.Core.Editing.ChangeRecord>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var record in records)
+        {
+            if (record.Operation == SCMW.Core.Editing.ChangeOperation.Set)
+                latestValue[record.FieldTechnicalName] = record;
+            else
+                listChanges.Add(new FieldChange(record.FieldTechnicalName, record.NewValue, record.Operation));
+        }
+
+        var changes = new List<FieldChange>(listChanges);
+        foreach (var record in latestValue.Values)
+            changes.Add(new FieldChange(record.FieldTechnicalName, record.NewValue));
+        return changes;
+    }
 
     /// <summary>A cheap fingerprint of the current project's changes, to detect edits mid-build.</summary>
     private static string RecordsToken(IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
-        => string.Join("|", records.Select(r => $"{r.AssetId}\u001f{r.FieldTechnicalName}\u001f{r.NewValue}"));
+        => string.Join("|", records.Select(r => $"{r.AssetPath}\u001f{r.AssetId}\u001f{r.FieldTechnicalName}\u001f{r.Operation}\u001f{r.NewValue}"));
 
     /// <summary>Copies the last built `.pak` into SCUM. Only available with a real service.</summary>
     [RelayCommand(CanExecute = nameof(CanInstall))]
@@ -483,6 +560,7 @@ public partial class BuildViewModel : ObservableObject
         FailureDetails = details;
         CanRestartAsAdmin = needsAdmin && _elevation is { IsElevated: false };
         State = BuildState.Failed;
+        FlushPendingUseGame();
     }
 
     /// <summary>Reopens SCMW with administrator rights so a blocked write can go through.</summary>
@@ -535,6 +613,7 @@ public partial class BuildViewModel : ObservableObject
         _builtStamp = CurrentStamp();
         State = BuildState.Succeeded;
         NotifyInstallState();
+        FlushPendingUseGame();
     }
 
     /// <summary>A fingerprint of what was just built: the version plus the current changes.</summary>

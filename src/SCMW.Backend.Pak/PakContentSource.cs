@@ -29,6 +29,10 @@ public sealed class PakContentSource : IContentSource
 {
     private const string ItemsRoot = "SCUM/Content/ConZ_Files/Items/";
 
+    // Base-building elements (the well and its relatives) live here; their values sit on the
+    // blueprint's default object, so the same reading machinery serves them.
+    private const string BaseElementsRoot = "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/";
+
     // Shown (and returned as the scan Error) when the pak enumerates but its item
     // packages cannot actually be decrypted — a missing/rotated/wrong AES key.
     private const string WrongKeyMessage =
@@ -124,7 +128,11 @@ public sealed class PakContentSource : IContentSource
             if (_dbPath is null || _index is null)
                 return null;
 
-            _gate.Wait();
+            // Never block the caller (often the screen's own thread) behind a long scan: give up
+            // after a moment and report "not known yet" rather than freezing.
+            if (!_gate.Wait(TimeSpan.FromSeconds(2)))
+                return null;
+
             try
             {
                 return new ScanInfo(
@@ -227,56 +235,73 @@ public sealed class PakContentSource : IContentSource
                 return new ContentSourceStatus(ContentSourceState.Error,
                     "Pak is not mounted.", _knownBuildId);
 
+            var previous = Status;
             Status = new(ContentSourceState.Scanning, "Scanning items...", _knownBuildId);
 
-            // Index-backed path (production): persist to SQLite and serve searches
-            // from it. A fresh (non-stale) index skips the enumeration entirely so
-            // opening Assets or rescanning never re-mounts/re-walks the pak.
-            if (_dbPath is not null && _index is not null)
+            try
             {
-                var buildId = ResolveBuildId();
-                if (_index.IsStale(_dbPath, buildId))
+                // Index-backed path (production): persist to SQLite and serve searches
+                // from it. A fresh (non-stale) index skips the enumeration entirely so
+                // opening Assets or rescanning never re-mounts/re-walks the pak.
+                if (_dbPath is not null && _index is not null)
                 {
-                    var items = Enumerate(progress, ct);
-                    if (!ProbeItemReadable(items))
+                    var buildId = ResolveBuildId();
+                    if (_index.IsStale(_dbPath, buildId))
                     {
-                        Status = new(ContentSourceState.Error, WrongKeyMessage, buildId);
-                        return Status;
+                        var items = Enumerate(progress, ct);
+                        if (!ProbeItemReadable(items))
+                        {
+                            Status = new(ContentSourceState.Error, WrongKeyMessage, buildId);
+                            return Status;
+                        }
+
+                        _index.ReplaceAll(_dbPath, buildId, items);
+                        _categories = _index.Categories(_dbPath);
+                        Status = new(ContentSourceState.Ready,
+                            $"Indexed {items.Count} items from build {buildId}.", buildId);
+                    }
+                    else
+                    {
+                        _categories = _index.Categories(_dbPath);
+                        var count = _index.Count(_dbPath);
+                        Status = new(ContentSourceState.Ready,
+                            $"{count} items (build {buildId}, index up to date).", buildId);
                     }
 
-                    _index.ReplaceAll(_dbPath, buildId, items);
-                    _categories = _index.Categories(_dbPath);
-                    Status = new(ContentSourceState.Ready,
-                        $"Indexed {items.Count} items from build {buildId}.", buildId);
+                    return Status;
                 }
-                else
+
+                // In-memory fallback (no db path): same behavior as before the index.
+                var scanned = Enumerate(progress, ct);
+                if (!ProbeItemReadable(scanned))
                 {
-                    _categories = _index.Categories(_dbPath);
-                    var count = _index.Count(_dbPath);
-                    Status = new(ContentSourceState.Ready,
-                        $"{count} items (build {buildId}, index up to date).", buildId);
+                    Status = new(ContentSourceState.Error, WrongKeyMessage, _knownBuildId);
+                    return Status;
                 }
 
+                _items = scanned;
+                _categories = scanned
+                    .Select(i => i.Category)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(c => c, StringComparer.Ordinal)
+                    .ToArray();
+
+                Status = new(ContentSourceState.Ready, $"Found {scanned.Count} items.", _knownBuildId);
                 return Status;
             }
-
-            // In-memory fallback (no db path): same behavior as before the index.
-            var scanned = Enumerate(progress, ct);
-            if (!ProbeItemReadable(scanned))
+            catch (OperationCanceledException)
             {
-                Status = new(ContentSourceState.Error, WrongKeyMessage, _knownBuildId);
+                // Never leave the screen stuck on "Scanning…" when a read is stopped.
+                Status = previous;
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"Scan failed unexpectedly ({ex.GetType().Name}).");
+                Status = new(ContentSourceState.Error,
+                    "Reading SCUM's files stopped unexpectedly. Try again.", _knownBuildId);
                 return Status;
             }
-
-            _items = scanned;
-            _categories = scanned
-                .Select(i => i.Category)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(c => c, StringComparer.Ordinal)
-                .ToArray();
-
-            Status = new(ContentSourceState.Ready, $"Found {scanned.Count} items.", _knownBuildId);
-            return Status;
         }
         finally
         {
@@ -327,38 +352,39 @@ public sealed class PakContentSource : IContentSource
             if (!_mount.IsMounted || string.IsNullOrWhiteSpace(assetId))
                 return Array.Empty<AssetField>();
 
-            // The item's configured values live on the class default object
-            // (Default__<AssetName>_C). The bare path form would fail: CUE4Parse
-            // treats a trailing ".uasset" as an object name (spike findings).
-            var cdoPath = CdoPathOf(assetId);
-
-            if (!_mount.TryLoadPackageObject(cdoPath, out var cdo) || cdo is null)
-                return Array.Empty<AssetField>();
-
             var fields = new List<AssetField>();
-            foreach (var prop in cdo.Properties)
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Most items are blueprints: their configured values live on the class default object
+            // (Default__<AssetName>_C). The bare path form would fail: CUE4Parse treats a trailing
+            // ".uasset" as an object name (spike findings). A data asset (a recipe) has no default
+            // object — that is not an error, so we carry on to the other reads below.
+            var cdoPath = CdoPathOf(assetId);
+            if (_mount.TryLoadPackageObject(cdoPath, out var cdo) && cdo is not null)
             {
-                var technicalName = string.IsNullOrEmpty(prop.Name.Text)
-                    ? prop.Name.ToString()
-                    : prop.Name.Text;
-                var value = prop.Tag?.GenericValue?.ToString() ?? string.Empty;
+                foreach (var prop in cdo.Properties)
+                {
+                    var technicalName = string.IsNullOrEmpty(prop.Name.Text)
+                        ? prop.Name.ToString()
+                        : prop.Name.Text;
+                    var value = prop.Tag?.GenericValue?.ToString() ?? string.Empty;
 
-                // The UE property type (e.g. "IntProperty", "FloatProperty", "BoolProperty",
-                // "StrProperty", "ObjectProperty") is the honesty engine's type clue for
-                // judging write capability. Read straight off the tag so the UI never has to.
-                var typeHint = prop.PropertyType.Text;
+                    // The UE property type (e.g. "IntProperty", "FloatProperty", "BoolProperty",
+                    // "StrProperty", "ObjectProperty") is the honesty engine's type clue for
+                    // judging write capability. Read straight off the tag so the UI never has to.
+                    var typeHint = prop.PropertyType.Text;
 
-                // Honesty rule: nothing is known to be editable or safe yet.
-                // FriendlyName mirrors the technical name for now (Plan 3 maps it).
-                fields.Add(new AssetField(technicalName, technicalName, StatusKind.ReadOnly, value, typeHint));
+                    // Honesty rule: nothing is known to be editable or safe yet.
+                    // FriendlyName mirrors the technical name for now (Plan 3 maps it).
+                    fields.Add(new AssetField(technicalName, technicalName, StatusKind.ReadOnly, value, typeHint));
+                    seen.Add(technicalName);
+                }
             }
 
             // Fields can also live on the item's component objects (e.g. MaxQuantity on a stackable
             // component); read those too, keeping one row per distinct property name.
             if (_mount.TryLoadExports(assetId, out var exports))
             {
-                var seen = new HashSet<string>(
-                    fields.Select(f => f.TechnicalName), StringComparer.OrdinalIgnoreCase);
                 foreach (var export in exports)
                 {
                     foreach (var prop in export.Properties)
@@ -369,6 +395,18 @@ public sealed class PakContentSource : IContentSource
                         var value = prop.Tag?.GenericValue?.ToString() ?? string.Empty;
                         fields.Add(new AssetField(name, name, StatusKind.ReadOnly, value, prop.PropertyType.Text));
                     }
+                }
+            }
+
+            // Finally, the values hidden inside structs and lists (the well's water numbers, a
+            // recipe's ingredient slots and friends). CUE4Parse hands those back as opaque slots;
+            // the writer's library sees inside them. Each is addressed by a dotted path.
+            if (_mount.TryReadPackage(assetId, out var rawFiles) && rawFiles is { Count: > 0 })
+            {
+                foreach (var nested in NestedValueReader.Read(rawFiles))
+                {
+                    if (seen.Add(nested.TechnicalName))
+                        fields.Add(nested);
                 }
             }
 
@@ -598,7 +636,9 @@ public sealed class PakContentSource : IContentSource
     // Bumped when the index's own contents change (so an old cached index rebuilds once).
     // i2: categories now come from the game's own ItemSortGroup.
     // i3: folder-only categories are aliased onto the sort-group words.
-    private const string IndexFormat = "i4";
+    // i4: item index only.
+    // i5: base-building elements are indexed alongside items.
+    private const string IndexFormat = "i5";
 
     private string? DeriveBuildId()
     {
@@ -654,7 +694,8 @@ public sealed class PakContentSource : IContentSource
                 }
             }
 
-            if (TryMapItem(path, out var summary) && seenIds.Add(summary.Id))
+            if ((TryMapItem(path, out var summary) || TryMapBaseElement(path, out summary))
+                && seenIds.Add(summary.Id))
                 items.Add(WithGameCategory(summary));
         }
 
@@ -750,12 +791,44 @@ public sealed class PakContentSource : IContentSource
 
         summary = new AssetSummary(
             Id: path[..^7],                                  // package path (load key)
-            Name: assetName.Replace('_', ' ').Trim(),        // friendly name (Plan 3 owns the real one)
+            Name: AssetNames.IsRecipeName(assetName)         // a recipe gets its plain name (no CR_)
+                ? AssetNames.RecipeFriendly(assetName)
+                : assetName.Replace('_', ' ').Trim(),
             Category: category,
             Overall: StatusKind.Unknown,
             EditableCount: 0,
             TechnicalPath: path,
             IconKey: null);                                  // icons are Plan 2b
+
+        return true;
+    }
+
+    /// <summary>
+    /// Maps a pak file key to an AssetSummary when it is a base-building element (a <c>BP_Base_*</c>
+    /// blueprint under <see cref="BaseElementsRoot"/>), otherwise returns false. Same shape as
+    /// <see cref="TryMapItem"/>, so base elements flow through the app like items.
+    /// </summary>
+    internal static bool TryMapBaseElement(string path, out AssetSummary summary)
+    {
+        summary = null!;
+
+        if (!path.StartsWith(BaseElementsRoot, StringComparison.OrdinalIgnoreCase) ||
+            !path.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var fileName = path[(path.LastIndexOf('/') + 1)..];
+        var assetName = fileName[..^7]; // strip ".uasset"
+        if (!AssetNames.IsBaseElementName(assetName))
+            return false;
+
+        summary = new AssetSummary(
+            Id: path[..^7],
+            Name: AssetNames.BaseElementFriendly(assetName),
+            Category: "Base elements",
+            Overall: StatusKind.Unknown,
+            EditableCount: 0,
+            TechnicalPath: path,
+            IconKey: null);
 
         return true;
     }

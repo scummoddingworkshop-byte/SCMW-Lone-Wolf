@@ -1,5 +1,6 @@
 using Avalonia.Headless.XUnit;
 using SCMW.Backend.Build;
+using SCMW.Core.Editing;
 
 namespace SCMW.App.Tests;
 
@@ -194,6 +195,29 @@ public class BuildRealServiceTests : IDisposable
 
         var item = Assert.Single(service.SentItems!);
         Assert.Equal("GridInventoryRowSpan", Assert.Single(item.Changes).Field);
+    }
+
+    [AvaloniaFact]
+    public async Task A_list_change_is_sent_before_the_value_edits()
+    {
+        // Adding a slot, then editing a value: the build must apply the list change first, so the
+        // edit lands on the slot that now exists.
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Well (base)", "Ingredients[1].Amount.NoSkill", "4", "7", projects.Current!.Id);
+        changes.RecordListChange("Well (base)", "Ingredients", ChangeOperation.AddEntry,
+            projects.Current!.Id);
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects, service: service);
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        var item = Assert.Single(service.SentItems!);
+        Assert.Equal(ChangeOperation.AddEntry, item.Changes[0].Operation);
+        Assert.Equal("Ingredients", item.Changes[0].Field);
+        Assert.Equal(ChangeOperation.Set, item.Changes[1].Operation);
+        Assert.Equal("Ingredients[1].Amount.NoSkill", item.Changes[1].Field);
     }
 
     private sealed class FakeElevation : IElevation

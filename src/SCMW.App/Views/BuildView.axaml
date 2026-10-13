@@ -15,46 +15,51 @@
       <StackPanel Spacing="10">
         <TextBlock Text="What's in this mod" Classes="section"/>
 
-        <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:BuildChange">
-              <Border Classes="changerow" Margin="0,0,0,6">
-                <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="12">
-                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
-                      <Panel>
-                        <TextBlock Text="SCMW" FontSize="8" Foreground="{StaticResource TextDimBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <Image Source="{Binding Picture}" Stretch="UniformToFill"/>
-                      </Panel>
-                    </Border>
-                    <TextBlock Text="{Binding ItemName}" VerticalAlignment="Center"
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                  </StackPanel>
+        <!-- The list scrolls on its own (about 8-9 rows), so a long mod can't push Build off screen. -->
+        <ScrollViewer Name="ChangeListScroll" MaxHeight="480"
+                      VerticalScrollBarVisibility="Auto"
+                      IsVisible="{Binding HasChanges}">
+          <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:BuildChange">
+                <Border Classes="changerow" Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                      <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
+                        <Panel>
+                          <TextBlock Text="SCMW" FontSize="8" Foreground="{StaticResource TextDimBrush}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          <Image Source="{Binding Picture}" Stretch="UniformToFill"/>
+                        </Panel>
+                      </Border>
+                      <TextBlock Text="{Binding ItemName}" VerticalAlignment="Center"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </StackPanel>
 
-                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:BuildValueChange">
-                        <Grid ColumnDefinitions="*,*" Margin="0,1">
-                          <TextBlock Grid.Column="0" Text="{Binding ValueName, StringFormat='{}{0}:'}"
-                                     Classes="dim" Width="160" HorizontalAlignment="Right"
-                                     TextAlignment="Left" Margin="0,0,10,0"/>
-                          <TextBlock Grid.Column="1" Text="{Binding Summary}"
-                                     Foreground="{StaticResource AccentBrush}"/>
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BuildValueChange">
+                          <Grid ColumnDefinitions="*,*" Margin="0,1">
+                            <TextBlock Grid.Column="0" Text="{Binding ValueName, StringFormat='{}{0}:'}"
+                                       Classes="dim" Width="160" HorizontalAlignment="Right"
+                                       TextAlignment="Left" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Summary}"
+                                       Foreground="{StaticResource AccentBrush}"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                  <Button Grid.Column="2" Classes="secondary" Content="Remove" VerticalAlignment="Center"
-                          ToolTip.Tip="Remove this item's changes"
-                          Command="{Binding $parent[UserControl].((vm:BuildViewModel)DataContext).RemoveItemCommand}"
-                          CommandParameter="{Binding}"/>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                    <Button Grid.Column="2" Classes="secondary" Content="Remove" VerticalAlignment="Center"
+                            ToolTip.Tip="Remove this item's changes"
+                            Command="{Binding $parent[UserControl].((vm:BuildViewModel)DataContext).RemoveItemCommand}"
+                            CommandParameter="{Binding}"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
 
         <Border Name="Nudge" Classes="card" IsVisible="{Binding ShowNudge}">
           <StackPanel Spacing="10">

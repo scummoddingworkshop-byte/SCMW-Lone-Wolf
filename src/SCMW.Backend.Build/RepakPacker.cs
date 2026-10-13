@@ -27,7 +27,13 @@ public sealed class RepakPacker : IPacker
             .ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            return new PackResult(false, "The packing tool reported a problem: " + result.Output);
+        {
+            // The tool's own output can contain raw paths and jargon — keep it in the log, and give
+            // the owner one plain sentence.
+            SCMW.Core.Logging.Log.Warn($"repak failed (exit {result.ExitCode}): {result.Output}");
+            return new PackResult(false,
+                "The packing tool couldn't make the mod file. Close anything using SCUM's files and try again.");
+        }
 
         if (!File.Exists(pakPath))
             return new PackResult(false, "The packing tool finished but no .pak file appeared.");

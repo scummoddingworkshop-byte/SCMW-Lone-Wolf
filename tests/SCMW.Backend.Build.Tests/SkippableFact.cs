@@ -25,6 +25,9 @@ public sealed class SkippableFactAttribute : FactAttribute
 
     /// <summary>Reason reported when one of <see cref="EnvVars"/> is unset.</summary>
     public string EnvSkipReason { get; set; } = "Required environment variables are not set.";
+
+    /// <summary>When set, the test skips if this file (under the test output folder) is missing.</summary>
+    public string SkipIfMissingFile { get; set; } = string.Empty;
 }
 
 public class SkippableFactDiscoverer : IXunitTestCaseDiscoverer
@@ -84,6 +87,13 @@ public class SkippableFactTestCase : XunitTestCase
             if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)))
                 return factAttribute.GetNamedArgument<string>("EnvSkipReason")
                        ?? "Required environment variables are not set.";
+        }
+
+        var file = factAttribute.GetNamedArgument<string>("SkipIfMissingFile");
+        if (!string.IsNullOrWhiteSpace(file)
+            && !System.IO.File.Exists(System.IO.Path.Combine(AppContext.BaseDirectory, file)))
+        {
+            return "The bundled tool is not present in this build.";
         }
 
         return null!;

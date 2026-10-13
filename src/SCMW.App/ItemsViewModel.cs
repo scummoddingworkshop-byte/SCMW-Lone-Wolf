@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SCMW.Core.Editing;
+using SCMW.Core.Knowledge;
 
 namespace SCMW.App;
 
@@ -19,18 +21,61 @@ public partial class ItemsViewModel : ObservableObject
     private readonly ProjectStore? _projects;
     private readonly SCMW.Core.Content.IContentSource? _source;
     private readonly ContentCatalog? _catalog;
+    private readonly AssetFamily _family;
     private ItemSummary? _editingItem;
+
+    /// <summary>True when this screen shows base-building elements rather than items.</summary>
+    private bool IsBase => _family == AssetFamily.BaseElements;
+
+    /// <summary>True when this screen shows crafting recipes.</summary>
+    private bool IsRecipes => _family == AssetFamily.Recipes;
+
+    /// <summary>The real crafting-tag names the game has (loaded when a recipe is opened), so a link
+    /// edit can be checked instead of silently writing a tag the game doesn't know.</summary>
+    private IReadOnlySet<string> _linkChoices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>True for an ingredient's accepted-tag link (the only retargetable link).</summary>
+    private static bool IsRetargetableLink(ItemValue value) =>
+        value.Band == ValueBand.Noted
+        && value.TechnicalName.Contains("AllowedTypes[", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Watermark for the search box.</summary>
+    public string SearchWatermark => IsBase ? "Search base parts…" : IsRecipes ? "Search recipes…" : "Search items…";
+
+    /// <summary>The "only _ES items" toggle applies to items only.</summary>
+    public bool ShowOnlyEditableToggle => !IsBase && !IsRecipes;
+
+    /// <summary>Plain line when nothing matches the current filter.</summary>
+    public string NoMatchesText => IsBase ? "No base parts match that" : IsRecipes ? "No recipes match that" : "No items match that";
+
+    /// <summary>Plain heading when there is nothing to list.</summary>
+    public string EmptyTitle => IsBase ? "No base parts yet" : IsRecipes ? "No recipes yet" : "No items yet";
+
+    /// <summary>Plain line under the empty heading.</summary>
+    public string EmptyText => "They'll appear here once SCUM's files are read.";
+
+    /// <summary>Plain heading in the detail pane before anything is picked.</summary>
+    public string HintTitle => IsBase
+        ? "Pick a base part to see what you can change"
+        : IsRecipes
+            ? "Pick a recipe to see what you can change"
+            : "Pick an item to see what you can change";
+
+    /// <summary>Plain line under the hint heading.</summary>
+    public string HintText => "Choose something from the list on the left.";
 
     public ItemsViewModel(ItemChangeStore? changes = null, ProjectStore? projects = null,
                           IReadOnlyList<ItemSummary>? items = null,
                           SCMW.Core.Content.IContentSource? source = null,
-                          ContentCatalog? catalog = null)
+                          ContentCatalog? catalog = null,
+                          AssetFamily family = AssetFamily.Items)
     {
-        _all = (items ?? SampleItems()).ToList();
+        _all = (items ?? (family == AssetFamily.Items ? SampleItems() : Array.Empty<ItemSummary>())).ToList();
         _changes = changes;
         _projects = projects;
         _source = source;
         _catalog = catalog;
+        _family = family;
 
         _categories = BuildCategories();
         RebuildShownCategories();
@@ -165,7 +210,7 @@ public partial class ItemsViewModel : ObservableObject
 
         if (status.State != SCMW.Core.Content.ContentSourceState.Ready)
         {
-            SourceNote = SourceNoteFor(status.State);
+            RunOnUi(() => SourceNote = SourceNoteFor(status.State));
             return;
         }
 
@@ -190,24 +235,33 @@ public partial class ItemsViewModel : ObservableObject
 
             if (assets.Count == 0) return;
 
-            _all.Clear();
-            _all.AddRange(_catalog.MapItems(assets));
-            _categories = BuildCategories();
+            // Everything that touches what is on screen happens on the screen's own thread.
+            RunOnUi(() =>
+            {
+                _all.Clear();
+                _all.AddRange(_family switch
+                {
+                    AssetFamily.BaseElements => _catalog.MapBaseElements(assets),
+                    AssetFamily.Recipes => _catalog.MapRecipes(assets),
+                    _ => _catalog.MapItems(assets),
+                });
+                _categories = BuildCategories();
 
-            // A category picked on the sample list may not exist in the real one; don't leave the
-            // filter showing "No items match that" out of nowhere.
-            if (!_categories.Contains(SelectedCategory, StringComparer.Ordinal))
-                SelectedCategory = "All";
+                // A category picked on the sample list may not exist in the real one; don't leave the
+                // filter showing "No items match that" out of nowhere.
+                if (!_categories.Contains(SelectedCategory, StringComparer.Ordinal))
+                    SelectedCategory = "All";
 
-            IsUsingRealItems = true;
-            SourceNote = "";
+                IsUsingRealItems = true;
+                SourceNote = "";
 
-            OnPropertyChanged(nameof(IsUsingRealItems));
-            OnPropertyChanged(nameof(Categories));
-            OnPropertyChanged(nameof(HasMoreCategories));
-            RebuildShownCategories();
+                OnPropertyChanged(nameof(IsUsingRealItems));
+                OnPropertyChanged(nameof(Categories));
+                OnPropertyChanged(nameof(HasMoreCategories));
+                RebuildShownCategories();
 
-            Refresh();
+                Refresh();
+            });
 
             // Icons are a fast follow: the list is already usable without them.
             await RequestIconsAsync().ConfigureAwait(false);
@@ -244,14 +298,17 @@ public partial class ItemsViewModel : ObservableObject
     /// </summary>
     public async System.Threading.Tasks.Task RequestIconsAsync()
     {
+        if (_family != AssetFamily.Items) return;   // base parts and recipes show letter tiles for now
         if (_source is null || _catalog is null || !IsUsingRealItems) return;
 
         try
         {
-            var ids = VisibleItems
+            // Read the on-screen list on its own thread, then do the slow work off it.
+            List<string> ids = new();
+            RunOnUi(() => ids = VisibleItems
                 .Where(i => i.AssetId is not null)
                 .Select(i => i.AssetId!)
-                .ToList();
+                .ToList());
             if (ids.Count == 0) return;
 
             await _source.ExtractIconsAsync(ids).ConfigureAwait(false);
@@ -285,11 +342,17 @@ public partial class ItemsViewModel : ObservableObject
             // The asset id is the reader's load key (the technical path is the display description).
             var fields = await _source.FieldsAsync(item.AssetId ?? item.Description).ConfigureAwait(false);
             var values = _catalog.MapFields(fields, editableItem: item.Editable);
+
+            // A recipe's accepted tags are links; learn the real tag names so a typed one can be checked.
+            if (values.Any(IsRetargetableLink))
+                _linkChoices = await LoadLinkChoicesAsync().ConfigureAwait(false);
+
             RunOnUi(() =>
             {
                 item.SetValues(values);
                 ApplyChangesTo(item);
                 OnPropertyChanged(nameof(Sections));
+                OnPropertyChanged(nameof(CanManageIngredients));
                 OnPropertyChanged(nameof(ShowNoValues));
                 OnPropertyChanged(nameof(NoValuesText));
             });
@@ -297,6 +360,32 @@ public partial class ItemsViewModel : ObservableObject
         catch
         {
             // A field-load failure leaves the item with no values rather than crashing.
+        }
+    }
+
+    /// <summary>The real crafting-tag names (CI_*) from the game, for checking a link edit.</summary>
+    private async System.Threading.Tasks.Task<IReadOnlySet<string>> LoadLinkChoicesAsync()
+    {
+        if (_source is null) return _linkChoices;
+
+        try
+        {
+            var hits = await _source
+                .SearchAsync("CI_", null, 0, SCMW.Core.Content.ContentLimits.MaxTake)
+                .ConfigureAwait(false);
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var hit in hits)
+            {
+                var slash = hit.Id.LastIndexOf('/');
+                var name = slash >= 0 ? hit.Id[(slash + 1)..] : hit.Id;
+                if (name.StartsWith("CI_", StringComparison.OrdinalIgnoreCase)) names.Add(name);
+            }
+            return names;
+        }
+        catch
+        {
+            return _linkChoices;   // couldn't check: keep whatever we had
         }
     }
 
@@ -323,13 +412,59 @@ public partial class ItemsViewModel : ObservableObject
             var item = SelectedItem;
             if (item is null) return Array.Empty<ValueGroup>();
 
-            return item.Values
-                .Where(v => v.Editable || ShowAllValues)
-                .GroupBy(v => v.Group)
-                .Select(g => new ValueGroup(g.Key, g.ToList()))
-                .ToList();
+            return GroupSections(item.Values.Where(v => v.Editable || ShowAllValues));
         }
     }
+
+    /// <summary>The fixed order of sections, whatever order the game lists a file's fields in.</summary>
+    private static readonly string[] SectionOrder =
+    {
+        "Inventory", "Gameplay", "Appearance", "ItemSettings", "Other",
+    };
+
+    /// <summary>
+    /// Groups values into sections in a fixed order, and sorts the values inside each section by
+    /// their shown name — so every item reads the same way, no matter how its file is ordered.
+    /// </summary>
+    internal static IReadOnlyList<ValueGroup> GroupSections(IEnumerable<ItemValue> values)
+    {
+        return values
+            .GroupBy(v => v.Group)
+            .OrderBy(g => SectionRank(g.Key))
+            .ThenBy(g => SectionSortKey(g.Key), StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var ordered = g.OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                var slot = SlotOf(g.First().TechnicalName);
+                return new ValueGroup(g.Key, ordered,
+                    slot is null ? null : SlotPrefix + slot.Value + "]");
+            })
+            .ToList();
+    }
+
+    /// <summary>A section's rank in the fixed order; an unrecognised section sorts last.</summary>
+    private static int SectionRank(string name)
+    {
+        var index = Array.FindIndex(SectionOrder,
+            s => string.Equals(s, name, StringComparison.OrdinalIgnoreCase));
+        return index < 0 ? SectionOrder.Length : index;
+    }
+
+    /// <summary>A tie-breaker so "Ingredient 2" sorts before "Ingredient 10".</summary>
+    private static string SectionSortKey(string name)
+    {
+        const string ingredient = "Ingredient ";
+        if (name.StartsWith(ingredient, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(name[ingredient.Length..], out var number))
+        {
+            return ingredient + number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return name;
+    }
+
+    /// <summary>True when the selected item has ingredient slots, so Add/Remove can be offered.</summary>
+    public bool CanManageIngredients =>
+        SelectedItem is { } item && item.GameValues.Any(v => SlotOf(v.TechnicalName) is not null);
 
     private ItemSummary? _previousItem;
 
@@ -357,6 +492,7 @@ public partial class ItemsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(ShowHint));
         OnPropertyChanged(nameof(Sections));
+        OnPropertyChanged(nameof(CanManageIngredients));
         OnPropertyChanged(nameof(ShowNoValues));
         OnPropertyChanged(nameof(NoValuesText));
 
@@ -407,6 +543,7 @@ public partial class ItemsViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(Sections));
+        OnPropertyChanged(nameof(CanManageIngredients));
     }
 
     /// <summary>Applies the current project's records to one item's values (used on load and selection).</summary>
@@ -421,14 +558,132 @@ public partial class ItemsViewModel : ObservableObject
         ApplyChangesTo(item, records);
     }
 
-    private static void ApplyChangesTo(ItemSummary item, IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
+    private static void ApplyChangesTo(ItemSummary item, IReadOnlyList<ChangeRecord> records)
     {
+        // List changes (add/remove an ingredient slot) first, then the value edits on top — the
+        // same order the build applies them, so what is shown matches what is built.
+        item.ReplaceValues(ApplyListOps(item.GameValues, records, item.Name));
+
         foreach (var value in item.Values)
         {
-            var applied = SCMW.Core.Editing.AppliedValue.Resolve(records, item.Name, value.TechnicalName, value.GameValue);
+            var applied = AppliedValue.Resolve(records, item.Name, value.TechnicalName, value.GameValue);
             value.OriginalValue = FirstOldValue(records, item.Name, value.TechnicalName) ?? value.GameValue;
             value.Value = applied ?? value.GameValue;
         }
+    }
+
+    /// <summary>The ingredient-slot field prefix (a recipe's list of ingredients).</summary>
+    private const string SlotPrefix = "Ingredients[";
+
+    /// <summary>Applies the recorded add/remove list changes to the game's values, in order.</summary>
+    private static IReadOnlyList<ItemValue> ApplyListOps(
+        IReadOnlyList<ItemValue> gameValues, IReadOnlyList<ChangeRecord> records, string assetName)
+    {
+        var ops = records
+            .Where(r => r.Operation != ChangeOperation.Set
+                        && string.Equals(r.AssetId, assetName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (ops.Count == 0) return gameValues;
+
+        var values = gameValues.ToList();
+        foreach (var op in ops)
+        {
+            if (op.Operation == ChangeOperation.AddEntry)
+                values = AddSlot(values);
+            else if (SlotOf(op.FieldTechnicalName) is { } index)
+                values = RemoveSlot(values, index);
+        }
+        return values;
+    }
+
+    /// <summary>Adds a slot by copying the last one's values with the next index.</summary>
+    private static List<ItemValue> AddSlot(List<ItemValue> values)
+    {
+        var highest = values
+            .Select(v => SlotOf(v.TechnicalName))
+            .Where(i => i is not null)
+            .Select(i => i!.Value)
+            .DefaultIfEmpty(-1)
+            .Max();
+        if (highest < 0) return values;
+
+        var next = highest + 1;
+        var result = new List<ItemValue>(values);
+        foreach (var value in values.Where(v => SlotOf(v.TechnicalName) == highest))
+            result.Add(Rewrite(value, ReplaceSlot(value.TechnicalName, next), useGameValue: true));
+        return result;
+    }
+
+    /// <summary>Removes a slot and shifts the later slots down so their paths stay right.</summary>
+    private static List<ItemValue> RemoveSlot(List<ItemValue> values, int index)
+    {
+        var result = new List<ItemValue>();
+        foreach (var value in values)
+        {
+            var slot = SlotOf(value.TechnicalName);
+            if (slot == index) continue;
+
+            result.Add(slot is not null && slot > index
+                ? Rewrite(value, ReplaceSlot(value.TechnicalName, slot.Value - 1))
+                : value);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// A copy of a value under a new path, with its section heading kept in step. A slot added by
+    /// copying the last one uses the last one's <em>game</em> value, matching what the build writes.
+    /// </summary>
+    private static ItemValue Rewrite(ItemValue value, string newPath, bool useGameValue = false)
+    {
+        var slot = SlotOf(newPath);
+        var group = slot is null ? value.Group : "Ingredient " + (slot.Value + 1);
+        var shown = useGameValue ? value.GameValue : value.Value;
+        return new ItemValue(value.Name, group, shown, value.Kind, value.Editable,
+            newPath, value.Band, value.Note);
+    }
+
+    /// <summary>The ingredient slot a path belongs to ("Ingredients[2]…" → 2), or null.</summary>
+    private static int? SlotOf(string path)
+    {
+        if (!path.StartsWith(SlotPrefix, StringComparison.Ordinal)) return null;
+        var close = path.IndexOf(']', SlotPrefix.Length);
+        return close > 0 && int.TryParse(path[SlotPrefix.Length..close], out var index) ? index : null;
+    }
+
+    /// <summary>Replaces a path's slot index with <paramref name="index"/>.</summary>
+    private static string ReplaceSlot(string path, int index)
+    {
+        var close = path.IndexOf(']', SlotPrefix.Length);
+        return SlotPrefix + index + "]" + path[(close + 1)..];
+    }
+
+    [RelayCommand]
+    private void AddIngredient()
+    {
+        var current = _projects?.Current;
+        if (_changes is null || SelectedItem is not { } item) return;
+        if (current is null) { RefusalMessage = "Open or create a project first, then change its values."; return; }
+
+        RefusalMessage = "";
+        _changes.RecordListChange(item.Name, "Ingredients", ChangeOperation.AddEntry, current.Id,
+            assetPath: item.AssetId);
+    }
+
+    [RelayCommand]
+    private void RemoveIngredient(string? slotPath)
+    {
+        var current = _projects?.Current;
+        if (_changes is null || SelectedItem is not { } item || string.IsNullOrEmpty(slotPath)) return;
+        if (current is null) { RefusalMessage = "Open or create a project first, then change its values."; return; }
+
+        var dropped = _changes.RecordListChange(item.Name, slotPath, ChangeOperation.RemoveEntry, current.Id,
+            assetPath: item.AssetId);
+
+        // Say so plainly: removing a slot shifts the others, so the recipe's value edits were reset.
+        RefusalMessage = dropped > 0
+            ? "Ingredient removed. Your earlier value edits to this recipe were reset — please re-do them."
+            : "";
     }
 
     private static string? FirstOldValue(
@@ -436,7 +691,7 @@ public partial class ItemsViewModel : ObservableObject
     {
         foreach (var record in records)
         {
-            if (record.AssetId == assetId
+            if (string.Equals(record.AssetId, assetId, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
             {
                 return record.OldValue;
@@ -471,6 +726,13 @@ public partial class ItemsViewModel : ObservableObject
         if (value is null || !value.IsEditing) return;
         if (!value.IsDraftValid) return;   // stays open so it can be corrected
 
+        // A link must name a real game tag — refuse an invented one rather than write a dead link.
+        if (IsRetargetableLink(value) && _linkChoices.Count > 0 && !_linkChoices.Contains(value.Draft.Trim()))
+        {
+            RefusalMessage = "That isn't a crafting tag SCUM has — choose a real one (they start with CI_).";
+            return;   // stays open so it can be corrected
+        }
+
         if (_changes is null)
         {
             // Not wired to a project store (a bare/preview screen): the old in-memory behaviour.
@@ -502,7 +764,9 @@ public partial class ItemsViewModel : ObservableObject
 
         if (_editingItem is { } item)
         {
-            _changes.RecordEdit(item.Name, value.TechnicalName, value.OriginalValue, value.Draft, current.Id);
+            if (!_changes.RecordEdit(item.Name, value.TechnicalName, value.OriginalValue, value.Draft, current.Id,
+                    assetPath: item.AssetId))
+                RefusalMessage = "That change could not be saved — check the project folder, then try again.";
         }
     }
 

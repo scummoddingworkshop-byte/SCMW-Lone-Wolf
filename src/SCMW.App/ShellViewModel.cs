@@ -28,6 +28,10 @@ public partial class ShellViewModel : ObservableObject
     private readonly ProjectsView _projectsView;
     private readonly ItemsViewModel _items;
     private readonly ItemsView _itemsView;
+    private readonly ItemsViewModel _baseElements;
+    private readonly ItemsView _baseElementsView;
+    private readonly ItemsViewModel _recipes;
+    private readonly ItemsView _recipesView;
     private readonly ItemChangeStore _itemChanges;
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
@@ -78,6 +82,14 @@ public partial class ShellViewModel : ObservableObject
         _items = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
                                     catalog: new ContentCatalog(ContentSource, ContentSource.Icons));
         _itemsView = new ItemsView { DataContext = _items };
+        _baseElements = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
+                                           catalog: new ContentCatalog(ContentSource, ContentSource.Icons),
+                                           family: AssetFamily.BaseElements);
+        _baseElementsView = new ItemsView { DataContext = _baseElements };
+        _recipes = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
+                                      catalog: new ContentCatalog(ContentSource, ContentSource.Icons),
+                                      family: AssetFamily.Recipes);
+        _recipesView = new ItemsView { DataContext = _recipes };
         _modList = new ModList();
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, _launcher, source: ContentSource,
@@ -98,6 +110,8 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.Home, "Home"),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Items, "Items"),
+            Nav(ScreenKey.BaseBuilding, "Base building"),
+            Nav(ScreenKey.Recipes, "Recipes"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods"),
             Nav(ScreenKey.Backups, "Backups"),
@@ -105,14 +119,23 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.Help, "Help"),
         };
 
+        // Start on the screen the owner was last using (when it still exists in the rail).
+        if (settings.LastScreen is { } last && Enum.TryParse<ScreenKey>(last, out var restored)
+            && Sidebar.Any(i => i.Key == restored))
+        {
+            _nav.GoTo(restored);
+        }
+
         _selectedEntry = Sidebar[0];
         _nav.Changed += Sync;
         _projectStore.Changed += SyncActiveProject;
         SyncActiveProject();
         Sync();
 
-        // Fill Items with the real items when a game is configured (no-op otherwise).
+        // Fill Items and Base building with the real data when a game is configured (no-op otherwise).
         _ = _items.LoadFromSourceAsync();
+        _ = _baseElements.LoadFromSourceAsync();
+        _ = _recipes.LoadFromSourceAsync();
     }
 
     /// <summary>The rail entries, Home…Settings in order.</summary>
@@ -183,9 +206,14 @@ public partial class ShellViewModel : ObservableObject
         var paks = ContentSourceFactory.PakFolderFor(settings, _workspace);
         ContentSource.Configure(paks ?? "", settings.AesKey, settings.BuildId);
 
+        // Release the previous build mount (it holds the game's pak files open) before replacing it.
+        (_buildService as IDisposable)?.Dispose();
         _buildService = BuildService.Create(settings, _workspace, ContentSource);
         if (!_launcherInjected) _launcher = new ScumLauncher(settings.GamePath);
         if (!_modsInjected) _modsService = new ModsService(settings.GamePath, _workspace.Root);
+
+        // The Backups screen is built from the game path too — refresh it for first-time setup.
+        _backups.UseService(new BackupsService(settings.GamePath, _workspace.Root));
 
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";
@@ -194,6 +222,8 @@ public partial class ShellViewModel : ObservableObject
         _mods.UseService(_modsService);
         _home.RefreshWelcome();                  // the "set up SCUM first" card can retire
         _ = _items.LoadFromSourceAsync();
+        _ = _baseElements.LoadFromSourceAsync();
+        _ = _recipes.LoadFromSourceAsync();
     }
 
     /// <summary>Re-reads SCUM after "Read Game Data", then tells Settings plainly that it is done.</summary>
@@ -202,6 +232,8 @@ public partial class ShellViewModel : ObservableObject
         try
         {
             await _items.LoadFromSourceAsync();
+            await _baseElements.LoadFromSourceAsync();
+            await _recipes.LoadFromSourceAsync();
             _settings.RefreshFinished(_items.IsUsingRealItems
                 ? "Done — SCMW — Lone Wolf re-read your items from SCUM."
                 : string.IsNullOrWhiteSpace(_items.SourceNote)
@@ -268,7 +300,7 @@ public partial class ShellViewModel : ObservableObject
 
         if (_modsService is { } mods)
         {
-            var switched = mods.SetAllEnabled(modded);
+            var switched = await Task.Run(() => mods.SetAllEnabled(modded));
             if (!switched.Ok)
             {
                 LaunchNote = switched.Error ?? "The mods could not be switched.";
@@ -299,6 +331,9 @@ public partial class ShellViewModel : ObservableObject
         Current = _nav.Current;
         ScreenTitle = Sidebar.First(i => i.Key == Current).Label;
 
+        // Remember the screen so the next launch opens here.
+        SaveLastScreen(Current);
+
         // The mods folder can change outside this screen (a build's Install, a manual copy), so
         // re-read it every time the screen is opened.
         if (Current == ScreenKey.Mods) _mods.Refresh();
@@ -314,6 +349,8 @@ public partial class ShellViewModel : ObservableObject
             ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
             ScreenKey.Items => _itemsView,
+            ScreenKey.BaseBuilding => _baseElementsView,
+            ScreenKey.Recipes => _recipesView,
             ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,
             ScreenKey.Backups => _backupsView,
@@ -326,6 +363,23 @@ public partial class ShellViewModel : ObservableObject
         if (!ReferenceEquals(entry, SelectedEntry))
         {
             SelectedEntry = entry;
+        }
+    }
+
+    /// <summary>Remembers the current screen so the next launch can reopen on it.</summary>
+    private void SaveLastScreen(ScreenKey key)
+    {
+        try
+        {
+            var settings = _settingsStore.Load();
+            if (string.Equals(settings.LastScreen, key.ToString(), StringComparison.Ordinal))
+                return;   // already saved: no needless disk writes
+
+            _settingsStore.Save(settings with { LastScreen = key.ToString() });
+        }
+        catch
+        {
+            // A settings hiccup must never break navigation.
         }
     }
 }

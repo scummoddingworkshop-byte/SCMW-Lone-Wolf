@@ -86,6 +86,23 @@ public class SettingsViewModelTests
         public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    /// <summary>Records the intro-video calls; never touches the disk.</summary>
+    private sealed class FakeIntroVideos : IIntroVideos
+    {
+        public bool Succeeds = true;
+        public string Failure = "It could not be done.";
+        public readonly List<(string? Path, bool Skip)> Calls = new();
+        public string? LastPath => Calls.Count == 0 ? null : Calls[^1].Path;
+        public bool LastSkip => Calls.Count > 0 && Calls[^1].Skip;
+
+        public IntroVideoResult Apply(string? gamePath, bool skip)
+        {
+            Calls.Add((gamePath, skip));
+            if (!Succeeds) return new(false, Failure);
+            return new(true, skip ? "Intro videos skipped." : "Intro videos play as normal.");
+        }
+    }
+
     [AvaloniaFact]
     public void Starts_from_the_stored_settings()
     {
@@ -369,6 +386,120 @@ public class SettingsViewModelTests
         vm.BuildId = "513710-build";
 
         Assert.Equal("513710-build", store.Load().BuildId);
+    }
+
+    // ── Launching options ───────────────────────────────────────────────────
+
+    [AvaloniaFact]
+    public void The_skip_videos_option_is_read_from_the_saved_settings()
+    {
+        var store = new InMemorySettingsStore();
+        store.Save(new AppSettings(null, @"D:\Games\SCUM", SkipIntroVideos: true));
+
+        var vm = new SettingsViewModel(store, new FakeScumSources(), introVideos: new FakeIntroVideos());
+
+        Assert.True(vm.SkipIntroVideos);
+    }
+
+    [AvaloniaFact]
+    public void Changing_the_skip_videos_option_saves_it()
+    {
+        var store = new InMemorySettingsStore();
+        var vm = new SettingsViewModel(store, new FakeScumSources(), introVideos: new FakeIntroVideos());
+
+        vm.SkipIntroVideos = true;
+
+        Assert.True(store.Load().SkipIntroVideos);
+    }
+
+    [AvaloniaFact]
+    public void Turning_on_skip_videos_disables_the_clips()
+    {
+        var videos = new FakeIntroVideos();
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources(), introVideos: videos)
+        {
+            GamePath = @"D:\Games\SCUM",
+        };
+
+        vm.SkipIntroVideos = true;
+
+        Assert.Equal(@"D:\Games\SCUM", videos.LastPath);
+        Assert.True(videos.LastSkip);
+        Assert.True(vm.IntroVideoNoteGood);
+        Assert.Contains("skipped", vm.IntroVideoNote);
+    }
+
+    [AvaloniaFact]
+    public void Turning_off_skip_videos_restores_the_clips()
+    {
+        var videos = new FakeIntroVideos();
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources(), introVideos: videos)
+        {
+            GamePath = @"D:\Games\SCUM",
+            SkipIntroVideos = true,
+        };
+        videos.Calls.Clear();
+
+        vm.SkipIntroVideos = false;
+
+        Assert.False(videos.LastSkip);
+        Assert.Contains("normal", vm.IntroVideoNote);
+    }
+
+    [AvaloniaFact]
+    public void A_skip_that_cannot_be_done_is_reported_plainly()
+    {
+        var videos = new FakeIntroVideos { Succeeds = false, Failure = "Set your SCUM folder first." };
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources(), introVideos: videos);
+
+        vm.SkipIntroVideos = true;
+
+        Assert.True(vm.IntroVideoNoteBad);
+        Assert.Contains("SCUM folder", vm.IntroVideoNote);
+    }
+
+    [AvaloniaFact]
+    public void The_skip_setting_is_re_applied_when_the_screen_starts()
+    {
+        // A game update may have put the clips back since last time, so the setting re-checks itself.
+        var store = new InMemorySettingsStore();
+        store.Save(new AppSettings(null, @"D:\Games\SCUM", SkipIntroVideos: true));
+        var videos = new FakeIntroVideos();
+
+        _ = new SettingsViewModel(store, new FakeScumSources(), introVideos: videos);
+
+        Assert.True(videos.LastSkip);
+        Assert.Equal(@"D:\Games\SCUM", videos.LastPath);
+    }
+
+    [AvaloniaFact]
+    public void The_skip_setting_is_not_touched_when_it_is_off()
+    {
+        var videos = new FakeIntroVideos();
+
+        _ = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources(), introVideos: videos);
+
+        Assert.Empty(videos.Calls);
+    }
+
+    [AvaloniaFact]
+    public void The_installed_game_build_is_shown_in_plain_words()
+    {
+        var store = new InMemorySettingsStore();
+        store.Save(new AppSettings(@"C:\w", @"D:\Games\SCUM", "25804202"));
+
+        var vm = new SettingsViewModel(store, new FakeScumSources());
+
+        Assert.Contains("25804202", vm.GameVersion);
+        Assert.Contains("Build", vm.GameVersion);
+    }
+
+    [AvaloniaFact]
+    public void With_no_known_build_the_version_points_at_detect()
+    {
+        var vm = new SettingsViewModel(new InMemorySettingsStore(), new FakeScumSources());
+
+        Assert.Contains("Detect", vm.GameVersion);
     }
 
     [AvaloniaFact]

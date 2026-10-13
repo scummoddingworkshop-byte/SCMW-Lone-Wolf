@@ -17,10 +17,11 @@ public sealed class ContentSourceAssetResolver : IAssetResolver
         if (recordedName.Contains('/'))
             return new AssetResolution(recordedName, null);
 
-        if (_source.LastScan is null)
-            await _source.ScanAsync(null, ct).ConfigureAwait(false);
+        // Always ask the source to scan: it is idempotent (a fresh index is a fast no-op). This
+        // also avoids the blocking "LastScan" check, which could freeze the window behind a scan.
+        await _source.ScanAsync(null, ct).ConfigureAwait(false);
 
-        var hits = await _source.SearchAsync(recordedName, null, 0, 50, ct).ConfigureAwait(false);
+        var hits = await _source.SearchAsync(recordedName, null, 0, 500, ct).ConfigureAwait(false);
         var exact = hits
             .Where(h => string.Equals(h.Name, recordedName, StringComparison.OrdinalIgnoreCase))
             .ToList();

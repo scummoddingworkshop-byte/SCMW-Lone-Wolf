@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using SCMW.Core.Knowledge;
 
 namespace SCMW.App;
 
@@ -13,7 +14,8 @@ public partial class ItemValue : ObservableObject
 
     public ItemValue(string name, string group, string value,
                      ItemValueKind kind = ItemValueKind.Number, bool editable = true,
-                     string? technicalName = null)
+                     string? technicalName = null, ValueBand band = ValueBand.Normal,
+                     string? note = null)
     {
         _name = name;
         TechnicalName = technicalName ?? name;
@@ -23,6 +25,8 @@ public partial class ItemValue : ObservableObject
         _gameValue = value;
         Kind = kind;
         Editable = editable;
+        Band = band;
+        Note = note;
     }
 
     [ObservableProperty] private string _name;
@@ -53,8 +57,26 @@ public partial class ItemValue : ObservableObject
 
     public ItemValueKind Kind { get; }
 
+    /// <summary>True for a free-text value (a description), which gets a wide, multi-line editor.</summary>
+    public bool IsMultiline => Kind == ItemValueKind.Text;
+
     /// <summary>False for values shown only when "Show all values" is on.</summary>
     public bool Editable { get; }
+
+    /// <summary>How the value is offered: ordinary, noted (editable with a caveat), or locked.</summary>
+    public ValueBand Band { get; }
+
+    /// <summary>A one-line caveat for a noted value, or null.</summary>
+    public string? Note { get; }
+
+    /// <summary>True when a noted value's one-line caveat should show under it.</summary>
+    public bool ShowNote => Band == ValueBand.Noted && !string.IsNullOrWhiteSpace(Note);
+
+    /// <summary>True when the value is locked (shown with a padlock, but not offered for change).</summary>
+    public bool IsLocked => Band == ValueBand.Locked;
+
+    /// <summary>The tooltip shown on the little padlock beside a locked value.</summary>
+    public string LockedTooltip => "This field is not editable (at least not yet — maybe in a future version).";
 
     /// <summary>True when the value differs from the original.</summary>
     public bool IsChanged => Value != OriginalValue;
@@ -80,10 +102,20 @@ public partial class ItemValue : ObservableObject
         ItemValueKind.Number => double.TryParse(
             Draft, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out _),
-        ItemValueKind.Boolean => bool.TryParse(Draft, out _),
+        ItemValueKind.Boolean => IsYesNo(Draft),
         ItemValueKind.Text => !string.IsNullOrWhiteSpace(Draft),
         _ => false,
     };
+
+    /// <summary>True for a switch value as shown ("Yes"/"No") or as the game writes it (true/false, 1/0).</summary>
+    private static bool IsYesNo(string? draft)
+    {
+        var text = (draft ?? string.Empty).Trim();
+        return bool.TryParse(text, out _)
+            || text.Equals("yes", System.StringComparison.OrdinalIgnoreCase)
+            || text.Equals("no", System.StringComparison.OrdinalIgnoreCase)
+            || text == "1" || text == "0";
+    }
 
     partial void OnValueChanged(string value) => OnPropertyChanged(nameof(IsChanged));
 

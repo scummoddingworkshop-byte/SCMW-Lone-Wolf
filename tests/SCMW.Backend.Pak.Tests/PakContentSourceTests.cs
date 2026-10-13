@@ -459,6 +459,20 @@ public class PakContentSourceTests
         }
     }
 
+    [Fact]
+    public void A_recipe_is_indexed_with_its_plain_name_so_the_build_can_resolve_it()
+    {
+        // The build resolves an asset by the exact name the index holds, so the index must name a
+        // recipe the same way the Recipes screen shows it.
+        Assert.True(PakContentSource.TryMapItem(
+            Item("Crafting/Recipes/Placeables/CR_Base_Garden.uasset"), out var recipe));
+        Assert.Equal("Base Garden", recipe.Name);
+
+        Assert.True(PakContentSource.TryMapItem(
+            Item("Weapons/Ranged_Weapons/Improvised_Bow.uasset"), out var bow));
+        Assert.Equal("Improvised Bow", bow.Name);
+    }
+
     private sealed class TempDb : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),

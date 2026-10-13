@@ -26,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IFolderOpener _folders;
     private readonly ILinkOpener _links;
     private readonly INavigation _nav;
+    private readonly IIntroVideos _introVideos;
     private bool _loading;
 
     /// <summary>Raised when the game-detection status changes, so the header chip can follow it.</summary>
@@ -41,7 +42,7 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(ISettingsStore? store = null, IScumSources? scumSources = null,
                              IContentSource? contentSource = null, WorkspacePaths? workspace = null,
                              IFolderOpener? folderOpener = null, INavigation? nav = null,
-                             ILinkOpener? linkOpener = null)
+                             ILinkOpener? linkOpener = null, IIntroVideos? introVideos = null)
     {
         _store = store ?? new InMemorySettingsStore();
         _scumSources = scumSources ?? WindowsScumSources.Default;
@@ -50,6 +51,7 @@ public partial class SettingsViewModel : ObservableObject
         _folders = folderOpener ?? new SystemFolderOpener();
         _nav = nav ?? NavigationHost.Shared;
         _links = linkOpener ?? new SystemLinkOpener();
+        _introVideos = introVideos ?? new SystemIntroVideos();
 
         var settings = _store.Load();
 
@@ -59,12 +61,16 @@ public partial class SettingsViewModel : ObservableObject
         _unlockKey = settings.AesKey ?? "";
         _buildId = settings.BuildId ?? "";
         _activeProjectId = settings.ActiveProjectId ?? "";
+        _skipIntroVideos = settings.SkipIntroVideos;
         _loading = false;
 
         RefreshGameStatus();
         RefreshStorage();
         RefreshModsPath();
         _logPath = _workspace?.Logs ?? "";
+
+        // Coming back after a game update: if the player wants the intros gone, disable them again.
+        if (_skipIntroVideos) ApplyIntroVideos();
     }
 
     // ── Stored settings ─────────────────────────────────────────────────────
@@ -73,6 +79,15 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _unlockKey;
     [ObservableProperty] private string _buildId;
     [ObservableProperty] private string _activeProjectId;
+
+    // ── Launching options ───────────────────────────────────────────────────
+    /// <summary>When on, SCUM's startup intro clips are disabled (renamed) so they don't play.</summary>
+    [ObservableProperty] private bool _skipIntroVideos;
+
+    /// <summary>Plain answer after the intro-video setting is applied.</summary>
+    [ObservableProperty] private string _introVideoNote = "";
+    [ObservableProperty] private bool _introVideoNoteGood;
+    [ObservableProperty] private bool _introVideoNoteBad;
 
     partial void OnGamePathChanged(string value)
     {
@@ -91,7 +106,32 @@ public partial class SettingsViewModel : ObservableObject
         Persist();
     }
 
-    partial void OnBuildIdChanged(string value) => Persist();
+    partial void OnBuildIdChanged(string value)
+    {
+        Persist();
+        OnPropertyChanged(nameof(GameVersion));
+    }
+
+    /// <summary>Applies the intro-video choice the moment it is ticked, and remembers it.</summary>
+    partial void OnSkipIntroVideosChanged(bool value)
+    {
+        Persist();
+        ApplyIntroVideos();
+    }
+
+    /// <summary>Disables or restores SCUM's startup clips to match the setting, and says how it went.</summary>
+    private void ApplyIntroVideos()
+    {
+        var result = _introVideos.Apply(GamePath, SkipIntroVideos);
+        IntroVideoNote = result.Message;
+        IntroVideoNoteGood = result.Ok;
+        IntroVideoNoteBad = !result.Ok;
+    }
+
+    /// <summary>The game build the app is working with, in plain words ("Build 25804202").</summary>
+    public string GameVersion => string.IsNullOrWhiteSpace(BuildId)
+        ? "Not known yet — press Detect"
+        : $"Build {BuildId}";
 
     /// <summary>True when the settings are really being written to disk.</summary>
     private bool Persistent => _store is not InMemorySettingsStore;
@@ -110,7 +150,8 @@ public partial class SettingsViewModel : ObservableObject
             GamePath: string.IsNullOrWhiteSpace(GamePath) ? null : GamePath,
             BuildId: string.IsNullOrWhiteSpace(BuildId) ? null : BuildId,
             AesKey: string.IsNullOrWhiteSpace(UnlockKey) ? null : UnlockKey,
-            ActiveProjectId: string.IsNullOrWhiteSpace(ActiveProjectId) ? null : ActiveProjectId));
+            ActiveProjectId: string.IsNullOrWhiteSpace(ActiveProjectId) ? null : ActiveProjectId,
+            SkipIntroVideos: SkipIntroVideos));
     }
 
     // ── Game ────────────────────────────────────────────────────────────────
@@ -167,6 +208,7 @@ public partial class SettingsViewModel : ObservableObject
             GameHint = "";
             RefreshGameStatus();
             GameConfigured?.Invoke();            // found it — the app can come alive now
+            if (SkipIntroVideos) ApplyIntroVideos();   // the game may have moved: re-disable the clips
             return;
         }
 

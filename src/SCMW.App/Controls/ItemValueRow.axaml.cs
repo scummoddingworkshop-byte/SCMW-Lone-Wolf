@@ -59,6 +59,8 @@ public partial class ItemValueRow : UserControl
 
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)
     {
+        // Enter applies the value (a description is one logical line that just wraps on screen);
+        // Escape cancels. Clicking away also applies it.
         if (e.Key == Key.Enter)
         {
             Commit();

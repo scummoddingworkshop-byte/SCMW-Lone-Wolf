@@ -13,6 +13,9 @@
     <PackageReference Include="CUE4Parse-Conversion" Version="1.2.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <!-- The writer's library. Reading the values hidden inside structs needs it: the reader
+         above (CUE4Parse) sees the struct slot but not its contents. -->
+    <PackageReference Include="UAssetAPI" Version="1.1.0" />
   </ItemGroup>
 
   <PropertyGroup>

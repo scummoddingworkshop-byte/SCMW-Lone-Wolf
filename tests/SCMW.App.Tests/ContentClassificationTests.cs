@@ -61,6 +61,25 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
+    public void Base_elements_are_their_own_family()
+    {
+        var catalog = new ContentCatalog(NoSource);
+        var assets = new[]
+        {
+            Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES"),
+            Asset("SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/BP_Base_Well"),
+        };
+
+        // Items list stays item-only; base elements get their own list with a friendly name.
+        var item = Assert.Single(catalog.MapItems(assets));
+        Assert.EndsWith("Batteries_ES", item.AssetId);
+
+        var baseElement = Assert.Single(catalog.MapBaseElements(assets));
+        Assert.Equal("Well (base)", baseElement.Name);
+        Assert.True(baseElement.Editable);
+    }
+
+    [AvaloniaFact]
     public void An_es_items_fields_are_editable_and_a_plain_items_are_not()
     {
         var catalog = new ContentCatalog(NoSource);

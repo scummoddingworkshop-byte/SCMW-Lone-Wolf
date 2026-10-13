@@ -21,6 +21,28 @@ public class RailTests
     }
 
     [AvaloniaFact]
+    public void The_rail_has_a_base_building_area()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+
+        var entry = vm.Sidebar.Single(i => i.Key == ScreenKey.BaseBuilding);
+
+        Assert.Equal("Base building", entry.Label);
+        Assert.NotNull(entry.Icon);
+    }
+
+    [AvaloniaFact]
+    public void The_rail_has_a_recipes_area()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+
+        var entry = vm.Sidebar.Single(i => i.Key == ScreenKey.Recipes);
+
+        Assert.Equal("Recipes", entry.Label);
+        Assert.NotNull(entry.Icon);
+    }
+
+    [AvaloniaFact]
     public void Clicking_a_rail_row_changes_the_shown_area()
     {
         var nav = new NavigationHost();

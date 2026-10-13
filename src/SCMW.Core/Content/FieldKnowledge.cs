@@ -214,7 +214,9 @@ public static class FieldKnowledge
             return LastPathSegment(text);
         }
 
-        if (text.StartsWith('[') || text.StartsWith('(') || text.Contains(','))
+        // Only a value that *looks* like a list is treated as one; a sentence with a comma in it
+        // (a description, say) is left as written.
+        if (text.StartsWith('[') || text.StartsWith('('))
         {
             return FormatList(text);
         }

@@ -73,11 +73,13 @@ public sealed class BuildService : IBuildService, IDisposable
     {
         var record = new InstallRecord(projectId, projectName, version, Path.GetFileName(pakPath),
             pakPath, InstalledPath: "", DateTime.UtcNow, BackupPath: null);
-        return Task.FromResult(_installer.Install(_settings.GamePath!, record, pakPath));
+
+        // Copying the pak is disk work — keep it off the window's thread.
+        return Task.Run(() => _installer.Install(_settings.GamePath!, record, pakPath), ct);
     }
 
     public Task<RemoveOutcome> RemoveAsync(string projectId, CancellationToken ct)
-        => Task.FromResult(_installer.Remove(_settings.GamePath!, projectId));
+        => Task.Run(() => _installer.Remove(_settings.GamePath!, projectId), ct);
 
     public bool IsInstalled(string projectId) => _installer.IsInstalled(projectId);
 

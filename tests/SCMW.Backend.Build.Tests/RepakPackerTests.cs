@@ -1,4 +1,5 @@
 using SCMW.Backend.Build;
+using SCMW.Testing;
 
 namespace SCMW.Backend.Build.Tests;
 
@@ -55,15 +56,15 @@ public class RepakPackerTests
         var result = await new RepakPacker(exe, runner)
             .PackAsync(staging, Path.Combine(staging, "o.pak"), CancellationToken.None);
         Assert.False(result.Ok);
-        Assert.Contains("problem", result.Error);
+        Assert.Contains("couldn't make the mod file", result.Error);
+        Assert.DoesNotContain("boom", result.Error);   // the tool's raw output stays out of the message
         Directory.Delete(staging, true);
     }
 
-    [Fact] // the real bundled repak pack must produce a readable .pak (no game needed)
+    [SkippableFact(SkipIfMissingFile = "tools/repak/repak.exe")]
     public async Task The_bundled_repak_really_packs_a_folder()
     {
         var repak = Path.Combine(AppContext.BaseDirectory, "tools", "repak", "repak.exe");
-        if (!File.Exists(repak)) return;   // not shipped in this build: covered by the gated test
 
         var root = Path.Combine(Path.GetTempPath(), "scmw-stage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "SCUM", "Content"));

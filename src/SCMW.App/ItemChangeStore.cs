@@ -37,19 +37,59 @@ public sealed class ItemChangeStore
         _store.AppliedValue(projectFolder, assetId, field, gameValue);
 
     /// <summary>
-    /// Append one edit to the project's <c>changes.json</c>. A no-op when no project matches
+    /// Append one edit to the project's <c>changes.json</c>. Returns false when it could not be
+    /// saved (so the screen can say so), true otherwise. A no-op when no project matches
     /// <paramref name="projectId"/> (never throws).
     /// </summary>
-    public void RecordEdit(string assetId, string field, string? oldValue, string newValue, string projectId)
+    public bool RecordEdit(string assetId, string field, string? oldValue, string newValue, string projectId,
+                           string? assetPath = null)
     {
         var folder = FolderFor(projectId);
-        if (folder is null) return;
+        if (folder is null) return false;
 
-        _store.Add(folder, new EngineChangeRecord(
+        var saved = _store.TryAdd(folder, new EngineChangeRecord(
             Guid.NewGuid(), projectId, assetId, field, oldValue, newValue,
-            DateTime.UtcNow, StatusKind.Editable));
+            DateTime.UtcNow, StatusKind.Editable, AssetPath: assetPath));
 
         Changed?.Invoke();
+        return saved;
+    }
+
+    /// <summary>
+    /// Append a list change (add or remove an entry) to the project's <c>changes.json</c>. Kept as
+    /// its own record so the order of several list changes survives (a value edit does not).
+    /// <para>
+    /// Removing an entry shifts the later slots, so the recipe's existing value edits are dropped
+    /// first: it is better to lose them (and re-do them) than to write a number onto the wrong
+    /// ingredient, which would build successfully and silently. Returns how many edits were dropped
+    /// so the screen can say so.
+    /// </para>
+    /// </summary>
+    public int RecordListChange(string assetId, string field, ChangeOperation operation, string projectId,
+                                string? assetPath = null)
+    {
+        var folder = FolderFor(projectId);
+        if (folder is null) return 0;
+
+        var dropped = 0;
+        if (operation == ChangeOperation.RemoveEntry)
+        {
+            var staleEdits = _store.Load(folder)
+                .Where(r => r.Operation == ChangeOperation.Set
+                            && string.Equals(r.AssetId, assetId, StringComparison.OrdinalIgnoreCase))
+                .Select(r => r.Id)
+                .ToList();
+
+            dropped = staleEdits.Count;
+            foreach (var id in staleEdits) _store.Undo(folder, id);
+        }
+
+        _store.TryAdd(folder, new EngineChangeRecord(
+            Guid.NewGuid(), projectId, assetId, field, null, "",
+            DateTime.UtcNow, StatusKind.Editable, Operation: operation, AssetPath: assetPath));
+
+        Changed?.Invoke();
+        return dropped;
     }
 
     /// <summary>

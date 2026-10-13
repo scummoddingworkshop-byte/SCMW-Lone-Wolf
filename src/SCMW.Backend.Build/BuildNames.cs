@@ -22,6 +22,13 @@ public static class BuildNames
         return ValidVersion.IsMatch(trimmed) ? trimmed : "1.0.0";
     }
 
+    /// <summary>True when a version reads like <c>1.2.3</c> (an optional leading "v" is allowed).</summary>
+    public static bool IsValidVersion(string? version)
+    {
+        var trimmed = (version ?? "").Trim().TrimStart('v', 'V');
+        return ValidVersion.IsMatch(trimmed);
+    }
+
     /// <summary>Our patch pak: `SCMW_&lt;SafeName&gt;_v&lt;x.y.z&gt;_P.pak` (the `_P` makes SCUM replace the original).</summary>
     public static string PakFileName(string projectName, string version)
         => $"SCMW_{SafeName(projectName)}_v{NormalizeVersion(version)}_P.pak";
@@ -41,4 +48,9 @@ public static class BuildNames
         var pattern = "^SCMW_" + Regex.Escape(SafeName(projectName)) + @"_v\d+\.\d+\.\d+_P\.pak$";
         return Regex.IsMatch(fileName ?? "", pattern, RegexOptions.IgnoreCase);
     }
+
+    private static readonly Regex OurPak = new(@"^SCMW_.+_v\d+\.\d+\.\d+_P\.pak$", RegexOptions.IgnoreCase);
+
+    /// <summary>True for a pak THIS app made (any project) — never a mod from somewhere else.</summary>
+    public static bool IsOurPak(string fileName) => OurPak.IsMatch(fileName ?? "");
 }

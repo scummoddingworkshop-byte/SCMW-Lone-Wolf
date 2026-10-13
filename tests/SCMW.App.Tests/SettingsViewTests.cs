@@ -35,6 +35,19 @@ public class SettingsViewTests
     }
 
     [AvaloniaFact]
+    public void The_game_card_shows_the_installed_game_version()
+    {
+        var vm = new SettingsViewModel { BuildId = "25804202" };
+        var view = new SettingsView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
+        window.Show();
+
+        var text = view.FindControl<TextBlock>("GameVersionText");
+        Assert.NotNull(text);
+        Assert.Contains("25804202", text!.Text);
+    }
+
+    [AvaloniaFact]
     public void Settings_shows_every_card()
     {
         var view = ShownView();
@@ -50,6 +63,35 @@ public class SettingsViewTests
         Assert.Contains("UNLOCK KEY", texts);
         Assert.Contains("WORKSPACE", texts);
         Assert.Contains("ABOUT", texts);
+    }
+
+    [AvaloniaFact]
+    public void The_launching_options_card_offers_the_skip_videos_tick()
+    {
+        var view = ShownView();
+        var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+
+        Assert.NotNull(view.FindControl<Border>("LaunchOptionsCard"));
+        Assert.Contains("LAUNCHING OPTIONS", texts);
+
+        var skip = view.FindControl<CheckBox>("SkipIntroVideosBox");
+        Assert.NotNull(skip);
+        Assert.Contains("intro", (string)skip!.Content!, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(view.FindControl<CheckBox>("FileOpenLogBox"));
+    }
+
+    [AvaloniaFact]
+    public void Ticking_skip_videos_reaches_the_view_model()
+    {
+        var vm = new SettingsViewModel { SkipIntroVideos = false };
+        var view = new SettingsView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
+        window.Show();
+
+        view.FindControl<CheckBox>("SkipIntroVideosBox")!.IsChecked = true;
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        Assert.True(vm.SkipIntroVideos);
     }
 
     [AvaloniaFact]

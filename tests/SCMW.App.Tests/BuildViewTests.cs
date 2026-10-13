@@ -33,6 +33,17 @@ public class BuildViewTests : IDisposable
         return new BuildViewModel(changes, projects: projects);
     }
 
+    /// <summary>A project with plenty of changed items, to see what a long list does to the layout.</summary>
+    private BuildViewModel ManyChanges(int count)
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        for (var i = 0; i < count; i++)
+            changes.RecordEdit($"Item {i:00}", "Max stack", "10", "25", projects.Current!.Id);
+        return new BuildViewModel(changes, projects: projects);
+    }
+
     [AvaloniaFact]
     public void Build_shows_the_project_and_the_nudge_when_empty()
     {
@@ -66,6 +77,27 @@ public class BuildViewTests : IDisposable
         var heading = view.GetVisualDescendants().OfType<TextBlock>()
             .First(t => t.Classes.Contains("section"));
         Assert.Equal("WHAT'S IN THIS MOD", heading.Text);
+    }
+
+    [AvaloniaFact]
+    public void The_changed_items_list_scrolls_so_the_build_button_stays_in_view()
+    {
+        var (view, _) = ShownView(ManyChanges(20));
+
+        var scroll = view.FindControl<ScrollViewer>("ChangeListScroll");
+        Assert.NotNull(scroll);
+        Assert.True(scroll!.MaxHeight < double.PositiveInfinity,
+            "the changed-items list must be capped, or a long list pushes Build off the screen");
+        Assert.True(scroll.MaxHeight <= 600);
+
+        // The change list really lives inside that scroller...
+        var list = view.FindControl<ItemsControl>("ChangeList");
+        Assert.NotNull(list);
+        Assert.Contains(scroll, list!.GetVisualAncestors().OfType<ScrollViewer>());
+
+        // ...and with plenty of rows it is capped, so it can't push the button down.
+        Assert.True(scroll.Bounds.Height <= scroll.MaxHeight + 1,
+            $"the list grew to {scroll.Bounds.Height}, past its {scroll.MaxHeight} cap");
     }
 
     [AvaloniaFact]

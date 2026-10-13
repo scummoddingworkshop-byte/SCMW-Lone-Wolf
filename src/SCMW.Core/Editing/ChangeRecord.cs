@@ -17,6 +17,12 @@ namespace SCMW.Core.Editing;
 /// <param name="Status">The field's resolved status at record time.</param>
 /// <param name="Backend">Which backend applies this later; <c>"pak"</c> is the built-in SCUM backend.</param>
 /// <param name="Target">Which side this change applies to; <c>"client"</c> by default.</param>
+/// <param name="Operation">Set a value, or add/remove a list entry (see <see cref="ChangeOperation"/>).</param>
+/// <param name="AssetPath">
+/// The game file's own path, when known. The build resolves by this instead of the friendly name,
+/// so two assets sharing a name can never be confused. Null for records made before paths were kept
+/// (the build then falls back to <paramref name="AssetId"/>).
+/// </param>
 public sealed record ChangeRecord(
     Guid Id,
     string ProjectId,
@@ -27,4 +33,6 @@ public sealed record ChangeRecord(
     DateTime CreatedUtc,
     StatusKind Status,
     string Backend = "pak",
-    string Target = "client");
+    string Target = "client",
+    ChangeOperation Operation = ChangeOperation.Set,
+    string? AssetPath = null);

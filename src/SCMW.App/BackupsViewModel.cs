@@ -32,7 +32,7 @@ public partial class BackupRow : ObservableObject
 /// </summary>
 public partial class BackupsViewModel : ObservableObject
 {
-    private readonly IBackupsService? _service;
+    private IBackupsService? _service;
     private readonly ProjectStore? _projects;
     private readonly IFolderOpener _folders;
 
@@ -58,10 +58,17 @@ public partial class BackupsViewModel : ObservableObject
 
     public string Summary => $"{Backups.Count} {(Backups.Count == 1 ? "backup" : "backups")} kept";
 
+    /// <summary>Swaps in a service built from the current settings (e.g. after first-time setup).</summary>
+    public void UseService(IBackupsService? service)
+    {
+        _service = service;
+        Message = "";
+        Refresh();
+    }
+
     /// <summary>Re-reads the backups from disk. Called at construction and after any change.</summary>
     public void Refresh()
-    {
-        Backups.Clear();
+    {        Backups.Clear();
         if (_service is not null)
         {
             foreach (var entry in _service.List()) Backups.Add(new BackupRow(entry));

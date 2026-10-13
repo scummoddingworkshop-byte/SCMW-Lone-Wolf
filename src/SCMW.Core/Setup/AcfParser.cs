@@ -11,14 +11,14 @@ public static class AcfParser
     public static string? ReadValue(string acf, string key)
     {
         foreach (var pair in Pairs(acf))
-            if (pair.Key == key)
+            if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
                 return pair.Value;
         return null;
     }
 
     /// <summary>All values found for <paramref name="key"/> in file order (e.g. one <c>path</c> per library folder).</summary>
     public static IReadOnlyList<string> ReadValues(string acf, string key) => Pairs(acf)
-        .Where(p => p.Key == key)
+        .Where(p => string.Equals(p.Key, key, StringComparison.OrdinalIgnoreCase))
         .Select(p => p.Value)
         .ToList();
 

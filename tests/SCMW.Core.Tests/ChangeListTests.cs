@@ -37,6 +37,71 @@ public class ChangeListTests
         Assert.Equal(record, loaded);
     }
 
+    [Fact] // a list change (add/remove an entry) survives the file round-trip as its own operation
+    public void A_list_change_round_trips_with_its_operation()
+    {
+        var folder = TempFolder();
+        IChangeStore store = new ProjectChangeStore();
+        var add = Record(field: "Ingredients", newValue: "", status: StatusKind.Editable)
+            with { Operation = ChangeOperation.AddEntry };
+        var remove = Record(field: "Ingredients[1]", newValue: "", status: StatusKind.Editable)
+            with { Operation = ChangeOperation.RemoveEntry };
+
+        store.Add(folder, add);
+        store.Add(folder, remove);
+
+        var loaded = store.Load(folder);
+        Assert.Equal(2, loaded.Count);
+        Assert.Equal(ChangeOperation.AddEntry, loaded[0].Operation);
+        Assert.Equal(ChangeOperation.RemoveEntry, loaded[1].Operation);
+    }
+
+    [Fact] // a damaged changes.json is kept aside, never silently overwritten as empty
+    public void A_damaged_change_file_is_kept_aside()
+    {
+        var folder = TempFolder();
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, ProjectChangeStore.FileName), "{ this is not json");
+
+        var store = new ProjectChangeStore();
+        Assert.Empty(store.Load(folder));
+        Assert.Empty(store.Load(folder));   // still empty on a second read
+
+        Assert.Single(Directory.GetFiles(folder, "changes.corrupt-*.json"));
+    }
+
+    [Fact] // a list change is not a value: AppliedValue must ignore it
+    public void Applied_value_ignores_a_list_change()
+    {
+        var folder = TempFolder();
+        IChangeStore store = new ProjectChangeStore();
+        store.Add(folder, Record(field: "Ingredients", newValue: "", status: StatusKind.Editable)
+            with { Operation = ChangeOperation.RemoveEntry });
+
+        Assert.Equal("game", store.AppliedValue(folder, "asset/a", "Ingredients", "game"));
+    }
+
+    [Fact] // a blank project folder cannot be written to (and says so rather than throwing)
+    public void Try_add_with_a_blank_folder_reports_failure()
+        => Assert.False(new ProjectChangeStore().TryAdd("", Record()));
+
+    [Fact] // a changes.json written before the operation field existed still loads (as a plain edit)
+    public void An_old_change_file_without_an_operation_loads_as_set()
+    {
+        var folder = TempFolder();
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, ProjectChangeStore.FileName),
+            """
+            { "records": [ { "id": "11111111-1111-1111-1111-111111111111", "projectId": "p1",
+              "assetId": "asset/a", "fieldTechnicalName": "Damage", "oldValue": "1", "newValue": "2",
+              "createdUtc": "2026-09-27T12:00:00Z", "status": "limited", "backend": "pak",
+              "target": "client" } ] }
+            """);
+
+        var loaded = Assert.Single(new ProjectChangeStore().Load(folder));
+        Assert.Equal(ChangeOperation.Set, loaded.Operation);
+    }
+
     [Fact] // backend/target defaults and the StatusKind survive the file round-trip
     public void Defaults_and_status_survive_the_round_trip()
     {

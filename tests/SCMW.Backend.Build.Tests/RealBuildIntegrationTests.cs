@@ -1,10 +1,12 @@
 using SCMW.Backend.Build;
 using SCMW.Backend.Pak;
 using SCMW.Core.Content;
+using SCMW.Core.Editing;
 using SCMW.Testing;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build.Tests;
@@ -118,10 +120,187 @@ public class RealBuildIntegrationTests
         finally { Directory.Delete(work, true); }
     }
 
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public void A_value_nested_inside_a_struct_is_written_and_stays_written()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string well = "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/BP_Base_Well";
+        Assert.True(mount.TryReadPackage(well, out var files));
+
+        var scratch = Path.Combine(Path.GetTempPath(), "scmw-nested-write-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            foreach (var pair in files!) File.WriteAllBytes(Path.Combine(scratch, pair.Key), pair.Value);
+            var uasset = Directory.GetFiles(scratch, "*.uasset").Single();
+
+            // The well's water replenishment rate is buried two structs deep — exactly what the
+            // Well3x mod changes. The writer must follow the path and leave its siblings alone.
+            // The base element type is a full enum: the writer must handle that type too.
+            const string path = "_replenishableResourceDescription.PeriodicReplenishment.ReplenishAmount";
+            Assert.True(new UAssetPackageWriter().Apply(uasset, new[]
+            {
+                new FieldChange(path, "0.3"),
+                new FieldChange("_baseElementType", "EBaseElementType::Well"),
+            }).Ok);
+
+            var reloaded = new UAsset(uasset, EngineVersion.VER_UE4_27);
+            var periodic = reloaded.Exports.OfType<NormalExport>()
+                .SelectMany(e => e.Data).OfType<StructPropertyData>()
+                .First(p => p.Name.ToString() == "_replenishableResourceDescription")
+                .Value.OfType<StructPropertyData>()
+                .First(p => p.Name.ToString() == "PeriodicReplenishment");
+
+            Assert.Equal(0.3f,
+                periodic.Value.OfType<FloatPropertyData>().First(p => p.Name.ToString() == "ReplenishAmount").Value, 3);
+            Assert.Equal(40f,
+                periodic.Value.OfType<FloatPropertyData>().First(p => p.Name.ToString() == "MaxAmount").Value, 3);
+            Assert.Equal("EBaseElementType::Well",
+                reloaded.Exports.OfType<NormalExport>().SelectMany(e => e.Data)
+                    .OfType<EnumPropertyData>().First(p => p.Name.ToString() == "_baseElementType").Value.ToString());
+        }
+        finally { Directory.Delete(scratch, true); }
+    }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public void A_value_inside_an_ingredient_slot_is_written_and_stays_written()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string recipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden";
+        Assert.True(mount.TryReadPackage(recipe, out var files));
+
+        var scratch = Path.Combine(Path.GetTempPath(), "scmw-ingredient-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            foreach (var pair in files!) File.WriteAllBytes(Path.Combine(scratch, pair.Key), pair.Value);
+            var uasset = Directory.GetFiles(scratch, "*.uasset").Single();
+
+            // A value buried inside a list entry — an ingredient's per-skill amount. The writer
+            // must follow the list step ("Ingredients[0]") to reach it.
+            const string path = "Ingredients[0].Amount.NoSkill";
+            Assert.True(new UAssetPackageWriter()
+                .Apply(uasset, new[] { new FieldChange(path, "7") }).Ok);
+
+            var reloaded = new UAsset(uasset, EngineVersion.VER_UE4_27);
+            var ingredients = reloaded.Exports.OfType<NormalExport>().SelectMany(e => e.Data)
+                .OfType<ArrayPropertyData>().First(p => p.Name.ToString() == "Ingredients");
+            var slot = (StructPropertyData)ingredients.Value[0];
+            var amount = (StructPropertyData)slot.Value.First(p => p.Name.ToString() == "Amount");
+            var noSkill = (IntPropertyData)amount.Value.First(p => p.Name.ToString() == "NoSkill");
+
+            Assert.Equal(7, noSkill.Value);
+        }
+        finally { Directory.Delete(scratch, true); }
+    }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public void An_ingredients_accepted_tag_is_swapped_and_stays_swapped()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        // Any real crafting-ingredient tag other than the one the recipe already accepts.
+        var otherTag = mount.FilePaths
+            .Select(Path.GetFileNameWithoutExtension)
+            .First(n => n.StartsWith("CI_", StringComparison.OrdinalIgnoreCase)
+                        && !n.Equals("CI_Plank", StringComparison.OrdinalIgnoreCase));
+
+        const string recipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden";
+        Assert.True(mount.TryReadPackage(recipe, out var files));
+
+        var scratch = Path.Combine(Path.GetTempPath(), "scmw-tag-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            foreach (var pair in files!) File.WriteAllBytes(Path.Combine(scratch, pair.Key), pair.Value);
+            var uasset = Directory.GetFiles(scratch, "*.uasset").Single();
+
+            // Retarget the first ingredient's accepted tag — the risky reference write.
+            const string path = "Ingredients[0].AllowedTypes[0]";
+            Assert.True(new UAssetPackageWriter()
+                .Apply(uasset, new[] { new FieldChange(path, otherTag) }).Ok);
+
+            var reloaded = new UAsset(uasset, EngineVersion.VER_UE4_27);
+            var slot = (StructPropertyData)reloaded.Exports.OfType<NormalExport>().SelectMany(e => e.Data)
+                .OfType<ArrayPropertyData>().First(p => p.Name.ToString() == "Ingredients").Value[0];
+            var allowed = (ArrayPropertyData)slot.Value.First(p => p.Name.ToString() == "AllowedTypes");
+            var link = (ObjectPropertyData)allowed.Value[0];
+
+            Assert.Equal(otherTag, link.Value.ToImport(reloaded).ObjectName.ToString());
+        }
+        finally { Directory.Delete(scratch, true); }
+    }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public void An_ingredient_slot_is_removed_and_another_added()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string recipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden";
+        Assert.True(mount.TryReadPackage(recipe, out var files));
+
+        var scratch = Path.Combine(Path.GetTempPath(), "scmw-slots-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            foreach (var pair in files!) File.WriteAllBytes(Path.Combine(scratch, pair.Key), pair.Value);
+            var uasset = Directory.GetFiles(scratch, "*.uasset").Single();
+
+            int Count()
+            {
+                var asset = new UAsset(uasset, EngineVersion.VER_UE4_27);
+                return asset.Exports.OfType<NormalExport>().SelectMany(e => e.Data)
+                    .OfType<ArrayPropertyData>().First(p => p.Name.ToString() == "Ingredients").Value.Length;
+            }
+
+            var before = Count();
+            Assert.True(before >= 2);
+
+            // Remove one slot, then add one back — the list length must follow.
+            Assert.True(new UAssetPackageWriter().Apply(uasset, new[]
+            {
+                new FieldChange("Ingredients[0]", "", ChangeOperation.RemoveEntry),
+            }).Ok);
+            Assert.Equal(before - 1, Count());
+
+            Assert.True(new UAssetPackageWriter().Apply(uasset, new[]
+            {
+                new FieldChange("Ingredients", "", ChangeOperation.AddEntry),
+            }).Ok);
+            Assert.Equal(before, Count());
+        }
+        finally { Directory.Delete(scratch, true); }
+    }
+
     private static async Task<string?> FindItemWithField(IContentSource source, string fieldName)
     {
-        var skip = 0;
-        while (skip < 5000)
+        var skip = 0;        while (skip < 5000)
         {
             var page = await source.SearchAsync("", null, skip, 500);
             if (page.Count == 0) return null;

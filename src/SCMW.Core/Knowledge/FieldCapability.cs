@@ -1,9 +1,8 @@
 // src/SCMW.Core/Knowledge/FieldCapability.cs
 // The honesty engine's first half: can we even write this field? Capability is a
 // CONSERVATIVE claim about whether a single property value can be changed, judged from
-// the field's technical name and (when known) its UE property type. It deliberately says
-// nothing about whether an edit has ever been proven in game - that is the evidence
-// store's job (see StatusResolver).
+// the field's technical name and (when known) its UE property type. It is used by
+// ValueSafety to refuse a field the writer could not handle.
 namespace SCMW.Core.Knowledge;
 
 /// <summary>Whether a field's value can be written at all. Conservative by design.</summary>
@@ -28,8 +27,8 @@ public enum WriteCapability { Unknown, NotWritable, Writable }
 ///       (the type is known to be a scalar; the name does not change that).</item>
 /// <item>Anything else -> <see cref="WriteCapability.Unknown"/> (honest "not assessed").</item>
 /// </list>
-/// This is a claim about a value slot only. It never makes a field <c>Editable</c>;
-/// only <see cref="StatusResolver"/> may do that, and only with recorded tested evidence.
+/// This is a claim about a value slot only. It never makes a field <c>Editable</c> — it only
+/// says whether the writer can set a value of that kind.
 /// </summary>
 public static class FieldCapability
 {

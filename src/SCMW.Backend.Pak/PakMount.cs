@@ -34,6 +34,7 @@ public sealed class PakMount : IPakMount
     public bool TryMount(string pakPath, string? aesKey, out string? error)
     {
         error = null;
+        DefaultFileProvider? provider = null;
         try
         {
             _provider?.Dispose();
@@ -52,7 +53,7 @@ public sealed class PakMount : IPakMount
             // Suppressed narrowly here rather than switching to the StringComparer ctor,
             // which the spike did not exercise.
 #pragma warning disable CS0618
-            var provider = new DefaultFileProvider(
+            provider = new DefaultFileProvider(
                 pakPath, SearchOption.TopDirectoryOnly, true,
                 new VersionContainer(EGame.GAME_UE4_27));
 #pragma warning restore CS0618
@@ -67,6 +68,8 @@ public sealed class PakMount : IPakMount
         }
         catch (Exception ex)
         {
+            // A half-built provider still holds the game's file handles — release it.
+            try { provider?.Dispose(); } catch { /* best effort */ }
             _provider = null;
             // Plain message only — never the key, never raw exception text or
             // a stack trace. The real failure (type + message) goes to the log

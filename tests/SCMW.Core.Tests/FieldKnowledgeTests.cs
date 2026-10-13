@@ -104,7 +104,7 @@ public class FieldKnowledgeTests
     [InlineData("/Game/Items/Weapons/BP_Bow.BP_Bow", "BP_Bow")]
     [InlineData("SCUM/Content/Items/Equipment/BP_DuctTape_C", "BP_DuctTape_C")]
     [InlineData("[a, b, c]", "a, b, c")]
-    [InlineData("a,b,c", "a, b, c")]
+    [InlineData("a,b,c", "a,b,c")]        // a bare comma string is a sentence, not a list (left as-is)
     [InlineData("Woodland", "Woodland")]
     public void FormatValue_renders_raw_values_plainly(string? raw, string expected)
     {

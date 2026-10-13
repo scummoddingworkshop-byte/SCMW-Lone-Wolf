@@ -46,21 +46,42 @@ public sealed class JsonSettingsStore : ISettingsStore
             Log.Warn("settings corrupt, using defaults");
             return new AppSettings(null, null, null);
         }
-        catch (IOException)
+        catch (Exception ex) when (IsExpectedIoFailure(ex))
         {
-            Log.Warn("settings corrupt, using defaults");
+            // A locked or unreadable file is not "corrupt" — say so honestly and use defaults.
+            Log.Warn($"settings could not be read, using defaults ({ex.GetType().Name})");
             return new AppSettings(null, null, null);
         }
     }
 
+    /// <summary>
+    /// Writes the settings atomically. Never throws: a locked/full disk is logged and the previous
+    /// file is left untouched (this is called on every keystroke and on window close).
+    /// </summary>
     public void Save(AppSettings s)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
+        var temp = _filePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
+            using (var fs = File.Create(temp))
+                JsonSerializer.Serialize(fs, s, Options);
+            File.Move(temp, _filePath, overwrite: true);
+        }
+        catch (Exception ex) when (IsExpectedIoFailure(ex))
+        {
+            TryDelete(temp);
+            Log.Warn($"settings could not be saved - the previous file is unchanged ({ex.GetType().Name})");
+        }
+    }
 
-        // Write to a temp file, then swap it in, so a crash mid-write can never leave a half file.
-        var temp = _filePath + ".tmp";
-        using (var fs = File.Create(temp))
-            JsonSerializer.Serialize(fs, s, Options);
-        File.Move(temp, _filePath, overwrite: true);
+    private static bool IsExpectedIoFailure(Exception ex) =>
+        ex is JsonException or IOException or UnauthorizedAccessException
+            or System.Security.SecurityException or NotSupportedException or ArgumentException;
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (Exception ex) when (IsExpectedIoFailure(ex)) { /* best effort only */ }
     }
 }

@@ -4,36 +4,61 @@
              xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Controls.ItemValueRow"
              x:DataType="vm:ItemValue">
-  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
-               Foreground="{StaticResource TextPrimaryBrush}"/>
+  <!-- Name | value | (pencil + changed chip). The label is muted and the value is bright, so they
+       read as different things. The value column is capped (MaxWidth) so a long paragraph wraps
+       narrow, and a left margin keeps a clear gap between the label and its value. -->
+  <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                 Foreground="{StaticResource TextDimBrush}"/>
+      <!-- A locked value shows a little padlock instead of a repeated sentence; hover it for why. -->
+      <Path Name="LockIcon" IsVisible="{Binding IsLocked}" Width="10" Height="12"
+            Stretch="Uniform" VerticalAlignment="Center"
+            Data="M3,6.5 L3,4.5 A2,2 0 0 1 7,4.5 L7,6.5 M1.5,6.5 L8.5,6.5 L8.5,11.5 L1.5,11.5 Z"
+            Stroke="{StaticResource TextDimBrush}" StrokeThickness="1.1" Fill="Transparent"
+            ToolTip.Tip="{Binding LockedTooltip}"/>
+    </StackPanel>
 
-    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-      <Button Name="ValueButton" Classes="valuefield"
-              IsVisible="{Binding ShowValueButton}"
-              Command="{Binding $parent[controls:ItemValueRow].BeginEditCommand}"
-              CommandParameter="{Binding}">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBlock Text="{Binding Value}" Classes.changed="{Binding IsChanged}"/>
-          <TextBlock Text="✎" Classes="dim"/>
-        </StackPanel>
-      </Button>
+    <Button Grid.Row="0" Grid.Column="1" Name="ValueButton" Classes="valuefield"
+            HorizontalAlignment="Right" HorizontalContentAlignment="Right" VerticalAlignment="Top"
+            MaxWidth="300" Margin="16,0,0,0"
+            IsVisible="{Binding ShowValueButton}"
+            Command="{Binding $parent[controls:ItemValueRow].BeginEditCommand}"
+            CommandParameter="{Binding}">
+      <TextBlock Text="{Binding Value}" Classes.changed="{Binding IsChanged}"
+                 TextWrapping="Wrap" TextAlignment="Left"/>
+    </Button>
 
-      <TextBlock Name="ReadOnlyText" Text="{Binding Value}" Classes="dim" VerticalAlignment="Center"
-                 IsVisible="{Binding !Editable}"/>
+    <TextBlock Grid.Row="0" Grid.Column="1" Name="ReadOnlyText" Text="{Binding Value}"
+               Foreground="{StaticResource TextPrimaryBrush}"
+               HorizontalAlignment="Right" VerticalAlignment="Top"
+               MaxWidth="300" Margin="16,0,0,0"
+               TextWrapping="Wrap" TextAlignment="Left"
+               IsVisible="{Binding !Editable}"/>
 
+    <!-- A free-text value (a description) gets a wide, multi-line editor; anything else stays one line. -->
+    <TextBox Grid.Row="0" Grid.Column="1" Name="Editor" Classes="field"
+             HorizontalAlignment="Right" VerticalAlignment="Top"
+             MaxWidth="300" Margin="16,0,0,0" MinHeight="30"
+             TextWrapping="Wrap" AcceptsReturn="{Binding IsMultiline}"
+             IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
+             KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus"/>
+
+    <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                VerticalAlignment="Top" Margin="6,2,0,0">
+      <TextBlock Text="✎" Classes="dim" IsVisible="{Binding ShowValueButton}"/>
       <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
               IsVisible="{Binding IsChanged}">
         <TextBlock Text="changed" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
       </Border>
     </StackPanel>
 
-    <TextBox Grid.Row="0" Grid.Column="1" Name="Editor" Classes="field" Width="140"
-             IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
-             KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus"/>
-
-    <TextBlock Grid.Row="1" Grid.Column="1" Name="WasText" Classes="dim"
+    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Name="WasText" Classes="dim"
                HorizontalAlignment="Right" Text="{Binding WasText}"
                IsVisible="{Binding IsChanged}"/>
+
+    <!-- A noted value carries a one-line caveat. -->
+    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Name="NoteText" Classes="dim"
+               TextWrapping="Wrap" Text="{Binding Note}" IsVisible="{Binding ShowNote}"/>
   </Grid>
 </UserControl>

@@ -148,6 +148,29 @@ public class ModBuilderTests : IDisposable
         Assert.Equal(new[] { 0, 1, 2, 3, 4 }, progress.Seen);
     }
 
+    [Fact]
+    public async Task Two_edits_to_the_same_package_are_both_applied()
+    {
+        var (builder, reader, writer, packer, resolver) = New();
+        const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
+        AddPackage(reader, pkg);
+        resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
+        resolver.Map[pkg] = new AssetResolution(pkg, null);   // the same file, recorded by path
+
+        var request = new BuildRequest("M", "1.0.0", new[]
+        {
+            new BuildItem("Duct Tape ES", new[] { new FieldChange("MaxStackSize", "25") }),
+            new BuildItem(pkg, new[] { new FieldChange("Weight", "0.5") }),
+        });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        // Both edits land on the one copy — neither silently overwrites the other.
+        Assert.Contains(writer.Applied, c => c.Field == "MaxStackSize" && c.NewValue == "25");
+        Assert.Contains(writer.Applied, c => c.Field == "Weight" && c.NewValue == "0.5");
+    }
+
     private sealed class ThrowingReader : IPackageReader
     {
         public bool TryReadPackage(string path, out IReadOnlyDictionary<string, byte[]>? files)

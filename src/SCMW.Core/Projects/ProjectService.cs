@@ -179,7 +179,7 @@ public sealed class ProjectService
 
             var now = DateTime.UtcNow;
             var file = new ProjectFile(id, displayName, description ?? string.Empty, now, now, iconFileName);
-            File.WriteAllText(Path.Combine(folder, ProjectFileName),
+            WriteJsonAtomic(Path.Combine(folder, ProjectFileName),
                 JsonSerializer.Serialize(file, JsonOptions));
 
             var record = new ProjectRecord(id, displayName, file.Description, folder, now, now, iconFileName);
@@ -358,7 +358,7 @@ public sealed class ProjectService
             Directory.CreateDirectory(root);
 
             var folderName = Path.GetFileName(source);
-            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             var destination = Path.Combine(root, $"{folderName} ({stamp})");
 
             var counter = 1;
@@ -422,7 +422,7 @@ public sealed class ProjectService
             project.CreatedUtc, now, desiredIconFileName);
         try
         {
-            File.WriteAllText(jsonPath, JsonSerializer.Serialize(file, JsonOptions));
+            WriteJsonAtomic(jsonPath, JsonSerializer.Serialize(file, JsonOptions));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or SecurityException or ArgumentException or NotSupportedException)
@@ -457,12 +457,28 @@ public sealed class ProjectService
             if (previousJson is null)
                 TryDeleteFile(path);
             else
-                File.WriteAllText(path, previousJson);
+                WriteJsonAtomic(path, previousJson);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or SecurityException or ArgumentException or NotSupportedException)
         {
             // Best effort only.
+        }
+    }
+
+    /// <summary>Writes a JSON file atomically (temp then move) so a crash cannot leave a half file.</summary>
+    private static void WriteJsonAtomic(string path, string json)
+    {
+        var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temp, json);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            TryDeleteFile(temp);
+            throw;
         }
     }
 

@@ -8,7 +8,7 @@
 
     <!-- Left: find -->
     <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*">
-      <TextBox Grid.Row="0" Name="SearchBox" Classes="field" Watermark="Search items…"
+      <TextBox Grid.Row="0" Name="SearchBox" Classes="field" Watermark="{Binding SearchWatermark}"
                Text="{Binding Search, Mode=TwoWay}"/>
 
       <Grid Grid.Row="1" Margin="0,12,0,0" RowDefinitions="Auto,Auto">
@@ -35,7 +35,8 @@
       </Grid>
 
       <CheckBox Grid.Row="2" Name="OnlyEditableBox" Margin="0,12,0,0"
-                Content="Show only _ES items"
+                Content="Show only items this mod can change"
+                IsVisible="{Binding ShowOnlyEditableToggle}"
                 IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
 
       <ListBox Grid.Row="3" Name="ItemList" Classes="items" Margin="0,8,0,0"
@@ -51,15 +52,15 @@
 
       <Border Grid.Row="3" Name="NoMatches" Classes="card" VerticalAlignment="Top"
               IsVisible="{Binding ShowNoMatches}">
-        <TextBlock Text="No items match that" Classes="dim"/>
+        <TextBlock Text="{Binding NoMatchesText}" Classes="dim"/>
       </Border>
 
       <Border Grid.Row="3" Name="EmptyState" Classes="card" VerticalAlignment="Top"
               IsVisible="{Binding ShowEmptyState}">
         <StackPanel Spacing="6">
-          <TextBlock Text="No items yet" FontSize="16" FontWeight="SemiBold"
+          <TextBlock Text="{Binding EmptyTitle}" FontSize="16" FontWeight="SemiBold"
                      Foreground="{StaticResource TextPrimaryBrush}"/>
-          <TextBlock Text="Items will appear here once the catalogue is loaded." Classes="dim"/>
+          <TextBlock Text="{Binding EmptyText}" Classes="dim"/>
         </StackPanel>
       </Border>
     </Grid>
@@ -74,9 +75,9 @@
         <Panel DockPanel.Dock="Top">
         <Border Name="Hint" Classes="card" IsVisible="{Binding ShowHint}">
           <StackPanel Spacing="6">
-            <TextBlock Text="Pick an item to see what you can change" FontSize="16" FontWeight="SemiBold"
+            <TextBlock Text="{Binding HintTitle}" FontSize="16" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Choose something from the list on the left." Classes="dim"/>
+            <TextBlock Text="{Binding HintText}" Classes="dim"/>
           </StackPanel>
         </Border>
 
@@ -89,6 +90,10 @@
 
             <CheckBox Content="Show all values" IsChecked="{Binding ShowAllValues, Mode=TwoWay}"/>
 
+            <Button Name="AddIngredientButton" Classes="secondary" Content="Add ingredient"
+                    HorizontalAlignment="Left" IsVisible="{Binding CanManageIngredients}"
+                    Command="{Binding AddIngredientCommand}"/>
+
             <TextBlock Text="{Binding RefusalMessage}" IsVisible="{Binding ShowRefusal}"
                        Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"/>
 
@@ -96,7 +101,16 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ValueGroup">
                   <StackPanel Spacing="8" Margin="0,0,0,16">
-                    <TextBlock Text="{Binding Name}" Classes="section"/>
+                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="4" Padding="8,4">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{Binding Name}" Classes="section" VerticalAlignment="Center"/>
+                        <Button Name="RemoveIngredientButton" Classes="secondary" Padding="8,2" FontSize="12"
+                                Content="Remove ingredient"
+                                IsVisible="{Binding RemovePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Command="{Binding $parent[UserControl].((vm:ItemsViewModel)DataContext).RemoveIngredientCommand}"
+                                CommandParameter="{Binding RemovePath}"/>
+                      </StackPanel>
+                    </Border>
                     <ItemsControl ItemsSource="{Binding Values}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ItemValue">

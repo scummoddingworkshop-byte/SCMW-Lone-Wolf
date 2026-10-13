@@ -17,9 +17,24 @@ public sealed class SystemProcessRunner : IProcessRunner
         foreach (var arg in args) start.ArgumentList.Add(arg);
 
         using var process = Process.Start(start)!;
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-        var stderr = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-        await process.WaitForExitAsync(ct).ConfigureAwait(false);
-        return new ProcessResult(process.ExitCode, (stdout + stderr).Trim());
+        try
+        {
+            // Read both pipes at the same time: a tool that writes a lot to one pipe must never
+            // block because we're waiting on the other.
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+
+            var stdout = await stdoutTask.ConfigureAwait(false);
+            var stderr = await stderrTask.ConfigureAwait(false);
+            return new ProcessResult(process.ExitCode, (stdout + stderr).Trim());
+        }
+        catch (OperationCanceledException)
+        {
+            // Never leave the tool running after the caller gave up.
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+            throw;
+        }
     }
 }

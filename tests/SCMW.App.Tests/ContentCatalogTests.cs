@@ -1,6 +1,7 @@
 using Avalonia.Headless.XUnit;
 using SCMW.Core;
 using SCMW.Core.Content;
+using SCMW.Core.Knowledge;
 
 namespace SCMW.App.Tests;
 
@@ -51,6 +52,135 @@ public class ContentCatalogTests
         var values = catalog.MapFields(new[] { Field("Damage", "45", StatusKind.Editable) });
 
         Assert.True(Assert.Single(values).Editable);
+    }
+
+    [AvaloniaFact]
+    public void A_nested_plain_value_reads_as_a_breadcrumb_in_its_parents_group()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+        const string path = "_replenishableResourceDescription.PeriodicReplenishment.ReplenishAmount";
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField(path, path, StatusKind.ReadOnly, "0.1", "FloatProperty", Nested: true),
+        }, editableItem: true);
+
+        var value = Assert.Single(values);
+        Assert.Equal("Replenish Amount", value.Name);   // just its own name, not the whole path
+        Assert.Equal("Replenishable Resource Description › Periodic Replenishment", value.Group);
+        Assert.Equal(path, value.TechnicalName);
+        Assert.Equal(ValueBand.Normal, value.Band);
+        Assert.True(value.Editable);   // a plain number: changeable like any other field
+        Assert.False(value.ShowNote);
+    }
+
+    [AvaloniaFact]
+    public void A_named_choice_is_changeable_with_a_one_line_note()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField("_baseElementType", "_baseElementType", StatusKind.ReadOnly,
+                "EBaseElementType::Well", "NameProperty"),
+        }, editableItem: true);
+
+        var value = Assert.Single(values);
+        Assert.Equal(ValueBand.Noted, value.Band);
+        Assert.True(value.Editable);
+        Assert.True(value.ShowNote);
+        Assert.False(string.IsNullOrWhiteSpace(value.Note));
+    }
+
+    [AvaloniaFact]
+    public void A_structural_value_is_locked()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField("_itemTags", "_itemTags", StatusKind.ReadOnly, "(tags)", "ArrayProperty"),
+        }, editableItem: true);
+
+        var value = Assert.Single(values);
+        Assert.Equal(ValueBand.Locked, value.Band);
+        Assert.False(value.Editable);
+        Assert.True(value.IsLocked);
+        Assert.Contains("not editable", value.LockedTooltip);
+    }
+
+    [AvaloniaFact]
+    public void A_base_elements_dead_name_field_is_not_offered()
+    {
+        // _name builds and writes but the game's shown name comes from the element's type/class,
+        // so the field is left out of the list entirely.
+        var catalog = new ContentCatalog(new NullSource());
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField("_name", "_name", StatusKind.ReadOnly, "Well", "TextProperty"),
+            new AssetField("_healthPoints", "_healthPoints", StatusKind.ReadOnly, "600", "IntProperty"),
+        }, editableItem: true);
+
+        Assert.DoesNotContain(values, v => v.TechnicalName == "_name");
+        Assert.Contains(values, v => v.TechnicalName == "_healthPoints");
+    }
+
+    [AvaloniaFact]
+    public void A_recipe_keeps_the_index_name_so_the_build_can_find_it()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+
+        var recipes = catalog.MapRecipes(new[]
+        {
+            new AssetSummary(
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden",
+                "Base Garden", "Crafting", StatusKind.Unknown, 0,
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden.uasset", null),
+        });
+
+        var recipe = Assert.Single(recipes);
+        // The row name must equal the index's name exactly — the build resolves by it.
+        Assert.Equal("Base Garden", recipe.Name);
+        Assert.Equal("Placeables", recipe.Category);  // grouped by the folder under Recipes/
+        Assert.True(recipe.Editable);
+    }
+
+    [AvaloniaFact]
+    public void An_ingredient_slots_amount_is_now_changeable()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+        const string path = "Ingredients[0].Amount.NoSkill";
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField(path, path, StatusKind.ReadOnly, "4", "IntProperty", Nested: true),
+        }, editableItem: true);
+
+        var value = Assert.Single(values);
+        Assert.Equal("Amount › No Skill", value.Name);
+        Assert.Equal("Ingredient 1", value.Group);
+        Assert.Equal(ValueBand.Normal, value.Band);
+        Assert.True(value.Editable);   // the build can now write into a list entry
+    }
+
+    [AvaloniaFact]
+    public void An_ingredients_accepted_tag_is_changeable_with_a_link_note()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+        const string path = "Ingredients[0].AllowedTypes[0]";
+
+        var values = catalog.MapFields(new[]
+        {
+            new AssetField(path, path, StatusKind.ReadOnly, "CI_Plank", "ObjectProperty", Nested: true),
+        }, editableItem: true);
+
+        var value = Assert.Single(values);
+        Assert.Equal("Accepts 1", value.Name);
+        Assert.Equal("Ingredient 1", value.Group);
+        Assert.Equal(ValueBand.Noted, value.Band);
+        Assert.True(value.Editable);
+        Assert.True(value.ShowNote);
     }
 
     /// <summary>A do-nothing source for mapping tests; no game, no disk.</summary>

@@ -5,17 +5,29 @@ namespace SCMW.App.Tests;
 public class ShellViewModelTests
 {
     [AvaloniaFact]
-    public void Sidebar_lists_the_six_areas_in_order()
+    public void Sidebar_lists_the_areas_in_order()
     {
         var vm = new ShellViewModel(new NavigationHost());
 
         Assert.Equal(
             new[]
             {
-                ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items,
+                ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding,
+                ScreenKey.Recipes,
                 ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,
             },
             vm.Sidebar.Select(i => i.Key));
+    }
+
+    [AvaloniaFact]
+    public void The_shell_reopens_on_the_last_screen()
+    {
+        var store = new InMemorySettingsStore();
+        store.Save(store.Load() with { LastScreen = "Recipes" });
+
+        var vm = new ShellViewModel(new NavigationHost(), settingsStore: store);
+
+        Assert.Equal(ScreenKey.Recipes, vm.Current);
     }
 
     [AvaloniaFact]

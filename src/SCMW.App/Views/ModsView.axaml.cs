@@ -40,7 +40,7 @@ public partial class ModsView : UserControl
             .ToList();
 #pragma warning restore CS0618
 
-        if (paths is { Count: > 0 }) Vm?.ImportDropped(paths);
+        if (paths is { Count: > 0 }) _ = Vm?.ImportDropped(paths);
     }
 
     private async Task PickAndImportAsync()
@@ -56,6 +56,6 @@ public partial class ModsView : UserControl
 
         var paths = files.Select(f => f.TryGetLocalPath())
             .Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
-        if (paths.Count > 0) Vm?.ImportDropped(paths);
+        if (paths.Count > 0 && Vm is { } vm) await vm.ImportDropped(paths);
     }
 }

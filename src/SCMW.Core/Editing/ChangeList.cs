@@ -80,59 +80,99 @@ public sealed class ProjectChangeStore : IChangeStore
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Serialises every read-modify-write on the list, so two edits can't lose one another.</summary>
+    private readonly object _gate = new();
+
     public IReadOnlyList<ChangeRecord> Load(string projectFolder)
     {
         if (IsBlankFolder(projectFolder))
             return Array.Empty<ChangeRecord>();
 
-        var path = Path.Combine(projectFolder, FileName);
-        try
+        lock (_gate)
         {
-            if (!File.Exists(path))
-                return Array.Empty<ChangeRecord>();
+            var path = Path.Combine(projectFolder, FileName);
+            try
+            {
+                if (!File.Exists(path))
+                    return Array.Empty<ChangeRecord>();
 
-            var json = File.ReadAllText(path);
-            if (string.IsNullOrWhiteSpace(json))
-                return Array.Empty<ChangeRecord>();
+                var json = File.ReadAllText(path);
+                if (string.IsNullOrWhiteSpace(json))
+                    return Array.Empty<ChangeRecord>();
 
-            var file = JsonSerializer.Deserialize<ChangesFile>(json, JsonOptions);
-            return file?.Records ?? new List<ChangeRecord>();
-        }
-        catch (Exception ex) when (IsExpectedIoFailure(ex))
-        {
-            // A hand-edited/corrupt or locked file must never take the app down: report it plainly
-            // and behave as if the project has no changes yet.
-            Log.Warn($"Could not read the change list at '{path}' - treating the project as having no changes. {ex.Message}");
-            return Array.Empty<ChangeRecord>();
+                var file = JsonSerializer.Deserialize<ChangesFile>(json, JsonOptions);
+                return file?.Records ?? new List<ChangeRecord>();
+            }
+            catch (JsonException)
+            {
+                // A damaged file is preserved (never overwritten as if empty) so nothing is lost.
+                ArchiveCorrupt(projectFolder, path);
+                return Array.Empty<ChangeRecord>();
+            }
+            catch (Exception ex) when (IsExpectedIoFailure(ex))
+            {
+                // A hand-edited/corrupt or locked file must never take the app down: report it plainly
+                // and behave as if the project has no changes yet.
+                Log.Warn($"Could not read the change list at '{path}' - treating the project as having no changes. {ex.Message}");
+                return Array.Empty<ChangeRecord>();
+            }
         }
     }
 
-    public void Add(string projectFolder, ChangeRecord record)
+    /// <summary>Moves a damaged change list aside (keeping it) so the next save can start clean.</summary>
+    private static void ArchiveCorrupt(string projectFolder, string path)
+    {
+        var kept = Path.Combine(projectFolder,
+            $"changes.corrupt-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
+        try
+        {
+            if (File.Exists(path)) File.Move(path, kept, overwrite: true);
+            Log.Warn($"The project's change list was damaged; it was kept as '{Path.GetFileName(kept)}' and treated as empty.");
+        }
+        catch (Exception ex) when (IsExpectedIoFailure(ex))
+        {
+            Log.Warn($"The project's change list was damaged and could not be kept aside. {ex.Message}");
+        }
+    }
+
+    public void Add(string projectFolder, ChangeRecord record) => TryAdd(projectFolder, record);
+
+    /// <summary>
+    /// Append a record; true when it is (or already was) in the saved list, false when the save
+    /// failed. Never throws — the caller can say plainly that the edit wasn't kept.
+    /// </summary>
+    public bool TryAdd(string projectFolder, ChangeRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        if (IsBlankFolder(projectFolder))
-            return; // no project folder -> nothing to append to (never throws)
+        lock (_gate)
+        {
+            if (IsBlankFolder(projectFolder))
+                return false; // no project folder -> nothing to append to (never throws)
 
-        var records = Load(projectFolder).ToList();
-        if (records.Any(r => r.Id == record.Id))
-            return; // idempotent by Id
+            var records = Load(projectFolder).ToList();
+            if (records.Any(r => r.Id == record.Id))
+                return true; // idempotent by Id
 
-        records.Add(record);
-        TrySave(projectFolder, records);
+            records.Add(record);
+            return TrySave(projectFolder, records);
+        }
     }
 
     public void Undo(string projectFolder, Guid recordId)
     {
-        if (IsBlankFolder(projectFolder))
-            return; // no project folder -> nothing to remove (never throws)
+        lock (_gate)
+        {
+            if (IsBlankFolder(projectFolder))
+                return; // no project folder -> nothing to remove (never throws)
 
-        var records = Load(projectFolder).ToList();
-        var kept = records.Where(r => r.Id != recordId).ToList();
-        if (kept.Count == records.Count)
-            return; // nothing matched: leave the file untouched
+            var records = Load(projectFolder).ToList();
+            var kept = records.Where(r => r.Id != recordId).ToList();
+            if (kept.Count == records.Count)
+                return; // nothing matched: leave the file untouched
 
-        TrySave(projectFolder, kept);
+            TrySave(projectFolder, kept);
+        }
     }
 
     public string? AppliedValue(string projectFolder, string assetId, string field, string? gameValue) =>
@@ -141,26 +181,30 @@ public sealed class ProjectChangeStore : IChangeStore
     public ProjectVersion SaveVersion(string projectFolder, string? label)
     {
         var labelText = (label ?? string.Empty).Trim();
-        if (IsBlankFolder(projectFolder))
+
+        lock (_gate)
         {
-            // No project folder -> no version can be written. Return a version-shaped no-op the
-            // caller cannot confirm against ListVersions (which is also empty), so the UI reports
-            // the plain failure instead of an unhandled exception.
-            Log.Warn("Cannot save a version: no project folder was supplied.");
-            return new ProjectVersion(string.Empty, labelText, DateTime.UtcNow, 0);
+            if (IsBlankFolder(projectFolder))
+            {
+                // No project folder -> no version can be written. Return a version-shaped no-op the
+                // caller cannot confirm against ListVersions (which is also empty), so the UI reports
+                // the plain failure instead of an unhandled exception.
+                Log.Warn("Cannot save a version: no project folder was supplied.");
+                return new ProjectVersion(string.Empty, labelText, DateTime.UtcNow, 0);
+            }
+
+            var records = Load(projectFolder).ToList();
+            var createdUtc = DateTime.UtcNow;
+            var id = UniqueVersionId(projectFolder, createdUtc);
+
+            if (!TryWriteVersionFile(projectFolder, id,
+                    new VersionFile(labelText, createdUtc, records)))
+            {
+                Log.Warn($"Could not save a version for the project at '{projectFolder}'.");
+            }
+
+            return new ProjectVersion(id, labelText, createdUtc, records.Count);
         }
-
-        var records = Load(projectFolder).ToList();
-        var createdUtc = DateTime.UtcNow;
-        var id = UniqueVersionId(projectFolder, createdUtc);
-
-        if (!TryWriteVersionFile(projectFolder, id,
-                new VersionFile(labelText, createdUtc, records)))
-        {
-            Log.Warn($"Could not save a version for the project at '{projectFolder}'.");
-        }
-
-        return new ProjectVersion(id, labelText, createdUtc, records.Count);
     }
 
     public IReadOnlyList<ProjectVersion> ListVersions(string projectFolder)
@@ -195,6 +239,14 @@ public sealed class ProjectChangeStore : IChangeStore
     }
 
     public string? Restore(string projectFolder, string versionId)
+    {
+        lock (_gate)
+        {
+            return RestoreCore(projectFolder, versionId);
+        }
+    }
+
+    private string? RestoreCore(string projectFolder, string versionId)
     {
         if (IsBlankFolder(projectFolder))
             return "That project folder is unavailable.";

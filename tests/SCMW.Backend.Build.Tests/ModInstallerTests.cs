@@ -97,6 +97,33 @@ public class ModInstallerTests : IDisposable
     }
 
     [Fact]
+    public void Reinstalling_our_own_pak_makes_no_backup_so_removing_really_removes_it()
+    {
+        var (installer, store) = NewInstaller();
+        var game = Game("game");
+        Directory.CreateDirectory(Path.Combine(game, "SCUM", "Content", "Paks"));
+        Directory.CreateDirectory(_root);
+
+        var first = Path.Combine(_root, "SCMW_Tape_v1.0.0_P.pak"); File.WriteAllText(first, "one");
+        Assert.True(installer.Install(game,
+            new InstallRecord("p1", "Tape", "1.0.0", "SCMW_Tape_v1.0.0_P.pak", first, "", DateTime.UtcNow, null), first).Ok);
+
+        // Rebuild + reinstall the same version: the file already there is OUR OWN pak, not a
+        // foreign one, so nothing is backed up.
+        var second = Path.Combine(_root, "SCMW_Tape_v1.0.0_P.pak"); File.WriteAllText(second, "two");
+        Assert.True(installer.Install(game,
+            new InstallRecord("p1", "Tape", "1.0.0", "SCMW_Tape_v1.0.0_P.pak", second, "", DateTime.UtcNow, null), second).Ok);
+        Assert.Null(store.Load("p1")!.BackupPath);
+
+        var modsPak = Path.Combine(ModsOf(game), "SCMW_Tape_v1.0.0_P.pak");
+        Assert.True(installer.Remove(game, "p1").Ok);
+
+        // The mod is really gone — it is not resurrected from a backup of itself.
+        Assert.False(File.Exists(modsPak));
+        Assert.Null(store.Load("p1"));
+    }
+
+    [Fact]
     public void Installing_again_replaces_a_switched_off_same_name_twin()
     {
         var (installer, _) = NewInstaller();

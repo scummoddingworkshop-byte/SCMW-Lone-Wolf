@@ -20,6 +20,7 @@ public sealed class ItemSummary
         Editable = editable;
         Picture = picture;
         Values = values ?? Array.Empty<ItemValue>();
+        GameValues = Values;
         AssetId = assetId;
     }
 
@@ -33,8 +34,18 @@ public sealed class ItemSummary
     public string? AssetId { get; }
     public IReadOnlyList<ItemValue> Values { get; private set; }
 
+    /// <summary>The values as the game has them, before any recorded list change is applied.</summary>
+    public IReadOnlyList<ItemValue> GameValues { get; private set; } = Array.Empty<ItemValue>();
+
     /// <summary>Replaces the values (real items load their fields after the list is built).</summary>
-    public void SetValues(IReadOnlyList<ItemValue> values) => Values = values;
+    public void SetValues(IReadOnlyList<ItemValue> values)
+    {
+        GameValues = values;
+        Values = values;
+    }
+
+    /// <summary>Replaces the shown values (e.g. after applying a recorded list change), keeping the game's.</summary>
+    public void ReplaceValues(IReadOnlyList<ItemValue> values) => Values = values;
 
     /// <summary>The cached icon PNG path once extracted, or null (the row shows a letter tile).</summary>
     public string? IconPath { get; set; }

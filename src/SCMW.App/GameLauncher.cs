@@ -95,9 +95,9 @@ public sealed class SystemProcessLauncher : IProcessLauncher
 
 /// <summary>
 /// Starts SCUM from the configured game path, through Steam, ensuring Steam is running first.
-/// <b>Modded</b> passes <c>-nobattleeye -fileopenlog</c> (the flags the proven versions needed for
-/// mods to load); <b>unmodded</b> starts a plain game. Switching the mods themselves on/off is done
-/// by the mods service before this is called.
+/// <b>Modded</b> passes <c>-nobattleeye -fileopenlog</c> (both are needed: BattlEye off, and the
+/// file-open log without which SCUM reports a file-integrity error); <b>unmodded</b> starts a plain
+/// game. Switching the mods themselves on/off is done by the mods service before this is called.
 /// </summary>
 public sealed class ScumLauncher : IGameLauncher
 {

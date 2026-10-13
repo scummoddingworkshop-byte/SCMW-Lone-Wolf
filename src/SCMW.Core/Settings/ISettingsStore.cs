@@ -8,7 +8,9 @@ public sealed record AppSettings(string? WorkspacePath, string? GamePath, string
                                  string? ActiveProjectId = null,
                                  int? WindowX = null, int? WindowY = null,
                                  int? WindowWidth = null, int? WindowHeight = null,
-                                 bool WindowMaximized = false);
+                                 bool WindowMaximized = false,
+                                 bool SkipIntroVideos = false,
+                                 string? LastScreen = null);
 
 public interface ISettingsStore
 {

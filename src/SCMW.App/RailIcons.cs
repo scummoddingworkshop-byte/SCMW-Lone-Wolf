@@ -23,6 +23,8 @@ public static class RailIcons
         ScreenKey.Home => "home",
         ScreenKey.Projects => "projects",
         ScreenKey.Items => "items",
+        ScreenKey.BaseBuilding => "basebuilding",   // placeholder icon (a copy of build) for now
+        ScreenKey.Recipes => "recipes",             // placeholder icon (a copy of items) for now
         ScreenKey.Build => "build",
         ScreenKey.Mods => "mods",
         ScreenKey.Backups => "backups",

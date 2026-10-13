@@ -6,6 +6,8 @@ public enum ScreenKey
     Home,
     Projects,
     Items,
+    BaseBuilding,
+    Recipes,
     Build,
     Mods,
     Backups,

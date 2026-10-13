@@ -123,14 +123,35 @@ public partial class ModsViewModel : ObservableObject
     }
 
     /// <summary>Adds .pak files the player dropped (or chose); refreshes and reports plainly.</summary>
-    public void ImportDropped(IReadOnlyList<string> paths)
+    public System.Threading.Tasks.Task ImportDropped(IReadOnlyList<string> paths)
     {
-        if (_service is null || paths.Count == 0) return;
+        if (_service is null)
+        {
+            // A drop with no game configured must say why, not swallow it.
+            if (paths.Count > 0) Message = "Set your SCUM folder in Settings to manage mods.";
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
 
-        var outcome = _service.Import(paths);
-        Message = DescribeImport(outcome);
-        CanRestartAsAdmin = NeedsAdmin(outcome.Failure);
-        LoadFromService();
+        if (paths.Count == 0) return System.Threading.Tasks.Task.CompletedTask;
+
+        // Copying mods can be large; do it off the window's thread and report when it's done.
+        return ImportDroppedCoreAsync(paths);
+    }
+
+    private async System.Threading.Tasks.Task ImportDroppedCoreAsync(IReadOnlyList<string> paths)
+    {
+        try
+        {
+            var outcome = await System.Threading.Tasks.Task.Run(() => _service!.Import(paths));
+            Message = DescribeImport(outcome);
+            CanRestartAsAdmin = NeedsAdmin(outcome.Failure);
+            LoadFromService();
+        }
+        catch (Exception ex)
+        {
+            SCMW.Core.Logging.Log.Warn($"Import failed unexpectedly ({ex.GetType().Name}).");
+            Message = "That mod could not be added.";
+        }
     }
 
     /// <summary>A plain line naming what was added, and exactly why anything was skipped.</summary>

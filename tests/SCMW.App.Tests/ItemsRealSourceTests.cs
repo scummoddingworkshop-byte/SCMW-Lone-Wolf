@@ -1,6 +1,7 @@
 using Avalonia.Headless.XUnit;
 using SCMW.Core;
 using SCMW.Core.Content;
+using SCMW.Core.Editing;
 
 namespace SCMW.App.Tests;
 
@@ -193,6 +194,145 @@ public class ItemsRealSourceTests
 
             var record = Assert.Single(store.For(projects.Current!.FolderPath));
             Assert.Equal("_drawWeight", record.FieldTechnicalName);
+            // ...and the file's own path is kept too, so the build never has to guess by name.
+            Assert.Equal("SCUM/.../Improvised_Bow_ES", record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_nested_value_is_shown_and_recorded_by_its_dotted_path()
+    {
+        const string path = "_replenishableResourceDescription.PeriodicReplenishment.ReplenishAmount";
+        var source = new FakeSource(
+            new[]
+            {
+                new AssetSummary("SCUM/.../Well_ES", "Well", "Base elements",
+                    StatusKind.Unknown, 0, "SCUM/.../Well_ES.uasset", null),
+            },
+            new Dictionary<string, IReadOnlyList<AssetField>>
+            {
+                ["SCUM/.../Well_ES"] = new[]
+                {
+                    new AssetField(path, path, StatusKind.ReadOnly, "0.1", "FloatProperty", Nested: true),
+                },
+            },
+            new ContentSourceStatus(ContentSourceState.Ready, "mounted", "1"));
+
+        var (projects, root) = TestProjects.With("Nested mod");
+        try
+        {
+            var store = TestProjects.ChangeStore(projects);
+            var vm = new ItemsViewModel(store, projects, source: source, catalog: new ContentCatalog(source));
+            await vm.LoadFromSourceAsync();
+            vm.SelectedItem = vm.VisibleItems.First(i => i.Name == "Well");
+            await vm.LoadFieldsAsync(vm.SelectedItem);
+
+            var value = Assert.Single(vm.Sections.SelectMany(s => s.Values));
+            Assert.True(value.Editable);
+            Assert.Equal("Replenish Amount", value.Name);   // its own name, not the whole path
+
+            vm.BeginEditCommand.Execute(value);
+            value.Draft = "0.3";
+            vm.CommitEditCommand.Execute(value);
+
+            var record = Assert.Single(store.For(projects.Current!.FolderPath));
+            Assert.Equal(path, record.FieldTechnicalName);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Adding_an_ingredient_records_a_list_change_and_shows_a_new_slot()
+    {
+        var source = new FakeSource(
+            new[]
+            {
+                new AssetSummary("SCUM/.../CR_Thing", "Thing", "Items",
+                    StatusKind.Unknown, 0, "SCUM/.../CR_Thing.uasset", null),
+            },
+            new Dictionary<string, IReadOnlyList<AssetField>>
+            {
+                ["SCUM/.../CR_Thing"] = new[]
+                {
+                    new AssetField("Ingredients[0].Amount.NoSkill",
+                        "Ingredients[0].Amount.NoSkill", StatusKind.ReadOnly, "4", "IntProperty", Nested: true),
+                },
+            },
+            new ContentSourceStatus(ContentSourceState.Ready, "mounted", "1"));
+
+        var (projects, root) = TestProjects.With("Recipe mod");
+        try
+        {
+            var store = TestProjects.ChangeStore(projects);
+            var vm = new ItemsViewModel(store, projects, source: source,
+                catalog: new ContentCatalog(source), family: AssetFamily.Recipes);
+            await vm.LoadFromSourceAsync();
+            vm.SelectedItem = vm.VisibleItems.First(i => i.Name == "Thing");
+            await vm.LoadFieldsAsync(vm.SelectedItem);
+
+            Assert.True(vm.CanManageIngredients);
+            Assert.Single(vm.Sections);
+
+            vm.AddIngredientCommand.Execute(null);
+
+            var record = Assert.Single(store.For(projects.Current!.FolderPath));
+            Assert.Equal(ChangeOperation.AddEntry, record.Operation);
+            Assert.Equal("Ingredients", record.FieldTechnicalName);
+            Assert.Equal(2, vm.Sections.Count);   // a second slot now shows
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Removing_an_ingredient_clears_the_recipes_value_edits()
+    {
+        var source = new FakeSource(
+            new[]
+            {
+                new AssetSummary("SCUM/.../CR_Thing", "Thing", "Items",
+                    StatusKind.Unknown, 0, "SCUM/.../CR_Thing.uasset", null),
+            },
+            new Dictionary<string, IReadOnlyList<AssetField>>
+            {
+                ["SCUM/.../CR_Thing"] = new[]
+                {
+                    new AssetField("Ingredients[0].Amount.NoSkill",
+                        "Ingredients[0].Amount.NoSkill", StatusKind.ReadOnly, "4", "IntProperty", Nested: true),
+                    new AssetField("Ingredients[1].Amount.NoSkill",
+                        "Ingredients[1].Amount.NoSkill", StatusKind.ReadOnly, "5", "IntProperty", Nested: true),
+                },
+            },
+            new ContentSourceStatus(ContentSourceState.Ready, "mounted", "1"));
+
+        var (projects, root) = TestProjects.With("Recipe mod");
+        try
+        {
+            var store = TestProjects.ChangeStore(projects);
+            var vm = new ItemsViewModel(store, projects, source: source,
+                catalog: new ContentCatalog(source), family: AssetFamily.Recipes);
+            await vm.LoadFromSourceAsync();
+            vm.SelectedItem = vm.VisibleItems.First(i => i.Name == "Thing");
+            await vm.LoadFieldsAsync(vm.SelectedItem);
+
+            // Edit slot 0's amount...
+            var value = vm.Sections.SelectMany(s => s.Values)
+                .First(v => v.TechnicalName == "Ingredients[0].Amount.NoSkill");
+            vm.BeginEditCommand.Execute(value);
+            value.Draft = "9";
+            vm.CommitEditCommand.Execute(value);
+            Assert.Contains(store.For(projects.Current!.FolderPath), r => r.Operation == ChangeOperation.Set);
+
+            // ...then remove a slot. The value edit is cleared, so it cannot land on the wrong
+            // ingredient after the slots shift.
+            vm.RemoveIngredientCommand.Execute("Ingredients[0]");
+
+            var records = store.For(projects.Current!.FolderPath);
+            Assert.DoesNotContain(records, r => r.Operation == ChangeOperation.Set);
+            Assert.Contains(records, r => r.Operation == ChangeOperation.RemoveEntry
+                                          && r.FieldTechnicalName == "Ingredients[0]");
+            // ...and the screen says plainly that the edits were reset.
+            Assert.Contains("reset", vm.RefusalMessage, StringComparison.OrdinalIgnoreCase);
         }
         finally { TestProjects.Cleanup(root); }
     }

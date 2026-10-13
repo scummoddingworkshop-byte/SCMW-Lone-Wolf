@@ -23,6 +23,16 @@ public class BuildNamesTests
         Assert.Equal("SCMW_Mod_v1.0.0_P.pak", BuildNames.PakFileName("Mod", "latest"));
     }
 
+    [Theory]
+    [InlineData("1.0.0", true)]
+    [InlineData("v2.10.3", true)]
+    [InlineData("", false)]
+    [InlineData("latest", false)]
+    [InlineData("1.0", false)]
+    [InlineData("1.0.0.0", false)]
+    public void A_version_is_checked_before_building(string version, bool expected)
+        => Assert.Equal(expected, BuildNames.IsValidVersion(version));
+
     [Fact]
     public void Old_version_matching_is_exact_and_never_a_lookalike()
     {

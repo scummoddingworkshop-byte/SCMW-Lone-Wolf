@@ -19,7 +19,11 @@ public static class AppliedValue
         for (var i = records.Count - 1; i >= 0; i--)
         {
             var record = records[i];
-            if (string.Equals(record.AssetId, assetId, StringComparison.Ordinal)
+
+            // A list change (add/remove an entry) is not a value; it must never be read as one.
+            if (record.Operation != ChangeOperation.Set) continue;
+
+            if (string.Equals(record.AssetId, assetId, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
             {
                 return record.NewValue;

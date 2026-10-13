@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using SCMW.App.Controls;
+using SCMW.Core.Knowledge;
 
 namespace SCMW.App.Tests;
 
@@ -67,6 +68,31 @@ public class ItemValueRowTests
 
         Assert.False(row.FindControl<Button>("ValueButton")!.IsVisible);
         Assert.True(row.FindControl<TextBlock>("ReadOnlyText")!.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Row_shows_a_one_line_note_under_a_noted_value()
+    {
+        var value = new ItemValue("Type", "Item settings", "EBaseElementType::Well",
+            ItemValueKind.Text, editable: true, band: ValueBand.Noted, note: "A named choice.");
+        var row = NewRow(value);
+        row.Measure(new Size(400, 80));
+
+        var note = row.FindControl<TextBlock>("NoteText")!;
+        Assert.True(note.IsVisible);
+        Assert.Equal("A named choice.", note.Text);
+    }
+
+    [AvaloniaFact]
+    public void Row_shows_a_padlock_for_a_locked_value()
+    {
+        var value = new ItemValue("Tags", "Item settings", "(tags)", editable: false, band: ValueBand.Locked);
+        var row = NewRow(value);
+        row.Measure(new Size(400, 80));
+
+        Assert.True(row.FindControl<Avalonia.Controls.Shapes.Path>("LockIcon")!.IsVisible);
+        Assert.False(row.FindControl<Button>("ValueButton")!.IsVisible);
+        Assert.Null(row.FindControl<TextBlock>("LockedText"));   // the repeated sentence is gone
     }
 
     private static (ItemValueRow row, ItemValue value) Wired()

@@ -56,6 +56,12 @@
           </Grid>
 
           <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Game version" Classes="dim" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Name="GameVersionText" Text="{Binding GameVersion}"
+                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+          </Grid>
+
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
             <TextBlock Grid.Column="0" Text="Mods folder" Classes="dim" VerticalAlignment="Center"/>
             <TextBlock Grid.Column="1" Name="ModsPathText" Text="{Binding ModsPath}" Classes="dim"
                        TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -69,6 +75,26 @@
                          IsVisible="{Binding ModsNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
               <TextBlock Text="Where SCMW — Lone Wolf installs your mods, and where SCUM loads them from."
                          Classes="dim" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Launching options -->
+      <Border Name="LaunchOptionsCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Launching options" Classes="section"/>
+
+          <Grid ColumnDefinitions="160,*,328" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Intro videos" Classes="dim" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <CheckBox Name="SkipIntroVideosBox" Content="Skip the intro videos"
+                        IsChecked="{Binding SkipIntroVideos, Mode=TwoWay}"/>
+              <TextBlock Text="Stops SCUM's three intro clips from playing. Untick to put them back."
+                         Classes="dim" TextWrapping="Wrap"/>
+              <TextBlock Name="IntroVideoNote" Text="{Binding IntroVideoNote}" Classes="dim" TextWrapping="Wrap"
+                         Classes.good="{Binding IntroVideoNoteGood}" Classes.bad="{Binding IntroVideoNoteBad}"
+                         IsVisible="{Binding IntroVideoNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
           </Grid>
         </StackPanel>

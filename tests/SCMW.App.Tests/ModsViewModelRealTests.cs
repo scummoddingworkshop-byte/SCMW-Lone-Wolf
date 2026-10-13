@@ -103,12 +103,12 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
-    public void Importing_dropped_paths_adds_them_and_refreshes()
+    public async Task Importing_dropped_paths_adds_them_and_refreshes()
     {
         var svc = new FakeMods();
         var vm = new ModsViewModel(service: svc);
 
-        vm.ImportDropped(new[] { @"C:\Downloads\New.pak" });
+        await vm.ImportDropped(new[] { @"C:\Downloads\New.pak" });
 
         Assert.Single(svc.Imports);                       // the view model really asked the service
         var mod = Assert.Single(vm.Mods);                 // and the refreshed list shows it
@@ -116,12 +116,12 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
-    public void A_refused_import_says_why()
+    public async Task A_refused_import_says_why()
     {
         var svc = new FakeMods { ImportOverride = new ImportOutcome(false, null, 0, 1, 0) };
         var vm = new ModsViewModel(service: svc);
 
-        vm.ImportDropped(new[] { @"C:\Downloads\Dup.pak" });
+        await vm.ImportDropped(new[] { @"C:\Downloads\Dup.pak" });
 
         Assert.Contains("already installed", vm.Message);
     }
@@ -180,7 +180,7 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
-    public void A_permission_block_on_an_import_offers_restart_as_administrator()
+    public async Task A_permission_block_on_an_import_offers_restart_as_administrator()
     {
         var svc = new FakeMods
         {
@@ -189,7 +189,7 @@ public class ModsViewModelRealTests
         };
         var vm = new ModsViewModel(service: svc, elevation: new FakeElevation());
 
-        vm.ImportDropped(new[] { @"C:\Downloads\New.pak" });
+        await vm.ImportDropped(new[] { @"C:\Downloads\New.pak" });
 
         Assert.True(vm.CanRestartAsAdmin);
     }

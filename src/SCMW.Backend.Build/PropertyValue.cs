@@ -7,12 +7,12 @@ namespace SCMW.Backend.Build;
 
 /// <summary>
 /// Sets one typed UAssetAPI property from a string. Only value kinds we can set correctly are
-/// accepted — anything else (including enum-backed bytes, objects, arrays, structs) is refused so
-/// the whole build fails rather than writing a value the game would ignore.
+/// accepted — anything else (objects, arrays, structs) is refused so the whole build fails rather
+/// than writing a value the game would ignore.
 /// </summary>
 internal static class PropertyValue
 {
-    internal static bool TrySet(PropertyData property, UAsset? asset, string raw, out string? error)
+    internal static bool TrySet(PropertyData property, INameMap? names, string raw, out string? error)
     {
         error = null;
         try
@@ -40,23 +40,40 @@ internal static class PropertyValue
                     l.Value = lv; return true;
 
                 case BytePropertyData b:
-                    // An enum value lives in EnumValue (an FName); the byte Value is not serialized,
-                    // so setting it would silently do nothing. Refuse rather than lie.
+                    // A plain byte is a number; an enum-backed byte keeps its choice in EnumValue
+                    // (an FName), not in Value, so each is set its own way.
                     if (b.ByteType != BytePropertyType.Byte)
-                        { error = Unsupported(); return false; }
+                    {
+                        b.EnumValue = FName.FromString(names!, raw);
+                        return true;
+                    }
                     if (!byte.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bv))
                         return NotANumber(raw, out error);
                     b.Value = bv; return true;
 
+                // A full enum property (e.g. _baseElementType) keeps its choice as an FName; the
+                // value the screen shows ("EBaseElementType::Well") is exactly what is stored.
+                case EnumPropertyData e:
+                    e.Value = FName.FromString(names!, raw); return true;
+
                 case BoolPropertyData bo:
-                    if (!TryBool(raw, out var bov)) return NotANumber(raw, out error);
+                    if (!TryBool(raw, out var bov))
+                    {
+                        error = $"\"{raw}\" isn't a yes/no value — use true or false.";
+                        return false;
+                    }
                     bo.Value = bov; return true;
 
                 case StrPropertyData s:
                     s.Value = FString.FromString(raw); return true;
 
+                // A display name like a base element's "_name" is a TextProperty (its Value is an
+                // FString, exactly like a StrProperty), so it is set the same way.
+                case TextPropertyData t:
+                    t.Value = FString.FromString(raw); return true;
+
                 case NamePropertyData n:
-                    n.Value = FName.FromString(asset!, raw); return true;
+                    n.Value = FName.FromString(names!, raw); return true;
 
                 default:
                     error = Unsupported(); return false;
@@ -64,7 +81,8 @@ internal static class PropertyValue
         }
         catch (Exception ex)
         {
-            error = "That value could not be set (" + ex.GetType().Name + ").";
+            SCMW.Core.Logging.Log.Warn($"Setting a value failed ({ex.GetType().Name}).");
+            error = "That value couldn't be set.";
             return false;
         }
     }
@@ -79,9 +97,12 @@ internal static class PropertyValue
 
     private static bool TryBool(string raw, out bool value)
     {
-        if (bool.TryParse(raw, out value)) return true;
-        if (raw.Trim() == "1") { value = true; return true; }
-        if (raw.Trim() == "0") { value = false; return true; }
+        var text = (raw ?? string.Empty).Trim();
+        if (bool.TryParse(text, out value)) return true;
+        if (text.Equals("yes", StringComparison.OrdinalIgnoreCase)) { value = true; return true; }
+        if (text.Equals("no", StringComparison.OrdinalIgnoreCase)) { value = false; return true; }
+        if (text == "1") { value = true; return true; }
+        if (text == "0") { value = false; return true; }
         value = false;
         return false;
     }

@@ -53,14 +53,34 @@ public sealed class ModBuilder : IModBuilder
             progress?.Report(1);
             progress?.Report(2);
 
+            // Resolve every item first. Two items can land on the same game file (one recorded by
+            // name, one by path), so their edits are grouped and applied together — otherwise the
+            // second copy would silently overwrite the first.
+            var packages = new Dictionary<string, (string Name, List<FieldChange> Changes)>(
+                StringComparer.OrdinalIgnoreCase);
+            var order = new List<string>();
+
             foreach (var item in request.Items)
             {
                 var resolved = await _resolver.ResolveAsync(item.RecordedName, ct).ConfigureAwait(false);
                 if (resolved.PackagePath is null)
                     return new BuildOutcome(false, null, resolved.Error ?? $"\"{item.RecordedName}\" could not be found.");
 
-                if (!_reader.TryReadPackage(resolved.PackagePath, out var files) || files is null || files.Count == 0)
-                    return new BuildOutcome(false, null, $"The game files for \"{item.RecordedName}\" could not be read.");
+                if (!packages.TryGetValue(resolved.PackagePath, out var group))
+                {
+                    group = (item.RecordedName, new List<FieldChange>());
+                    packages[resolved.PackagePath] = group;
+                    order.Add(resolved.PackagePath);
+                }
+                group.Changes.AddRange(item.Changes);
+            }
+
+            foreach (var packagePath in order)
+            {
+                var (name, changes) = packages[packagePath];
+
+                if (!_reader.TryReadPackage(packagePath, out var files) || files is null || files.Count == 0)
+                    return new BuildOutcome(false, null, $"The game files for \"{name}\" could not be read.");
 
                 var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(packageDir);
@@ -73,13 +93,13 @@ public sealed class ModBuilder : IModBuilder
                 }
 
                 if (uassetPath is null)
-                    return new BuildOutcome(false, null, $"\"{item.RecordedName}\" had no .uasset file to change.");
+                    return new BuildOutcome(false, null, $"\"{name}\" had no .uasset file to change.");
 
-                var written = _writer.Apply(uassetPath, item.Changes);
+                var written = _writer.Apply(uassetPath, changes);
                 if (!written.Ok)
-                    return new BuildOutcome(false, null, written.Error ?? $"\"{item.RecordedName}\" could not be changed.");
+                    return new BuildOutcome(false, null, written.Error ?? $"\"{name}\" could not be changed.");
 
-                var relative = resolved.PackagePath.Replace('/', Path.DirectorySeparatorChar);
+                var relative = packagePath.Replace('/', Path.DirectorySeparatorChar);
                 var targetFile = Path.Combine(staging, relative);
                 var targetDir = Path.GetDirectoryName(targetFile)!;
                 Directory.CreateDirectory(targetDir);
@@ -118,8 +138,10 @@ public sealed class ModBuilder : IModBuilder
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Leave a trail: the plain message is for the user, the detail is for the log.
+            SCMW.Core.Logging.Log.Warn($"Build failed: {ex.GetType().Name}: {ex.Message}");
             return new BuildOutcome(false, null,
                 "The mod could not be made. Something went wrong while reading or writing the game files.");
         }

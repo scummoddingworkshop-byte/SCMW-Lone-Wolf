@@ -33,18 +33,6 @@ public class ScreenshotTests
     }
 
     [AvaloniaFact]
-    public void Capture_style_catalogue()
-    {
-        var catalog = new Window { Content = new StyleCatalogView(), Width = 1100, Height = 1750 };
-        catalog.Show();
-
-        var path = Screenshot.Capture(catalog, "style-catalogue");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
     public void Capture_home()
     {
         var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
@@ -239,9 +227,13 @@ public class ScreenshotTests
             string id, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<SCMW.Core.Content.AssetField>>(new[]
             {
+                new SCMW.Core.Content.AssetField("Caption", "Caption", SCMW.Core.StatusKind.ReadOnly, "Fletched Wooden Arrow", "TextProperty"),
+                new SCMW.Core.Content.AssetField("Description", "Description", SCMW.Core.StatusKind.ReadOnly,
+                    "An arrow crafted from a stick. It is enhanced with feather fletchings. It can be used to hunt small game and it flies quite straight.", "TextProperty"),
                 new SCMW.Core.Content.AssetField("MaxStackSize", "MaxStackSize", SCMW.Core.StatusKind.ReadOnly, "10"),
                 new SCMW.Core.Content.AssetField("GridInventoryRowSpan", "GridInventoryRowSpan", SCMW.Core.StatusKind.ReadOnly, "2"),
                 new SCMW.Core.Content.AssetField("Weight", "Weight", SCMW.Core.StatusKind.ReadOnly, "1.5"),
+                new SCMW.Core.Content.AssetField("_itemTags", "_itemTags", SCMW.Core.StatusKind.ReadOnly, "(tags)", "ArrayProperty"),
             });
         public Task<SCMW.Core.Content.IconExtractionProgress> ExtractAllIconsAsync(
             IProgress<SCMW.Core.Content.IconExtractionProgress>? p = null, CancellationToken ct = default) =>

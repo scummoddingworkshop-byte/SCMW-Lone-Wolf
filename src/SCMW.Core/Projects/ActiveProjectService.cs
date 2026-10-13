@@ -51,8 +51,15 @@ public sealed class ActiveProjectService
     /// </summary>
     public void Set(string id)
     {
-        if (_store is null || string.IsNullOrWhiteSpace(id))
+        if (_store is null)
             return;
+
+        // A blank id means "no project open" — clear it rather than silently doing nothing.
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            Clear();
+            return;
+        }
 
         try
         {
