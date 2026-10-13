@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "Item",
+    "name": "Weight",
+    "label": "Weight",
+    "type": "Number",
+    "unit": "kg",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How heavy the item is."
+  },
+  {
+    "kind": "Item",
+    "name": "MaxStackSize",
+    "label": "Max Stack",
+    "type": "Number",
+    "unit": "items per slot",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many of the item fit in one inventory slot."
+  }
+]

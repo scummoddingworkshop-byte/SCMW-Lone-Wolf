@@ -11,4 +11,10 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The field library's reference data ships inside the assembly, so it needs no file paths. -->
+    <None Remove="Knowledge\library\**\*.json" />
+    <EmbeddedResource Include="Knowledge\library\**\*.json" />
+  </ItemGroup>
+
 </Project>
