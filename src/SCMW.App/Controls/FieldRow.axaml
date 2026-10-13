@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Controls.FieldRow"
+             x:DataType="vm:WorkspaceField">
+  <!-- One described field: a risk dot, its label and unit, the current value, and the plain
+       meaning underneath. The dot is the only colour; text stays quiet. -->
+  <UserControl.Styles>
+    <Style Selector="Border.risk">
+      <Setter Property="Width" Value="9"/>
+      <Setter Property="Height" Value="9"/>
+      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.risk.low">
+      <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+    </Style>
+    <Style Selector="Border.risk.medium">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    </Style>
+    <Style Selector="Border.risk.high">
+      <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
+    </Style>
+    <Style Selector="Border.risk.unknown">
+      <Setter Property="Background" Value="{StaticResource TextDimBrush}"/>
+      <Setter Property="Opacity" Value="0.35"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
+    <Border Grid.Row="0" Grid.Column="0" Name="RiskDot" Classes="risk" Margin="0,4,8,0"
+            Classes.low="{Binding IsLow}" Classes.medium="{Binding IsMedium}"
+            Classes.high="{Binding IsHigh}" Classes.unknown="{Binding IsUnknown}"/>
+
+    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+      <TextBlock Name="LabelText" Text="{Binding Label}"
+                 Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+      <TextBlock Name="UnitText" Text="{Binding Unit}" Classes="dim"
+                 VerticalAlignment="Center" IsVisible="{Binding HasUnit}"/>
+    </StackPanel>
+
+    <TextBlock Grid.Row="0" Grid.Column="2" Name="ValueText" Text="{Binding Value}"
+               Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"
+               TextAlignment="Right" HorizontalAlignment="Right" VerticalAlignment="Top"
+               MaxWidth="320" Margin="16,0,0,0"/>
+
+    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Name="MeaningText"
+               Classes="dim" Text="{Binding Meaning}" TextWrapping="Wrap" Margin="0,2,0,0"
+               IsVisible="{Binding HasMeaning}"/>
+  </Grid>
+</UserControl>

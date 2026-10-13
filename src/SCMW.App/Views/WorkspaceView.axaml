@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
+             x:Class="SCMW.App.Views.WorkspaceView"
+             x:DataType="vm:WorkspaceViewModel">
+  <!-- The adapting Workspace: whichever file is open, its real fields shown, explained. -->
+  <Grid Margin="24,8,24,24" RowDefinitions="Auto,Auto,*">
+    <TextBlock Grid.Row="0" Name="TitleText" Classes="h1" Text="{Binding Title}"
+               IsVisible="{Binding HasFields}"/>
+
+    <TextBlock Grid.Row="1" Classes="dim" Margin="0,8,0,0"
+               Text="This file has no values to show."
+               IsVisible="{Binding !HasFields}"/>
+
+    <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
+      <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:WorkspaceField">
+            <controls:FieldRow Margin="0,0,0,14"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
