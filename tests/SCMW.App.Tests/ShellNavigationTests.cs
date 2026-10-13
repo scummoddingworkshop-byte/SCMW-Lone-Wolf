@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
+using SCMW.App.Views;
 
 namespace SCMW.App.Tests;
 
@@ -62,7 +63,11 @@ public class ShellNavigationTests
 
         Assert.Equal(new[] { NavBand.Make, NavBand.Ship, NavBand.App }, vm.Bands.Select(b => b.Band));
         Assert.Equal(
-            new[] { ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes },
+            new[]
+            {
+                ScreenKey.Workspace,
+                ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
+            },
             vm.Bands[0].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
                      vm.Bands[1].Items.Select(i => i.Key));
@@ -161,5 +166,16 @@ public class ShellNavigationTests
 
         Assert.True(make.FontSize >= 13, $"band header too small: {make.FontSize}");
         Assert.True(make.Margin.Top >= 8, $"band header has too little space above: {make.Margin.Top}");
+    }
+
+    [AvaloniaFact]
+    public void The_workspace_area_shows_the_workspace_view()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        nav.GoTo(ScreenKey.Workspace);
+
+        Assert.IsType<WorkspaceView>(vm.ActiveView);
     }
 }

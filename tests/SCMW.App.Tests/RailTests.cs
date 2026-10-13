@@ -43,10 +43,24 @@ public class RailTests
     }
 
     [AvaloniaFact]
+    public void The_rail_lists_the_workspace_first_under_make()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+
+        var first = vm.Sidebar.First();
+        Assert.Equal(ScreenKey.Workspace, first.Key);
+        Assert.Equal("Workspace", first.Label);
+        Assert.NotNull(first.Icon);
+
+        var make = vm.Bands.Single(b => b.Band == NavBand.Make);
+        Assert.Equal(ScreenKey.Workspace, make.Items.First().Key);
+    }
+
+    [AvaloniaFact]
     public void Clicking_a_rail_row_changes_the_shown_area()
     {
         var nav = new NavigationHost();
-        var window = new MainWindow { DataContext = new ShellViewModel(nav) };
+        var window = new MainWindow { DataContext = new ShellViewModel(nav), Height = 900 };
         window.Show();
 
         var last = window.GetVisualDescendants().OfType<ListBoxItem>().Last();
@@ -66,7 +80,8 @@ public class RailTests
 
         Assert.All(vm.Sidebar, item => Assert.NotNull(item.Icon));   // the icons loaded
 
-        var home = window.GetVisualDescendants().OfType<ListBoxItem>().First();
+        var home = window.GetVisualDescendants().OfType<ListBoxItem>()
+                          .Single(i => i.DataContext is NavItem n && n.Key == ScreenKey.Home);
         Assert.True(home.IsSelected);                                // Home starts selected
 
         var images = home.GetVisualDescendants().OfType<Image>().ToList();

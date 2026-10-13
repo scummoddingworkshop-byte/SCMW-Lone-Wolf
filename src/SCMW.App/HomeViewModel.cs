@@ -22,13 +22,14 @@ public partial class HomeViewModel : ObservableObject
     private bool _welcomeDismissed;
 
     public HomeViewModel(INavigation? nav = null, IReadOnlyList<ProjectSummary>? projects = null,
-                         ProjectStore? store = null, Func<bool>? gameReady = null)
+                         ProjectStore? store = null, Func<bool>? gameReady = null,
+                         WorkspaceViewModel? workspace = null)
     {
         _nav = nav ?? NavigationHost.Shared;
         _store = store;
         _samples = projects;
         _gameReady = gameReady;
-        Chooser = new ChooserViewModel(_nav);
+        Chooser = new ChooserViewModel(_nav, workspace);
 
         if (_store is not null) _store.Changed += Refresh;
         Refresh();

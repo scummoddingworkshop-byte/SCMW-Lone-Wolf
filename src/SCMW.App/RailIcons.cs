@@ -20,6 +20,7 @@ public static class RailIcons
 
     private static string Name(ScreenKey key) => key switch
     {
+        ScreenKey.Workspace => "home",              // placeholder icon (no Workspace artwork yet)
         ScreenKey.Home => "home",
         ScreenKey.Projects => "projects",
         ScreenKey.Items => "items",

@@ -247,6 +247,81 @@ public class WorkspaceViewTests
         Assert.Contains(vm.Fields, f => !f.Described);
     }
 
+    // --- The kind picker + making the Workspace reachable (Task 3.0) ----------------------------
+
+    [AvaloniaFact]
+    public void The_kind_picker_offers_only_the_kinds_we_can_browse()
+    {
+        var vm = new WorkspaceViewModel();
+
+        Assert.Equal(new[] { "Items", "Base building", "Recipes" }, vm.Kinds);
+        Assert.DoesNotContain("Loot & spawn", vm.Kinds);
+    }
+
+    [AvaloniaFact]
+    public void The_workspace_opens_on_items()
+        => Assert.Equal("Items", new WorkspaceViewModel().SelectedKind);
+
+    [AvaloniaFact]
+    public async Task Picking_a_kind_loads_that_kinds_real_files()
+    {
+        var source = new BrowseSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
+
+        await vm.OpenKindAsync("Recipes");
+
+        Assert.Contains(vm.VisibleAssets, a => a.Name == "Wooden Arrow");
+        Assert.DoesNotContain(vm.VisibleAssets, a => a.Name == "Batteries");
+    }
+
+    [AvaloniaFact]
+    public void Clicking_a_file_row_opens_its_fields()
+    {
+        var source = new BrowseSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
+        vm.Browse("Items", new[]
+        {
+            new ItemSummary("Batteries", "Equipment", "", editable: true, assetId: "batteries-id"),
+        });
+
+        vm.SelectedAsset = vm.VisibleAssets.Single();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("Batteries", vm.Title);
+        Assert.Contains(vm.Fields, f => f.TechnicalName == "Weight");
+    }
+
+    /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
+    private sealed class BrowseSource : IContentSource
+    {
+        private static readonly IReadOnlyList<AssetSummary> Rows = new[]
+        {
+            new AssetSummary("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES", "Batteries",
+                "Equipment", StatusKind.Editable, 1,
+                "SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES.uasset", null),
+            new AssetSummary("SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_Wooden_Arrow",
+                "Wooden Arrow", "Items", StatusKind.Editable, 1,
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_Wooden_Arrow.uasset", null),
+        };
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons => throw new NotSupportedException();
+        public IReadOnlyList<string> Categories => new[] { "Equipment", "Items" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetField>>(new[] { Field("Weight", "400") });
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     /// <summary>A fake source that reads one spawner preset's fields. No game, no disk.</summary>
     private sealed class SpawnerSource : IContentSource
     {

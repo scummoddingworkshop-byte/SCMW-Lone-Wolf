@@ -9,11 +9,26 @@
   <Grid ColumnDefinitions="2*,12,3*" Margin="24,8,24,24">
 
     <!-- Left: find + browse -->
-    <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*">
-      <TextBox Grid.Row="0" Name="SearchBox" Classes="field" Watermark="Search by name…"
+    <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
+               ItemsSource="{Binding Kinds}"
+               SelectedItem="{Binding SelectedKind, Mode=TwoWay}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <TextBox Grid.Row="1" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
                Text="{Binding Search, Mode=TwoWay}"/>
 
-      <ListBox Grid.Row="1" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
+      <ListBox Grid.Row="2" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
                ItemsSource="{Binding Categories}"
                SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
         <ListBox.ItemsPanel>
@@ -28,11 +43,11 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <CheckBox Grid.Row="2" Name="OnlyEditableBox" Margin="0,12,0,0"
+      <CheckBox Grid.Row="3" Name="OnlyEditableBox" Margin="0,12,0,0"
                 Content="Show only what this mod can change"
                 IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
 
-      <ListBox Grid.Row="3" Name="AssetList" Classes="items" Margin="0,8,0,0"
+      <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                IsVisible="{Binding HasAssetMatches}">
@@ -43,7 +58,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <Border Grid.Row="3" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
+      <Border Grid.Row="4" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
               IsVisible="{Binding ShowAssetNoMatches}">
         <TextBlock Text="Nothing matches that" Classes="dim"/>
       </Border>

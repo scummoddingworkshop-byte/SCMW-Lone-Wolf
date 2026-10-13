@@ -17,13 +17,17 @@ public partial class WorkspaceViewModel : ObservableObject
 {
     private readonly FieldLibrary _library;
     private readonly IContentSource? _source;
+    private readonly ContentCatalog? _catalog;
+    private bool _loadingKind;
+    private ItemSummary? _suppressingSelection;
 
     public WorkspaceViewModel() : this(FieldLibraryLoader.LoadDefault()) { }
 
-    public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null)
+    public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null)
     {
         _library = library;
         _source = source;
+        _catalog = catalog;
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -36,6 +40,79 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>True when the open file has at least one field to show.</summary>
     [ObservableProperty] private bool _hasFields;
+
+    // --- The kind picker (Task 3.0) --------------------------------------------------------------
+    // Only the kinds we have released for browsing. Loot & spawn is built, but not offered yet.
+
+    /// <summary>The kind the Workspace opens on — the commonest thing to change.</summary>
+    public const string DefaultKind = "Items";
+
+    /// <summary>The kinds the picker offers, in the order they are shown.</summary>
+    public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes" };
+
+    /// <summary>The kind being browsed (always one of <see cref="Kinds"/>).</summary>
+    [ObservableProperty] private string _selectedKind = DefaultKind;
+
+    partial void OnSelectedKindChanged(string value)
+    {
+        if (!_loadingKind && !string.IsNullOrEmpty(value))
+        {
+            _ = LoadKindAsync(value);
+        }
+    }
+
+    /// <summary>Pick a kind and load its real files. Sets <see cref="SelectedKind"/> straight away —
+    /// so a caller can navigate at once — then reads off-thread. Unknown kinds fall back to Items.</summary>
+    public async System.Threading.Tasks.Task OpenKindAsync(string kind)
+    {
+        if (string.IsNullOrEmpty(kind) || !Kinds.Contains(kind, StringComparer.Ordinal))
+        {
+            kind = DefaultKind;
+        }
+
+        _loadingKind = true;
+        SelectedKind = kind;
+        _loadingKind = false;
+
+        await LoadKindAsync(kind).ConfigureAwait(false);
+    }
+
+    /// <summary>Which family a picker kind maps to. The library's kind names are the family names.</summary>
+    private static AssetFamily FamilyOf(string kind) => kind switch
+    {
+        "Base building" => AssetFamily.BaseElements,
+        "Recipes" => AssetFamily.Recipes,
+        _ => AssetFamily.Items,
+    };
+
+    /// <summary>Read the picked kind's real files and show them. The open file is closed first, as it
+    /// may belong to the kind we just left. Never throws.</summary>
+    private async System.Threading.Tasks.Task LoadKindAsync(string kind)
+    {
+        var family = FamilyOf(kind);
+
+        IReadOnlyList<ItemSummary> assets = Array.Empty<ItemSummary>();
+        if (_source is not null && _catalog is not null)
+        {
+            try
+            {
+                var all = await AssetReader.ReadAllAsync(_source).ConfigureAwait(false);
+                assets = _catalog.Map(family, all);
+            }
+            catch
+            {
+                assets = Array.Empty<ItemSummary>();   // a load failure shows an empty list, not a crash
+            }
+        }
+
+        RunOnUi(() =>
+        {
+            Fields.Clear();
+            Title = string.Empty;
+            HasFields = false;
+            Browse(family.ToString(), assets);
+        });
+    }
 
     // --- Search + browse (Task 2.5) -------------------------------------------------------------
     // The browse list: the files of one kind, found by name and by the game's own category tag.
@@ -138,8 +215,27 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (asset is null) return;
 
+        // Selecting the file is what opens it; suppress the selection hook's own load so the work
+        // happens exactly once and the caller can await it.
+        _suppressingSelection = asset;
         SelectedAsset = asset;
+        _suppressingSelection = null;
 
+        await LoadFieldsAsync(asset).ConfigureAwait(false);
+    }
+
+    /// <summary>Picking a file in the browse list opens it (Task 3.0).</summary>
+    partial void OnSelectedAssetChanged(ItemSummary? value)
+    {
+        if (value is not null && !ReferenceEquals(value, _suppressingSelection))
+        {
+            _ = LoadFieldsAsync(value);
+        }
+    }
+
+    /// <summary>Read <paramref name="asset"/>'s own fields and show them. Never throws.</summary>
+    private async System.Threading.Tasks.Task LoadFieldsAsync(ItemSummary asset)
+    {
         IReadOnlyList<AssetField> fields = Array.Empty<AssetField>();
         if (_source is not null)
         {

@@ -6,14 +6,14 @@ using SCMW.App.Views;
 namespace SCMW.App.Tests;
 
 /// <summary>
-/// The friendly chooser: "What would you like to change?" Each tile opens a kind of content.
-/// Until Phase 2's Workspace exists, that means the kind's own screen.
+/// The friendly chooser: "What would you like to change?" Each tile opens the Workspace with
+/// that kind of content already picked.
 /// </summary>
 public class ChooserViewTests
 {
-    private static ChooserView Shown(INavigation nav)
+    private static ChooserView Shown(INavigation nav, WorkspaceViewModel? workspace = null)
     {
-        var view = new ChooserView { DataContext = new ChooserViewModel(nav) };
+        var view = new ChooserView { DataContext = new ChooserViewModel(nav, workspace) };
         var window = new Window { Content = view, Width = 900, Height = 400 };
         window.Show();
         return view;
@@ -33,16 +33,18 @@ public class ChooserViewTests
     }
 
     [AvaloniaFact]
-    public void A_kind_tile_opens_that_kind()
+    public void A_kind_tile_opens_the_workspace_with_that_kind()
     {
         var nav = new NavigationHost();
-        var view = Shown(nav);
+        var workspace = new WorkspaceViewModel();
+        var view = Shown(nav, workspace);
 
         var tile = view.FindControl<Button>("ItemsTile")!;
         Assert.NotNull(tile.Command);
         tile.Command!.Execute(null);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal("Items", workspace.SelectedKind);
     }
 
     [AvaloniaFact]
@@ -57,7 +59,7 @@ public class ChooserViewTests
     }
 
     [AvaloniaFact]
-    public void A_chooser_tile_in_home_opens_that_kind()
+    public void A_chooser_tile_in_home_opens_the_workspace_with_that_kind()
     {
         var nav = new NavigationHost();
         var vm = new ShellViewModel(nav);
@@ -69,7 +71,8 @@ public class ChooserViewTests
         Assert.NotNull(tile.Command);
         tile.Command!.Execute(null);
 
-        Assert.Equal(ScreenKey.Recipes, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal("Recipes", vm.Workspace.SelectedKind);
     }
 
     [AvaloniaFact]

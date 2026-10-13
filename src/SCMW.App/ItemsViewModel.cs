@@ -213,22 +213,9 @@ public partial class ItemsViewModel : ObservableObject
 
         try
         {
-            // Load the WHOLE index, not just the first page. SCUM has tens of thousands of
-            // entries; a single capped page silently hid items (search only filters what is
-            // loaded), which is why real items went missing. Page until the index is exhausted.
-            var assets = new List<SCMW.Core.Content.AssetSummary>();
-            var skip = 0;
-            while (true)
-            {
-                var page = await _source
-                    .SearchAsync("", null, skip, SCMW.Core.Content.ContentLimits.MaxTake)
-                    .ConfigureAwait(false);
-                if (page.Count == 0) break;
-                assets.AddRange(page);
-                skip += page.Count;
-                if (page.Count < SCMW.Core.Content.ContentLimits.MaxTake) break;
-                if (assets.Count > 200_000) break;   // safety: a source that ignores paging
-            }
+            // Load the WHOLE index, not just the first page — AssetReader pages to exhaustion.
+            // A single capped page silently hid items (search only filters what is loaded).
+            var assets = await AssetReader.ReadAllAsync(_source).ConfigureAwait(false);
 
             if (assets.Count == 0) return;
 
@@ -236,12 +223,7 @@ public partial class ItemsViewModel : ObservableObject
             RunOnUi(() =>
             {
                 _all.Clear();
-                _all.AddRange(_family switch
-                {
-                    AssetFamily.BaseElements => _catalog.MapBaseElements(assets),
-                    AssetFamily.Recipes => _catalog.MapRecipes(assets),
-                    _ => _catalog.MapItems(assets),
-                });
+                _all.AddRange(_catalog.Map(_family, assets));
                 _categories = BuildCategories();
 
                 // A category picked on the sample list may not exist in the real one; don't leave the

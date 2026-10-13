@@ -12,6 +12,7 @@ public class ShellViewModelTests
         Assert.Equal(
             new[]
             {
+                ScreenKey.Workspace,
                 ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding,
                 ScreenKey.Recipes,
                 ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,

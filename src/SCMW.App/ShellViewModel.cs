@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SCMW.App.Views;
 using SCMW.Core.Editing;
+using SCMW.Core.Knowledge;
 using SCMW.Core.Setup;
 using SCMW.Core.Settings;
 
@@ -25,6 +26,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly ProjectStore _projectStore;
     private readonly HomeViewModel _home;
     private readonly HomeView _homeView;
+    private readonly WorkspaceViewModel _workspaceVm;
+    private readonly WorkspaceView _workspaceView;
     private readonly ProjectsViewModel _projects;
     private readonly ProjectsView _projectsView;
     private readonly ItemsViewModel _items;
@@ -74,8 +77,12 @@ public partial class ShellViewModel : ObservableObject
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";
 
+        _workspaceVm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), ContentSource,
+                                              new ContentCatalog(ContentSource, ContentSource.Icons));
+        _workspaceView = new WorkspaceView { DataContext = _workspaceVm };
         _home = new HomeViewModel(_nav, store: _projectStore,
-                                  gameReady: () => IsScumConfigured(store));
+                                  gameReady: () => IsScumConfigured(store),
+                                  workspace: _workspaceVm);
         _homeView = new HomeView { DataContext = _home };
         _projects = new ProjectsViewModel(_projectStore, _nav);
         _projectsView = new ProjectsView { DataContext = _projects };
@@ -108,6 +115,7 @@ public partial class ShellViewModel : ObservableObject
 
         Sidebar = new[]
         {
+            Nav(ScreenKey.Workspace, "Workspace"),
             Nav(ScreenKey.Home, "Home"),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Items, "Items"),
@@ -146,6 +154,7 @@ public partial class ShellViewModel : ObservableObject
         _ = _items.LoadFromSourceAsync();
         _ = _baseElements.LoadFromSourceAsync();
         _ = _recipes.LoadFromSourceAsync();
+        _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
     }
 
     /// <summary>The rail entries, Home…Settings in order.</summary>
@@ -183,6 +192,9 @@ public partial class ShellViewModel : ObservableObject
 
     /// <summary>The projects the app is working from.</summary>
     public ProjectStore ProjectStore => _projectStore;
+
+    /// <summary>The Workspace's view model (kept alive so the picker state survives switching areas).</summary>
+    public WorkspaceViewModel Workspace => _workspaceVm;
 
     /// <summary>The one content source: reading the player's real SCUM files.</summary>
     public SCMW.Core.Content.IContentSource ContentSource { get; }
@@ -237,6 +249,7 @@ public partial class ShellViewModel : ObservableObject
         _ = _items.LoadFromSourceAsync();
         _ = _baseElements.LoadFromSourceAsync();
         _ = _recipes.LoadFromSourceAsync();
+        _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
     }
 
     /// <summary>Re-reads SCUM after "Read Game Data", then tells Settings plainly that it is done.</summary>
@@ -247,6 +260,7 @@ public partial class ShellViewModel : ObservableObject
             await _items.LoadFromSourceAsync();
             await _baseElements.LoadFromSourceAsync();
             await _recipes.LoadFromSourceAsync();
+            await _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
             _settings.RefreshFinished(_items.IsUsingRealItems
                 ? "Done — SCMW — Lone Wolf re-read your items from SCUM."
                 : string.IsNullOrWhiteSpace(_items.SourceNote)
@@ -382,6 +396,7 @@ public partial class ShellViewModel : ObservableObject
 
         ActiveView = Current switch
         {
+            ScreenKey.Workspace => _workspaceView,
             ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
             ScreenKey.Items => _itemsView,

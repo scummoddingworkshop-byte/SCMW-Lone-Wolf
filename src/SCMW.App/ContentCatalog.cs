@@ -147,6 +147,18 @@ public sealed class ContentCatalog
             .ToList();
 
     /// <summary>
+    /// One family's screen rows from the whole index — the one place a kind maps to its rows, so the
+    /// Items screens and the Workspace cannot drift apart.
+    /// </summary>
+    public IReadOnlyList<ItemSummary> Map(AssetFamily family, IReadOnlyList<AssetSummary> assets) => family switch
+    {
+        AssetFamily.BaseElements => MapBaseElements(assets),
+        AssetFamily.Recipes => MapRecipes(assets),
+        AssetFamily.LootAndSpawn => MapSpawnerPresets(assets),
+        _ => MapItems(assets),
+    };
+
+    /// <summary>
     /// One screen value per real field: a friendly label from <see cref="FieldNames"/>, a group
     /// from <see cref="FieldKnowledge"/>, a plain value from <see cref="FieldKnowledge"/>. Each
     /// field is sorted into a band by <see cref="ValueSafety"/>: an ordinary field (editable), a
