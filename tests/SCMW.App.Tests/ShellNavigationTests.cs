@@ -1,3 +1,7 @@
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
+
 namespace SCMW.App.Tests;
 
 /// <summary>
@@ -49,5 +53,58 @@ public class ShellNavigationTests
                      groups[1].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      groups[2].Items.Select(i => i.Key));
+    }
+
+    [AvaloniaFact]
+    public void The_rail_groups_its_rows_into_the_three_bands()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+
+        Assert.Equal(new[] { NavBand.Make, NavBand.Ship, NavBand.App }, vm.Bands.Select(b => b.Band));
+        Assert.Equal(
+            new[] { ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes },
+            vm.Bands[0].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
+                     vm.Bands[1].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
+                     vm.Bands[2].Items.Select(i => i.Key));
+    }
+
+    [AvaloniaFact]
+    public void Only_one_band_row_is_selected_at_a_time()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Mods);
+
+        var selected = vm.Bands.Where(b => b.Selected is not null).ToList();
+        Assert.Single(selected);
+        Assert.Equal(ScreenKey.Mods, selected[0].Selected!.Key);
+    }
+
+    [AvaloniaFact]
+    public void Choosing_a_band_row_navigates_to_it()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        var ship = vm.Bands.Single(b => b.Band == NavBand.Ship);
+        ship.Selected = ship.Items.Single(i => i.Key == ScreenKey.Build);
+
+        Assert.Equal(ScreenKey.Build, nav.Current);
+        Assert.Same(ship.Selected, vm.SelectedEntry);
+    }
+
+    [AvaloniaFact]
+    public void The_rail_shows_the_three_band_labels()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Show();
+
+        var labels = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+
+        Assert.Contains("MAKE", labels);
+        Assert.Contains("SHIP", labels);
+        Assert.Contains("APP", labels);
     }
 }

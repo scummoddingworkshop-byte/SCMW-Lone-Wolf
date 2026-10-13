@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -119,6 +120,15 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.Help, "Help"),
         };
 
+        // The rail's three labelled bands, built once from the one source of band membership.
+        Bands = NavBands.Group(Sidebar)
+                        .Select(g => new NavBandSection(g.Band, g.Items))
+                        .ToList();
+        foreach (var band in Bands)
+        {
+            band.PropertyChanged += OnBandSelectionChanged;
+        }
+
         // Start on the screen the owner was last using (when it still exists in the rail).
         if (settings.LastScreen is { } last && Enum.TryParse<ScreenKey>(last, out var restored)
             && Sidebar.Any(i => i.Key == restored))
@@ -140,6 +150,9 @@ public partial class ShellViewModel : ObservableObject
 
     /// <summary>The rail entries, Home…Settings in order.</summary>
     public IReadOnlyList<NavItem> Sidebar { get; }
+
+    /// <summary>The rail rows grouped under their three bands (Make · Ship · App), for the rail to show.</summary>
+    public IReadOnlyList<NavBandSection> Bands { get; }
 
     /// <summary>Home's view model (kept alive so the welcome dismissal survives switching areas).</summary>
     public HomeViewModel Home => _home;
@@ -318,6 +331,20 @@ public partial class ShellViewModel : ObservableObject
 
     partial void OnSelectedEntryChanged(NavItem value) => _nav.GoTo(value.Key);
 
+    /// <summary>A rail row was clicked in one of the bands: make it the current screen.</summary>
+    private void OnBandSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(NavBandSection.Selected))
+        {
+            return;
+        }
+
+        if (sender is NavBandSection band && band.Selected is { } row && !ReferenceEquals(row, SelectedEntry))
+        {
+            SelectedEntry = row;
+        }
+    }
+
     partial void OnCanLaunchChanged(bool value)
     {
         LaunchModdedCommand.NotifyCanExecuteChanged();
@@ -359,7 +386,13 @@ public partial class ShellViewModel : ObservableObject
             _ => new AreaPlaceholderView { Title = ScreenTitle },
         };
 
+        // Keep exactly one row shown as selected: the band that owns the current screen.
         var entry = Sidebar.First(i => i.Key == Current);
+        foreach (var band in Bands)
+        {
+            band.Selected = band.Items.FirstOrDefault(i => i.Key == Current);
+        }
+
         if (!ReferenceEquals(entry, SelectedEntry))
         {
             SelectedEntry = entry;

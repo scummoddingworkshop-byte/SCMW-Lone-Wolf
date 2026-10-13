@@ -36,23 +36,34 @@
                      IsVisible="{Binding ShowLaunchNote}"/>
         </StackPanel>
 
-        <!-- The six areas -->
-        <ListBox Classes="rail" Margin="8,20,8,0" ItemsSource="{Binding Sidebar}"
-                 SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:NavItem">
-              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Panel Width="18" Height="18" VerticalAlignment="Center">
-                  <Image Source="{Binding Icon}" Width="18" Height="18" Stretch="Uniform"
-                         IsVisible="{Binding !$parent[ListBoxItem].IsSelected}"/>
-                  <Image Source="{Binding IconSelected}" Width="18" Height="18" Stretch="Uniform"
-                         IsVisible="{Binding $parent[ListBoxItem].IsSelected}"/>
-                </Panel>
-                <TextBlock Text="{Binding Label}" FontSize="14" VerticalAlignment="Center"/>
+        <!-- The three bands: Make · Ship · App -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8,8,8,0">
+        <ItemsControl ItemsSource="{Binding Bands}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NavBandSection">
+              <StackPanel>
+                <TextBlock Classes="section" Text="{Binding Title}" Margin="12,4,0,0"/>
+                <ListBox Classes="rail" ItemsSource="{Binding Items}"
+                         SelectedItem="{Binding Selected, Mode=TwoWay}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NavItem">
+                      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Panel Width="18" Height="18" VerticalAlignment="Center">
+                          <Image Source="{Binding Icon}" Width="18" Height="18" Stretch="Uniform"
+                                 IsVisible="{Binding !$parent[ListBoxItem].IsSelected}"/>
+                          <Image Source="{Binding IconSelected}" Width="18" Height="18" Stretch="Uniform"
+                                 IsVisible="{Binding $parent[ListBoxItem].IsSelected}"/>
+                        </Panel>
+                        <TextBlock Text="{Binding Label}" FontSize="14" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
               </StackPanel>
             </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        </ScrollViewer>
         </DockPanel>
       </Panel>
     </Border>
@@ -64,7 +75,7 @@
 
   <Window.Styles>
     <Style Selector="ListBox.rail ListBoxItem">
-      <Setter Property="Padding" Value="12,9"/>
+      <Setter Property="Padding" Value="12,7"/>
       <Setter Property="Margin" Value="0,1"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

@@ -25,14 +25,14 @@ public static class NavBands
     public static IReadOnlyList<NavBand> All { get; } =
         new[] { NavBand.Make, NavBand.Ship, NavBand.App };
 
-    /// <summary>The rail rows in the order the design lists them (retired areas last).</summary>
+    /// <summary>The rail rows in the order the design lists them. Workspace leads Make; the kind
+    /// families (Items, Base building, Recipes) and Home follow it until Phase 2's Workspace absorbs them.</summary>
     private static readonly ScreenKey[] RailOrder =
     {
-        ScreenKey.Workspace, ScreenKey.Projects,
+        ScreenKey.Workspace,
+        ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
         ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
         ScreenKey.Settings, ScreenKey.Help,
-        // Retired areas, kept until they fold into the Workspace's chooser.
-        ScreenKey.Home, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
     };
 
     /// <summary>The band an area sits in. Every area has one — adding a screen forces a choice here.</summary>
