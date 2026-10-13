@@ -164,10 +164,7 @@ public partial class ItemsViewModel : ObservableObject
         OnPropertyChanged(nameof(CategoriesToggleLabel));
     }
 
-    private IReadOnlyList<string> BuildCategories() => new[] { "All" }
-        .Concat(_all.Select(i => i.Category).Where(c => c.Length > 0)
-            .Distinct().OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
-        .ToList();
+    private IReadOnlyList<string> BuildCategories() => AssetFilter.Categories(_all);
 
     /// <summary>True once a real SCUM item list has replaced the samples.</summary>
     public bool IsUsingRealItems { get; private set; }
@@ -795,14 +792,8 @@ public partial class ItemsViewModel : ObservableObject
 
     private void Refresh()
     {
-        var query = Search.Trim();
-        var category = string.IsNullOrEmpty(SelectedCategory) ? "All" : SelectedCategory;
-
         VisibleItems.Clear();
-        foreach (var item in _all.Where(i =>
-                     (category == "All" || i.Category == category) &&
-                     (!OnlyEditable || i.Editable) &&
-                     (query.Length == 0 || i.Name.Contains(query, StringComparison.OrdinalIgnoreCase))))
+        foreach (var item in AssetFilter.Apply(_all, Search, SelectedCategory, OnlyEditable))
         {
             VisibleItems.Add(item);
         }

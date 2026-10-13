@@ -4,23 +4,69 @@
              xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
-  <!-- The adapting Workspace: whichever file is open, its real fields shown, explained. -->
-  <Grid Margin="24,8,24,24" RowDefinitions="Auto,Auto,*">
-    <TextBlock Grid.Row="0" Name="TitleText" Classes="h1" Text="{Binding Title}"
-               IsVisible="{Binding HasFields}"/>
+  <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
+       changeable" to hide the rest, then its real fields show, explained, on the right. -->
+  <Grid ColumnDefinitions="2*,12,3*" Margin="24,8,24,24">
 
-    <TextBlock Grid.Row="1" Classes="dim" Margin="0,8,0,0"
-               Text="This file has no values to show."
-               IsVisible="{Binding !HasFields}"/>
+    <!-- Left: find + browse -->
+    <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*">
+      <TextBox Grid.Row="0" Name="SearchBox" Classes="field" Watermark="Search by name…"
+               Text="{Binding Search, Mode=TwoWay}"/>
 
-    <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
-      <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:WorkspaceField">
-            <controls:FieldRow Margin="0,0,0,14"/>
+      <ListBox Grid.Row="1" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
+               ItemsSource="{Binding Categories}"
+               SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}"/>
           </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </ScrollViewer>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <CheckBox Grid.Row="2" Name="OnlyEditableBox" Margin="0,12,0,0"
+                Content="Show only what this mod can change"
+                IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
+
+      <ListBox Grid.Row="3" Name="AssetList" Classes="items" Margin="0,8,0,0"
+               ItemsSource="{Binding VisibleAssets}"
+               SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
+               IsVisible="{Binding HasAssetMatches}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ItemSummary">
+            <controls:ItemRow Item="{Binding}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <Border Grid.Row="3" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
+              IsVisible="{Binding ShowAssetNoMatches}">
+        <TextBlock Text="Nothing matches that" Classes="dim"/>
+      </Border>
+    </Grid>
+
+    <!-- Right: the open file's real fields, explained -->
+    <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+      <TextBlock Grid.Row="0" Name="TitleText" Classes="h1" Text="{Binding Title}"
+                 IsVisible="{Binding HasFields}"/>
+
+      <TextBlock Grid.Row="1" Classes="dim" Margin="0,8,0,0"
+                 Text="This file has no values to show."
+                 IsVisible="{Binding !HasFields}"/>
+
+      <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
+        <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:WorkspaceField">
+              <controls:FieldRow Margin="0,0,0,14"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>

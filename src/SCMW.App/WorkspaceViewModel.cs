@@ -1,9 +1,12 @@
 // src/SCMW.App/WorkspaceViewModel.cs
 // The adapting Workspace: opens one file of any kind and turns its real fields into rows,
 // explained from the field library (label, unit, risk dot, plain meaning).
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SCMW.Core.Content;
 using SCMW.Core.Knowledge;
 
@@ -26,6 +29,86 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>True when the open file has at least one field to show.</summary>
     [ObservableProperty] private bool _hasFields;
+
+    // --- Search + browse (Task 2.5) -------------------------------------------------------------
+    // The browse list: the files of one kind, found by name and by the game's own category tag.
+
+    private string _kind = string.Empty;
+    private IReadOnlyList<ItemSummary> _allAssets = Array.Empty<ItemSummary>();
+    private IReadOnlyList<string> _categories = new[] { "All" };
+
+    /// <summary>The files of the browsed kind that pass the filters (search, category, editable).</summary>
+    public ObservableCollection<ItemSummary> VisibleAssets { get; } = new();
+
+    /// <summary>What the owner types to find a file by name.</summary>
+    [ObservableProperty] private string _search = string.Empty;
+
+    /// <summary>The game's own category tag in use, or "All".</summary>
+    [ObservableProperty] private string _selectedCategory = "All";
+
+    /// <summary>When ticked, only files the writer can change are listed.</summary>
+    [ObservableProperty] private bool _onlyEditable = true;
+
+    /// <summary>The file picked in the browse list, or null.</summary>
+    [ObservableProperty] private ItemSummary? _selectedAsset;
+
+    /// <summary>The category chips: "All" first, then the game's own tags present.</summary>
+    public IReadOnlyList<string> Categories => _categories;
+
+    /// <summary>True when the kind has any files to browse.</summary>
+    public bool HasAssets => _allAssets.Count > 0;
+
+    /// <summary>True when at least one file passes the filters.</summary>
+    public bool HasAssetMatches => VisibleAssets.Count > 0;
+
+    /// <summary>True when the kind has files but none pass the filters.</summary>
+    public bool ShowAssetNoMatches => HasAssets && !HasAssetMatches;
+
+    /// <summary>Load <paramref name="kind"/>'s files for browsing. The category comes straight from
+    /// the game's own tag (carried on each row), so nothing is invented here.</summary>
+    public void Browse(string kind, IReadOnlyList<ItemSummary> assets)
+    {
+        _kind = kind;
+        _allAssets = assets ?? Array.Empty<ItemSummary>();
+        _categories = AssetFilter.Categories(_allAssets);
+
+        if (!_categories.Contains(SelectedCategory, StringComparer.Ordinal))
+            SelectedCategory = "All";
+
+        OnPropertyChanged(nameof(Categories));
+        RefreshAssets();
+    }
+
+    private void RefreshAssets()
+    {
+        VisibleAssets.Clear();
+        foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory, OnlyEditable))
+        {
+            VisibleAssets.Add(asset);
+        }
+
+        OnPropertyChanged(nameof(HasAssets));
+        OnPropertyChanged(nameof(HasAssetMatches));
+        OnPropertyChanged(nameof(ShowAssetNoMatches));
+    }
+
+    partial void OnSearchChanged(string value) => RefreshAssets();
+
+    partial void OnOnlyEditableChanged(bool value) => RefreshAssets();
+
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            SelectedCategory = "All";   // a chip list can clear the selection; fall back, don't filter to nothing
+            return;
+        }
+
+        RefreshAssets();
+    }
+
+    [RelayCommand]
+    private void SelectCategory(string? category) => SelectedCategory = category ?? "All";
 
     /// <summary>Open <paramref name="kind"/>'s file named <paramref name="title"/> and show the
     /// fields it actually has, each explained by the library where the library knows it.</summary>

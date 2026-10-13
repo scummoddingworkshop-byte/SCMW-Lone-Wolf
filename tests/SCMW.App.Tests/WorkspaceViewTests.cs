@@ -119,4 +119,77 @@ public class WorkspaceViewTests
         Assert.Equal(field.Meaning, meaning.Text);
         Assert.NotEqual(WorkspaceField.NotDescribed, meaning.Text);
     }
+
+    // --- Search + browse (Task 2.5) -------------------------------------------------------------
+
+    private static WorkspaceViewModel Browsing()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Browse("Items", new[]
+        {
+            new ItemSummary("Tomato", "Food", "", editable: true),
+            new ItemSummary("Tomato (unripe)", "Food", "", editable: false),
+            new ItemSummary("Fire Axe", "Weapons", "", editable: true),
+        });
+        return vm;
+    }
+
+    [AvaloniaFact]
+    public void Browsing_offers_the_games_categories_as_chips()
+    {
+        var vm = Browsing();
+
+        Assert.Contains("All", vm.Categories);
+        Assert.Contains("Food", vm.Categories);
+        Assert.Contains("Weapons", vm.Categories);
+    }
+
+    [AvaloniaFact]
+    public void The_only_editable_tick_hides_rows_the_writer_cannot_change()
+    {
+        var vm = Browsing();
+
+        Assert.True(vm.OnlyEditable);
+        Assert.DoesNotContain(vm.VisibleAssets, a => !a.Editable);
+
+        vm.OnlyEditable = false;
+        Assert.Contains(vm.VisibleAssets, a => a.Name == "Tomato (unripe)");
+    }
+
+    [AvaloniaFact]
+    public void A_category_chip_narrows_the_browse_list()
+    {
+        var vm = Browsing();
+
+        vm.SelectCategoryCommand.Execute("Food");
+
+        Assert.Equal("Food", vm.SelectedCategory);
+        Assert.All(vm.VisibleAssets, a => Assert.Equal("Food", a.Category));
+    }
+
+    [AvaloniaFact]
+    public void Search_filters_the_browse_list_by_name()
+    {
+        var vm = Browsing();
+
+        vm.Search = "axe";
+
+        var only = Assert.Single(vm.VisibleAssets);
+        Assert.Equal("Fire Axe", only.Name);
+    }
+
+    [AvaloniaFact]
+    public void Browsing_renders_the_rows_that_pass_the_filters()
+    {
+        var vm = Browsing();
+        vm.Search = "axe";
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 500 };
+        window.Show();
+
+        var list = view.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "AssetList");
+
+        Assert.True(list.IsVisible);
+        Assert.Single(list.GetVisualDescendants().OfType<ItemRow>());
+    }
 }
