@@ -1,0 +1,92 @@
+[
+  {
+    "kind": "Recipes",
+    "name": "ExperienceReward.NoSkill",
+    "label": "XP reward (no skill)",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for crafting this with no skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "ExperienceReward.Basic",
+    "label": "XP reward (basic)",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for crafting this at Basic skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "ExperienceReward.Medium",
+    "label": "XP reward (medium)",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for crafting this at Medium skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "ExperienceReward.Advanced",
+    "label": "XP reward (advanced)",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for crafting this at Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "ExperienceReward.AboveAdvanced",
+    "label": "XP reward (above advanced)",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for crafting this above Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "ProductQuantity",
+    "label": "Amount produced",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many the recipe makes."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Ingredients",
+    "label": "Ingredients",
+    "type": "Reference",
+    "unit": "",
+    "risk": "High",
+    "writable": false,
+    "meaning": "The ingredient slots the recipe needs."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Product",
+    "label": "Produces",
+    "type": "Reference",
+    "unit": "",
+    "risk": "High",
+    "writable": false,
+    "meaning": "A link to what the recipe makes."
+  },
+  {
+    "kind": "Recipes",
+    "name": "RelevantSkill",
+    "label": "Skill",
+    "type": "Reference",
+    "unit": "",
+    "risk": "High",
+    "writable": false,
+    "meaning": "A link to the skill the recipe uses."
+  }
+]

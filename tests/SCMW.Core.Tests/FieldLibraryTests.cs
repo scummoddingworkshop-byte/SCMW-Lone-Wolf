@@ -114,6 +114,6 @@ public class FieldLibraryTests
     {
         var lib = FieldLibraryLoader.LoadDefault();
 
-        Assert.NotNull(lib.Lookup("Item", "Weight"));
+        Assert.NotNull(lib.Lookup("Items", "Weight"));
     }
 }

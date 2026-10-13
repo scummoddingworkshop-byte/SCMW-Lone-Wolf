@@ -1,0 +1,112 @@
+[
+  {
+    "kind": "BaseElements",
+    "name": "_healthPoints",
+    "label": "Health",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much damage the structure can take before it is destroyed."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_hoursToDecay",
+    "label": "Decay time",
+    "type": "Number",
+    "unit": "hours",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long before an unmaintained structure decays. 672 means 28 days."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_hoursToDecayOutsideFlagArea",
+    "label": "Decay time outside flag",
+    "type": "Number",
+    "unit": "hours",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The decay timer when the structure sits outside your flag area. -1 means never."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_destructionTime",
+    "label": "Destruction time",
+    "type": "Number",
+    "unit": "seconds",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long it takes to destroy the structure."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_repairTime",
+    "label": "Repair time",
+    "type": "Number",
+    "unit": "seconds",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long repairing the structure takes."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_explosionResistance",
+    "label": "Explosion resistance",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How well the structure resists explosions."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_experienceAwardForBuilding",
+    "label": "XP for building",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for building the structure."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_repairableParams.ExperienceAwardedPerHealthRepaired",
+    "label": "XP per health repaired",
+    "type": "Number",
+    "unit": "XP",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Experience given for each point of health you repair."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_isClimbable",
+    "label": "Climbable",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether players can climb the structure."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBePainted",
+    "label": "Can be painted",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether the structure can be painted."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "StaticMesh",
+    "label": "Model",
+    "type": "Reference",
+    "unit": "",
+    "risk": "High",
+    "writable": false,
+    "meaning": "A link to the structure's model (art)."
+  }
+]

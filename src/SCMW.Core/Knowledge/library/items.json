@@ -1,22 +1,172 @@
 [
   {
-    "kind": "Item",
+    "kind": "Items",
     "name": "Weight",
     "label": "Weight",
     "type": "Number",
-    "unit": "kg",
+    "unit": "grams",
     "risk": "Low",
     "writable": true,
-    "meaning": "How heavy the item is."
+    "meaning": "How heavy the item is. Packed items read in grams, so 20000 means 20 kg."
   },
   {
-    "kind": "Item",
-    "name": "MaxStackSize",
-    "label": "Max Stack",
+    "kind": "Items",
+    "name": "MaxQuantity",
+    "label": "Stack size",
     "type": "Number",
-    "unit": "items per slot",
+    "unit": "",
     "risk": "Low",
     "writable": true,
-    "meaning": "How many of the item fit in one inventory slot."
+    "meaning": "How many of the item fit in one inventory slot. It lives on the item's Stackable part, not the item itself."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxStackSize",
+    "label": "Max stack",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The most of the item that can sit in one stack."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxContainedWeight",
+    "label": "Max contained weight",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The most weight this container can hold."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxWaterWeightRatio",
+    "label": "Water ratio",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much water the item holds for its weight (bottles and containers)."
+  },
+  {
+    "kind": "Items",
+    "name": "CanBecomeBadQuality",
+    "label": "Can spoil",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether the item can spoil or go bad over time."
+  },
+  {
+    "kind": "Items",
+    "name": "IsMergeable",
+    "label": "Mergeable",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether stacks of this item can be merged together."
+  },
+  {
+    "kind": "Items",
+    "name": "ShelfLife",
+    "label": "Spoil time",
+    "type": "Number",
+    "unit": "in-game hours",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long food lasts before it spoils. It counts down only while you are in game. No value means it never spoils."
+  },
+  {
+    "kind": "Items",
+    "name": "_autoDestructTime",
+    "label": "Auto-destruct time",
+    "type": "Number",
+    "unit": "real minutes",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long an item left on the ground lasts before it vanishes. It counts down only while you are away from it. 0 means never."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxHealth",
+    "label": "Health",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The item's health (how much wear it takes before it breaks)."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxRadiationAmountPerWeight",
+    "label": "Radiation per weight",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much radiation the item gives off for its weight."
+  },
+  {
+    "kind": "Items",
+    "name": "GridInventoryRowSpan",
+    "label": "Height in grid",
+    "type": "Number",
+    "unit": "rows",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "How many grid rows the item takes up in the inventory."
+  },
+  {
+    "kind": "Items",
+    "name": "GridInventoryColumnSpan",
+    "label": "Width in grid",
+    "type": "Number",
+    "unit": "columns",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "How many grid columns the item takes up in the inventory."
+  },
+  {
+    "kind": "Items",
+    "name": "GridInventorySortGroup.TagName",
+    "label": "Category",
+    "type": "Text",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "The item's category tag (for example ItemSortGroup.Food.Solid). The game matches this name exactly."
+  },
+  {
+    "kind": "Items",
+    "name": "Caption",
+    "label": "Name",
+    "type": "Text",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "The item's shown name. Stored as a string-table key, not the words themselves."
+  },
+  {
+    "kind": "Items",
+    "name": "Description",
+    "label": "Description",
+    "type": "Text",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "The item's description. Stored as a string-table key, not the words themselves."
+  },
+  {
+    "kind": "Items",
+    "name": "Actor",
+    "label": "World object",
+    "type": "Reference",
+    "unit": "",
+    "risk": "High",
+    "writable": false,
+    "meaning": "A link to the blueprint this item becomes in the world."
   }
 ]
