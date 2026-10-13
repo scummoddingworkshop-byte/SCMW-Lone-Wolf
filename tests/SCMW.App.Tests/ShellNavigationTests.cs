@@ -118,4 +118,18 @@ public class ShellNavigationTests
 
         Assert.Contains(OnTheWay.Message, texts);
     }
+
+    [AvaloniaFact]
+    public void The_strip_explains_the_levels_in_plain_words()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Show();
+
+        var texts = window.GetVisualDescendants().OfType<TextBlock>()
+                          .Select(t => t.Text ?? "").ToList();
+
+        // Level 1 must say what it is, not just its number.
+        Assert.Contains(texts, t => t.Contains("Level 1") && t.Contains("change values"));
+        Assert.Contains(texts, t => t.Contains("On the way"));
+    }
 }
