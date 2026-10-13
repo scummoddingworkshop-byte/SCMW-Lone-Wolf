@@ -129,7 +129,7 @@ public class ShellNavigationTests
                           .Select(t => t.Text ?? "").ToList();
 
         // Level 1 must say what it is, not just its number.
-        Assert.Contains(texts, t => t.Contains("Level 1") && t.Contains("change values"));
-        Assert.Contains(texts, t => t.Contains("On the way"));
+        Assert.Contains(texts, t => t.Contains("Level 1") && t.Contains("change item values"));
+        Assert.Contains(texts, t => t.Contains("Coming up"));
     }
 }

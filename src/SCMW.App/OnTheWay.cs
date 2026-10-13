@@ -8,6 +8,7 @@ namespace SCMW.App;
 public static class OnTheWay
 {
     public const string Message =
-        "Here now — Level 1 change values · Level 2 change a recipe · Level 3 add a field.   " +
-        "On the way — new recipes, new categories and new objects.";
+        "Things you can do in this version: Level 1 change item values · " +
+        "Level 2 modify an existing recipe · Level 3 add a new field to an object.   " +
+        "Coming up: create a new recipe (Level 3), new categories and objects (Levels 4–5).";
 }
