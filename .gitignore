@@ -4,6 +4,7 @@ obj/
 *.user
 .superpowers/
 artifacts/
+.worktrees/
 
 # Private / internal — these live in the separate private repo (SCMW-Lone-Wolf-Internal),
 # never in the public repository.
