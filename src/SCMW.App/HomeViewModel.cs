@@ -28,6 +28,7 @@ public partial class HomeViewModel : ObservableObject
         _store = store;
         _samples = projects;
         _gameReady = gameReady;
+        Chooser = new ChooserViewModel(_nav);
 
         if (_store is not null) _store.Changed += Refresh;
         Refresh();
@@ -39,6 +40,9 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>True when there is at least one project to show.</summary>
     public bool HasProjects => RecentProjects.Count > 0;
+
+    /// <summary>The chooser folded into Home — the friendly "what would you like to change?" tiles.</summary>
+    public ChooserViewModel Chooser { get; }
 
     /// <summary>Whether the "set SCUM up first" card is showing.</summary>
     [ObservableProperty] private bool _showWelcome = true;

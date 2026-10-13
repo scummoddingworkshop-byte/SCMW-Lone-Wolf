@@ -168,6 +168,21 @@
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
   </Style>
 
+  <!-- Chooser tile: a plain tile that lights its border on hover, for the "what can I change?" front door. -->
+  <Style Selector="Button.choosetile">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Padding" Value="16"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+  </Style>
+  <Style Selector="Button.choosetile:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+
   <!-- Projects tile: a plain surface (never a button) that holds its own controls. -->
   <Style Selector="Border.projecttile">
     <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>

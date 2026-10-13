@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Views.ChooserView"
+             x:DataType="vm:ChooserViewModel">
+  <StackPanel Spacing="12">
+    <TextBlock Classes="h1" FontSize="18" Text="What would you like to change?"/>
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+      <Button Grid.Column="0" Name="ItemsTile" Classes="choosetile"
+              Command="{Binding OpenItemsCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/items.png" Width="22" Height="22"/>
+          <TextBlock Text="Items" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="1" Name="BaseBuildingTile" Classes="choosetile"
+              Command="{Binding OpenBaseBuildingCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/basebuilding.png" Width="22" Height="22"/>
+          <TextBlock Text="Base building" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="2" Name="RecipesTile" Classes="choosetile"
+              Command="{Binding OpenRecipesCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/recipes.png" Width="22" Height="22"/>
+          <TextBlock Text="Recipes" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+    </Grid>
+  </StackPanel>
+</UserControl>
