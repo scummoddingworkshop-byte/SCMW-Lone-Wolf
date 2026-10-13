@@ -130,7 +130,8 @@ public class ShellNavigationTests
 
         // A level must say what it is, not just its number.
         Assert.Contains(texts, t => t.Contains("Change items values") && t.Contains("Mod level 1"));
-        Assert.Contains(texts, t => t.Contains("Coming up"));
+        // "Coming up" starts on its own, after a blank line.
+        Assert.Contains(texts, t => t.Contains("\n\nComing up"));
     }
 
     [AvaloniaFact]
@@ -148,5 +149,17 @@ public class ShellNavigationTests
               .Command!.Execute(null);
 
         Assert.False(strip.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Band_headers_are_legible_with_breathing_room()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Show();
+
+        var make = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == "MAKE");
+
+        Assert.True(make.FontSize >= 13, $"band header too small: {make.FontSize}");
+        Assert.True(make.Margin.Top >= 8, $"band header has too little space above: {make.Margin.Top}");
     }
 }

@@ -14,6 +14,14 @@
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
     <Setter Property="app:UppercaseText.Enabled" Value="True"/>
   </Style>
+  <!-- Rail band heading (MAKE · SHIP · APP): a touch larger and letter-spaced, so it reads as a label. -->
+  <Style Selector="TextBlock.bandHeader">
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
+    <Setter Property="LetterSpacing" Value="1.5"/>
+    <Setter Property="app:UppercaseText.Enabled" Value="True"/>
+  </Style>
   <Style Selector="TextBlock.dim">
     <Setter Property="FontSize" Value="11"/>
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
