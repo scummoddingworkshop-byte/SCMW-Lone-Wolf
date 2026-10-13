@@ -77,8 +77,10 @@ public partial class ShellViewModel : ObservableObject
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";
 
+        _itemChanges = new ItemChangeStore(new ProjectChangeStore(), _projectStore);
         _workspaceVm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), ContentSource,
-                                              new ContentCatalog(ContentSource, ContentSource.Icons));
+                                              new ContentCatalog(ContentSource, ContentSource.Icons),
+                                              changes: _itemChanges, projects: _projectStore);
         _workspaceView = new WorkspaceView { DataContext = _workspaceVm };
         _home = new HomeViewModel(_nav, store: _projectStore,
                                   gameReady: () => IsScumConfigured(store),
@@ -86,7 +88,6 @@ public partial class ShellViewModel : ObservableObject
         _homeView = new HomeView { DataContext = _home };
         _projects = new ProjectsViewModel(_projectStore, _nav);
         _projectsView = new ProjectsView { DataContext = _projects };
-        _itemChanges = new ItemChangeStore(new ProjectChangeStore(), _projectStore);
         _items = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
                                     catalog: new ContentCatalog(ContentSource, ContentSource.Icons));
         _itemsView = new ItemsView { DataContext = _items };

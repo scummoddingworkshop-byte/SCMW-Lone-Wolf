@@ -1,10 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Controls.FieldRow"
              x:DataType="vm:WorkspaceField">
-  <!-- One described field: a risk dot, its label and unit, the current value, and the plain
-       meaning underneath. The dot is the only colour; text stays quiet. -->
+  <!-- One described field: a risk dot, its label and unit, the current value (click it to type a new
+       one when we can write it), and the plain meaning underneath. The dot is the only colour. -->
   <UserControl.Styles>
     <Style Selector="Border.risk">
       <Setter Property="Width" Value="9"/>
@@ -27,7 +28,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
+  <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto">
     <Border Grid.Row="0" Grid.Column="0" Name="RiskDot" Classes="risk" Margin="0,4,8,0"
             Classes.low="{Binding IsLow}" Classes.medium="{Binding IsMedium}"
             Classes.high="{Binding IsHigh}" Classes.unknown="{Binding IsUnknown}"/>
@@ -39,13 +40,45 @@
                  VerticalAlignment="Center" IsVisible="{Binding HasUnit}"/>
     </StackPanel>
 
-    <TextBlock Grid.Row="0" Grid.Column="2" Name="ValueText" Text="{Binding Value}"
+    <!-- The value: click to type a new one (when we can write the field). -->
+    <Button Grid.Row="0" Grid.Column="2" Name="ValueButton" Classes="valuefield"
+            HorizontalAlignment="Right" HorizontalContentAlignment="Right" VerticalAlignment="Top"
+            MaxWidth="320" Margin="16,0,0,0"
+            IsVisible="{Binding ShowValueButton}"
+            Command="{Binding $parent[controls:FieldRow].BeginEditCommand}"
+            CommandParameter="{Binding}">
+      <TextBlock Name="ValueText" Text="{Binding Value}" Classes.changed="{Binding IsChanged}"
+                 TextWrapping="Wrap" TextAlignment="Right"/>
+    </Button>
+
+    <!-- A field we cannot write shows a plain value. -->
+    <TextBlock Grid.Row="0" Grid.Column="2" Name="ReadOnlyText" Text="{Binding Value}"
                Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"
                TextAlignment="Right" HorizontalAlignment="Right" VerticalAlignment="Top"
-               MaxWidth="320" Margin="16,0,0,0"/>
+               MaxWidth="320" Margin="16,0,0,0"
+               IsVisible="{Binding !Writable}"/>
+
+    <TextBox Grid.Row="0" Grid.Column="2" Name="Editor" Classes="field"
+             HorizontalAlignment="Right" VerticalAlignment="Top"
+             MaxWidth="320" Margin="16,0,0,0" MinHeight="30"
+             IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
+             KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus"/>
+
+    <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="6"
+                VerticalAlignment="Top" Margin="6,2,0,0">
+      <TextBlock Text="✎" Classes="dim" IsVisible="{Binding ShowValueButton}"/>
+      <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
+              IsVisible="{Binding IsChanged}">
+        <TextBlock Text="changed" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+      </Border>
+    </StackPanel>
 
     <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Name="MeaningText"
                Classes="dim" Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,2,0,0"
                IsVisible="{Binding HasDetail}"/>
+
+    <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Name="WasText" Classes="dim"
+               HorizontalAlignment="Right" Text="{Binding WasText}"
+               IsVisible="{Binding IsChanged}"/>
   </Grid>
 </UserControl>

@@ -32,4 +32,34 @@ public static class AppliedValue
 
         return gameValue;
     }
+
+    /// <summary>
+    /// The applied value for a file addressed by its own PATH: the newest
+    /// <see cref="ChangeOperation.Set"/> record whose <see cref="ChangeRecord.AssetPath"/> matches
+    /// <paramref name="assetPath"/> (case-insensitively), else <paramref name="gameValue"/>. A record
+    /// with no path never matches — path-addressed means path, so two files that share a display name
+    /// can never be confused.
+    /// </summary>
+    public static string? ResolveForPath(
+        IReadOnlyList<ChangeRecord> records, string assetPath, string field, string? gameValue)
+    {
+        if (string.IsNullOrEmpty(assetPath)) return gameValue;
+
+        for (var i = records.Count - 1; i >= 0; i--)
+        {
+            var record = records[i];
+
+            // A list change (add/remove an entry) is not a value; it must never be read as one.
+            if (record.Operation != ChangeOperation.Set) continue;
+
+            if (!string.IsNullOrEmpty(record.AssetPath)
+                && string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
+            {
+                return record.NewValue;
+            }
+        }
+
+        return gameValue;
+    }
 }

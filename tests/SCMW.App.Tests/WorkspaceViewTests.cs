@@ -6,6 +6,7 @@ using SCMW.App.Controls;
 using SCMW.App.Views;
 using SCMW.Core;
 using SCMW.Core.Content;
+using SCMW.Core.Editing;
 using SCMW.Core.Knowledge;
 
 namespace SCMW.App.Tests;
@@ -289,6 +290,33 @@ public class WorkspaceViewTests
 
         Assert.Equal("Batteries", vm.Title);
         Assert.Contains(vm.Fields, f => f.TechnicalName == "Weight");
+    }
+
+    [AvaloniaFact]
+    public async Task Committing_an_edit_records_a_change_against_the_files_path()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new BrowseSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Batteries"));
+
+            var weight = vm.Fields.Single(f => f.TechnicalName == "Weight");
+            vm.BeginEditCommand.Execute(weight);
+            weight.Draft = "999";
+            vm.CommitEditCommand.Execute(weight);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES", record.AssetPath);
+            Assert.Equal("999", record.NewValue);
+            Assert.Equal(ChangeOperation.Set, record.Operation);
+        }
+        finally { TestProjects.Cleanup(root); }
     }
 
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>

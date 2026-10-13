@@ -8,6 +8,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SCMW.Core.Content;
+using SCMW.Core.Editing;
 using SCMW.Core.Knowledge;
 
 namespace SCMW.App;
@@ -18,16 +19,21 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly FieldLibrary _library;
     private readonly IContentSource? _source;
     private readonly ContentCatalog? _catalog;
+    private readonly ItemChangeStore? _changes;
+    private readonly ProjectStore? _projects;
     private bool _loadingKind;
     private ItemSummary? _suppressingSelection;
 
     public WorkspaceViewModel() : this(FieldLibraryLoader.LoadDefault()) { }
 
-    public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null)
+    public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null,
+                              ItemChangeStore? changes = null, ProjectStore? projects = null)
     {
         _library = library;
         _source = source;
         _catalog = catalog;
+        _changes = changes;
+        _projects = projects;
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -196,7 +202,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Open <paramref name="kind"/>'s file named <paramref name="title"/> and show the
     /// fields it actually has, each explained by the library where the library knows it.</summary>
-    public void Show(string kind, string title, IReadOnlyList<AssetField> fields)
+    public void Show(string kind, string title, IReadOnlyList<AssetField> fields, string? assetPath = null)
     {
         Title = title;
         Fields.Clear();
@@ -204,6 +210,18 @@ public partial class WorkspaceViewModel : ObservableObject
         foreach (var field in fields)
         {
             Fields.Add(Describe(kind, field));
+        }
+
+        // Show the project's recorded values for this file, addressed by its own PATH (Task 3.1).
+        if (!string.IsNullOrEmpty(assetPath) && Fields.Count > 0)
+        {
+            var records = Records();
+            foreach (var field in Fields)
+            {
+                var applied = AppliedValue.ResolveForPath(records, assetPath, field.TechnicalName, field.GameValue);
+                field.Load(applied ?? field.GameValue,
+                           FirstOldValue(records, assetPath, field.TechnicalName) ?? field.GameValue);
+            }
         }
 
         HasFields = Fields.Count > 0;
@@ -249,7 +267,7 @@ public partial class WorkspaceViewModel : ObservableObject
             }
         }
 
-        RunOnUi(() => Show(_kind, asset.Name, fields));
+        RunOnUi(() => Show(_kind, asset.Name, fields, asset.AssetId));
     }
 
     /// <summary>Run an action on the UI thread (the field rows are bound to the view).</summary>
@@ -257,6 +275,89 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
         else Avalonia.Threading.Dispatcher.UIThread.Post(action);
+    }
+
+    // --- Setting a value (Task 3.1) -------------------------------------------------------------
+    // A change is recorded against the file's own PATH (never its display name), so two files that
+    // share a name can never be confused.
+
+    /// <summary>The current project's recorded changes (empty when no project is open).</summary>
+    private IReadOnlyList<ChangeRecord> Records()
+    {
+        var folder = _projects?.Current?.FolderPath;
+        if (folder is null || _changes is null) return Array.Empty<ChangeRecord>();
+        return _changes.For(folder);
+    }
+
+    /// <summary>The value a field had before the project's first change to it, or null.</summary>
+    private static string? FirstOldValue(IReadOnlyList<ChangeRecord> records, string assetPath, string field)
+    {
+        foreach (var record in records)
+        {
+            if (record.Operation != ChangeOperation.Set) continue;
+            if (string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
+            {
+                return record.OldValue;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Open the inline editor on one field; only one editor at a time.</summary>
+    [RelayCommand]
+    private void BeginEdit(WorkspaceField? field)
+    {
+        if (field is null || !field.Writable) return;
+
+        foreach (var other in Fields)
+        {
+            if (!ReferenceEquals(other, field)) other.IsEditing = false;
+        }
+
+        field.Draft = field.Value;
+        field.IsEditing = true;
+    }
+
+    /// <summary>Apply a typed value: record it against the file's PATH (never its name).</summary>
+    [RelayCommand]
+    private void CommitEdit(WorkspaceField? field)
+    {
+        if (field is null || !field.IsEditing) return;
+        if (!field.IsDraftValid) return;   // stays open so it can be corrected
+
+        var draft = field.Draft.Trim();
+        var path = SelectedAsset?.AssetId;
+
+        // Not wired to a project (a bare/preview screen): keep the change in memory only.
+        if (_changes is null || _projects?.Current is null || string.IsNullOrEmpty(path))
+        {
+            field.Value = draft;
+            field.IsEditing = false;
+            return;
+        }
+
+        // Nothing actually changed: leave the records alone (a no-op record would be listed by
+        // Build as a real change).
+        if (draft == field.OriginalValue)
+        {
+            field.Value = draft;
+            field.IsEditing = false;
+            return;
+        }
+
+        field.Value = draft;
+        field.IsEditing = false;
+        _changes.RecordEdit(path!, field.TechnicalName, field.OriginalValue, draft, _projects!.Current!.Id,
+                            assetPath: path);
+    }
+
+    [RelayCommand]
+    private void CancelEdit(WorkspaceField? field)
+    {
+        if (field is null) return;
+        field.IsEditing = false;
     }
 
     /// <summary>Describe one real field through the library. When the library does not know it,
@@ -273,24 +374,30 @@ public partial class WorkspaceViewModel : ObservableObject
             writable: definition?.Writable ?? false,
             meaning: definition?.Meaning ?? string.Empty,
             technicalName: field.TechnicalName,
-            described: definition is not null);
+            described: definition is not null,
+            type: definition?.Type ?? FieldType.Unknown);
     }
 }
 
-/// <summary>One row of the Workspace: a real field, described for the owner.</summary>
-public sealed class WorkspaceField
+/// <summary>One row of the Workspace: a real field, described for the owner, and — when we can write
+/// it — editable by typing a value (Task 3.1).</summary>
+public partial class WorkspaceField : ObservableObject
 {
     public WorkspaceField(string label, string unit, string value, Risk risk,
-                          bool writable, string meaning, string technicalName, bool described)
+                          bool writable, string meaning, string technicalName, bool described,
+                          FieldType type = FieldType.Unknown)
     {
         Label = label;
         Unit = unit;
-        Value = value;
+        _value = value;
+        _originalValue = value;
+        GameValue = value;
         Risk = risk;
         Writable = writable;
         Meaning = meaning;
         TechnicalName = technicalName;
         Described = described;
+        Type = type;
     }
 
     /// <summary>What the owner reads.</summary>
@@ -301,14 +408,26 @@ public sealed class WorkspaceField
 
     public bool HasUnit => !string.IsNullOrWhiteSpace(Unit);
 
-    /// <summary>The field's current value, formatted for reading.</summary>
-    public string Value { get; }
+    /// <summary>The kind of value, from the library (Unknown when the field is not described).</summary>
+    public FieldType Type { get; }
+
+    /// <summary>The value the game itself has, before any project record is applied.</summary>
+    public string GameValue { get; }
+
+    /// <summary>The field's current value, shown for reading.</summary>
+    [ObservableProperty] private string _value;
+
+    /// <summary>The value before the project's first change (the "was …" baseline).</summary>
+    [ObservableProperty] private string _originalValue;
 
     /// <summary>How risky a wrong value is — the colour of the row's dot.</summary>
     public Risk Risk { get; }
 
     /// <summary>True when the writer can set this field.</summary>
     public bool Writable { get; }
+
+    /// <summary>True when the value can be typed into (the same as <see cref="Writable"/>).</summary>
+    public bool Editable => Writable;
 
     /// <summary>A one-line plain meaning, or empty when not described.</summary>
     public string Meaning { get; }
@@ -320,6 +439,61 @@ public sealed class WorkspaceField
 
     /// <summary>True when the field library describes this field.</summary>
     public bool Described { get; }
+
+    /// <summary>True when the shown value differs from the baseline (we changed it).</summary>
+    public bool IsChanged => Value != OriginalValue;
+
+    /// <summary>Plain "was 10" line shown under a changed value.</summary>
+    public string WasText => $"was {OriginalValue}";
+
+    /// <summary>True while the inline editor is open.</summary>
+    [ObservableProperty] private bool _isEditing;
+
+    /// <summary>True when the clickable value should show (writable and not being edited).</summary>
+    public bool ShowValueButton => Writable && !IsEditing;
+
+    /// <summary>What the owner is typing; only committed when it is sane for the field's kind.</summary>
+    [ObservableProperty] private string _draft = "";
+
+    /// <summary>Whether the draft is a plausible value: a number for a number, Yes/No for a switch,
+    /// and any non-blank text otherwise.</summary>
+    public bool IsDraftValid => Type switch
+    {
+        // Numbers use the game's format (dot decimal) whatever the machine's culture.
+        FieldType.Number => double.TryParse(Draft, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out _),
+        FieldType.Boolean => IsYesNo(Draft),
+        _ => !string.IsNullOrWhiteSpace(Draft),
+    };
+
+    /// <summary>True for a switch value as shown ("Yes"/"No") or as the game writes it (true/false, 1/0).</summary>
+    private static bool IsYesNo(string? draft)
+    {
+        var text = (draft ?? string.Empty).Trim();
+        return bool.TryParse(text, out _)
+            || text.Equals("yes", StringComparison.OrdinalIgnoreCase)
+            || text.Equals("no", StringComparison.OrdinalIgnoreCase)
+            || text == "1" || text == "0";
+    }
+
+    /// <summary>Set the shown value and the "was …" baseline (used when records are applied).</summary>
+    public void Load(string value, string original)
+    {
+        Value = value;
+        OriginalValue = original;
+    }
+
+    partial void OnValueChanged(string value) => OnPropertyChanged(nameof(IsChanged));
+
+    partial void OnOriginalValueChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsChanged));
+        OnPropertyChanged(nameof(WasText));
+    }
+
+    partial void OnIsEditingChanged(bool value) => OnPropertyChanged(nameof(ShowValueButton));
+
+    partial void OnDraftChanged(string value) => OnPropertyChanged(nameof(IsDraftValid));
 
     /// <summary>The honest line shown for a field we have not worked out yet.</summary>
     public const string NotDescribed = "We haven't worked out what this does yet.";

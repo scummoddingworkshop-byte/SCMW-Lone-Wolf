@@ -77,7 +77,10 @@
         <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:WorkspaceField">
-              <controls:FieldRow Margin="0,0,0,14"/>
+              <controls:FieldRow Margin="0,0,0,14"
+                  BeginEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                  CommitEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitEditCommand}"
+                  CancelEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelEditCommand}"/>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
