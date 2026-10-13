@@ -319,6 +319,34 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact]
+    public async Task Multiplying_a_number_field_records_a_multiply_against_the_files_path()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new BrowseSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Batteries"));
+
+            var weight = vm.Fields.Single(f => f.TechnicalName == "Weight");
+            vm.BeginMultiplyCommand.Execute(weight);
+            weight.FactorDraft = "2";
+            vm.CommitMultiplyCommand.Execute(weight);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES", record.AssetPath);
+            Assert.Equal("2", record.NewValue);
+            Assert.Equal(ChangeOperation.Multiply, record.Operation);
+            Assert.Equal("800", weight.Value);   // the game's 400, doubled
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {

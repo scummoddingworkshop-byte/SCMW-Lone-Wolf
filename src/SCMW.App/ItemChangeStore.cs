@@ -56,6 +56,25 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
+    /// Append a multiply (scale by a factor) to the project's <c>changes.json</c>. The factor is kept
+    /// as the record's new value; the factor always scales the file's own value, so the newest change
+    /// to the field wins. Returns false when it could not be saved (so the screen can say so).
+    /// </summary>
+    public bool RecordMultiply(string assetId, string field, string? oldValue, string factor, string projectId,
+                               string? assetPath = null)
+    {
+        var folder = FolderFor(projectId);
+        if (folder is null) return false;
+
+        var saved = _store.TryAdd(folder, new EngineChangeRecord(
+            Guid.NewGuid(), projectId, assetId, field, oldValue, factor,
+            DateTime.UtcNow, StatusKind.Editable, Operation: ChangeOperation.Multiply, AssetPath: assetPath));
+
+        Changed?.Invoke();
+        return saved;
+    }
+
+    /// <summary>
     /// Append a list change (add or remove an entry) to the project's <c>changes.json</c>. Kept as
     /// its own record so the order of several list changes survives (a value edit does not).
     /// <para>

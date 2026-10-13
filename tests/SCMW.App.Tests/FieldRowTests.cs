@@ -83,6 +83,9 @@ public class FieldRowTests
             BeginEditCommand = vm.BeginEditCommand,
             CommitEditCommand = vm.CommitEditCommand,
             CancelEditCommand = vm.CancelEditCommand,
+            BeginMultiplyCommand = vm.BeginMultiplyCommand,
+            CommitMultiplyCommand = vm.CommitMultiplyCommand,
+            CancelMultiplyCommand = vm.CancelMultiplyCommand,
         };
         var window = new Window { Content = row, Width = 400, Height = 120 };
         window.Show();
@@ -128,6 +131,79 @@ public class FieldRowTests
         editor.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
 
         Assert.True(field.IsEditing);
+        Assert.Equal("10", field.Value);
+    }
+
+    [AvaloniaFact] // a multiply only makes sense on a number field
+    public void Row_offers_a_multiply_only_for_a_number_field()
+    {
+        var number = NewRow(Field(type: FieldType.Number));
+        number.Measure(new Size(400, 60));
+        Assert.True(number.FindControl<Button>("MultiplyButton")!.IsVisible);
+
+        var text = NewRow(Field(type: FieldType.Text));
+        text.Measure(new Size(400, 60));
+        Assert.False(text.FindControl<Button>("MultiplyButton")!.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Row_switches_to_the_factor_editor_when_multiplying()
+    {
+        var field = Field();
+        var row = NewRow(field);
+        row.Measure(new Size(400, 60));
+
+        var factor = row.FindControl<TextBox>("FactorEditor")!;
+        Assert.False(factor.IsVisible);
+
+        field.IsMultiplying = true;
+        row.Measure(new Size(400, 60));
+
+        Assert.True(factor.IsVisible);
+        Assert.False(row.FindControl<Button>("ValueButton")!.IsVisible);
+        Assert.False(row.FindControl<TextBox>("Editor")!.IsVisible);
+    }
+
+    [AvaloniaFact] // "half" — a fraction, and the unit stays exactly where it was
+    public void Entering_a_factor_scales_the_value_and_keeps_the_unit()
+    {
+        var (row, field) = Wired();
+        field.IsMultiplying = true;
+        var factor = row.FindControl<TextBox>("FactorEditor")!;
+        factor.Text = "0.5";
+
+        factor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+
+        Assert.Equal("5", field.Value);
+        Assert.False(field.IsMultiplying);
+        Assert.Equal("grams", field.Unit);
+    }
+
+    [AvaloniaFact]
+    public void Escape_cancels_a_multiply()
+    {
+        var (row, field) = Wired();
+        field.IsMultiplying = true;
+        var factor = row.FindControl<TextBox>("FactorEditor")!;
+        factor.Text = "3";
+
+        factor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+
+        Assert.Equal("10", field.Value);
+        Assert.False(field.IsMultiplying);
+    }
+
+    [AvaloniaFact]
+    public void Clicking_away_keeps_an_invalid_factor_open()
+    {
+        var (row, field) = Wired();
+        field.IsMultiplying = true;
+        var factor = row.FindControl<TextBox>("FactorEditor")!;
+        factor.Text = "abc";
+
+        factor.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+
+        Assert.True(field.IsMultiplying);
         Assert.Equal("10", field.Value);
     }
 }

@@ -10,6 +10,13 @@ public enum ChangeOperation
     /// <summary>Set a value (the ordinary edit).</summary>
     Set,
 
+    /// <summary>
+    /// Multiply the field's game value by a factor ("×2", "half", "+50%"). The factor is stored in
+    /// <see cref="ChangeRecord.NewValue"/>; it always scales the file's own value, so a newer value
+    /// change replaces the result outright (the newest change wins).
+    /// </summary>
+    Multiply,
+
     /// <summary>Add a new entry to a list, cloned from the last existing entry.</summary>
     AddEntry,
 

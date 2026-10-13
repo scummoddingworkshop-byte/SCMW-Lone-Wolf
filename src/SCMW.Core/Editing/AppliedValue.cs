@@ -50,14 +50,23 @@ public static class AppliedValue
             var record = records[i];
 
             // A list change (add/remove an entry) is not a value; it must never be read as one.
-            if (record.Operation != ChangeOperation.Set) continue;
+            if (record.Operation != ChangeOperation.Set && record.Operation != ChangeOperation.Multiply)
+                continue;
 
-            if (!string.IsNullOrEmpty(record.AssetPath)
-                && string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(record.AssetPath)
+                || !string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
             {
-                return record.NewValue;
+                continue;
             }
+
+            // The newest value change wins. A set is an absolute value; a multiply scales the file's
+            // own value by its factor (so it always works from the game's number, never an earlier edit).
+            if (record.Operation == ChangeOperation.Set) return record.NewValue;
+
+            return Multiplier.TryParse(record.NewValue, out var factor)
+                ? Multiplier.Apply(gameValue, factor)
+                : gameValue;
         }
 
         return gameValue;

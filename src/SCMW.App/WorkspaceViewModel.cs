@@ -294,7 +294,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         foreach (var record in records)
         {
-            if (record.Operation != ChangeOperation.Set) continue;
+            if (record.Operation != ChangeOperation.Set && record.Operation != ChangeOperation.Multiply) continue;
             if (string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
             {
@@ -313,7 +313,11 @@ public partial class WorkspaceViewModel : ObservableObject
 
         foreach (var other in Fields)
         {
-            if (!ReferenceEquals(other, field)) other.IsEditing = false;
+            if (!ReferenceEquals(other, field))
+            {
+                other.IsEditing = false;
+                other.IsMultiplying = false;
+            }
         }
 
         field.Draft = field.Value;
@@ -358,6 +362,55 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (field is null) return;
         field.IsEditing = false;
+    }
+
+    /// <summary>Open the factor editor on one field ("×2", "half", "+50%"); only one editor at a time.</summary>
+    [RelayCommand]
+    private void BeginMultiply(WorkspaceField? field)
+    {
+        if (field is null || !field.CanMultiply) return;
+
+        foreach (var other in Fields)
+        {
+            if (!ReferenceEquals(other, field))
+            {
+                other.IsEditing = false;
+                other.IsMultiplying = false;
+            }
+        }
+
+        field.FactorDraft = string.Empty;
+        field.IsMultiplying = true;
+    }
+
+    /// <summary>Apply a factor: record a multiply against the file's PATH (never its name). The factor
+    /// scales the game's own value, so the newest change to the field wins.</summary>
+    [RelayCommand]
+    private void CommitMultiply(WorkspaceField? field)
+    {
+        if (field is null || !field.IsMultiplying) return;
+        if (!field.IsFactorValid) return;   // stays open so it can be corrected
+
+        Multiplier.TryParse(field.FactorDraft, out var factor);
+        var product = Multiplier.Apply(field.GameValue, factor);
+        var path = SelectedAsset?.AssetId;
+
+        field.IsMultiplying = false;
+        field.Load(product ?? field.GameValue, field.GameValue);
+
+        // Not wired to a project (a bare/preview screen): keep the change in memory only.
+        if (_changes is null || _projects?.Current is null || string.IsNullOrEmpty(path)) return;
+
+        _changes.RecordMultiply(path!, field.TechnicalName, field.GameValue,
+                                factor.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                _projects!.Current!.Id, assetPath: path);
+    }
+
+    [RelayCommand]
+    private void CancelMultiply(WorkspaceField? field)
+    {
+        if (field is null) return;
+        field.IsMultiplying = false;
     }
 
     /// <summary>Describe one real field through the library. When the library does not know it,
@@ -450,7 +503,22 @@ public partial class WorkspaceField : ObservableObject
     [ObservableProperty] private bool _isEditing;
 
     /// <summary>True when the clickable value should show (writable and not being edited).</summary>
-    public bool ShowValueButton => Writable && !IsEditing;
+    public bool ShowValueButton => Writable && !IsEditing && !IsMultiplying;
+
+    /// <summary>True when the field is a number we can multiply (multiplying text makes no sense).</summary>
+    public bool CanMultiply => Writable && Type == FieldType.Number;
+
+    /// <summary>True while the factor editor is open.</summary>
+    [ObservableProperty] private bool _isMultiplying;
+
+    /// <summary>What the owner types as the factor ("2", "half", "+50%").</summary>
+    [ObservableProperty] private string _factorDraft = "";
+
+    /// <summary>Whether the typed text is a factor we can use.</summary>
+    public bool IsFactorValid => Multiplier.TryParse(FactorDraft, out _);
+
+    /// <summary>True when the × button should show (a number we can multiply, nothing else open).</summary>
+    public bool ShowMultiplyButton => CanMultiply && !IsEditing && !IsMultiplying;
 
     /// <summary>What the owner is typing; only committed when it is sane for the field's kind.</summary>
     [ObservableProperty] private string _draft = "";
@@ -491,7 +559,19 @@ public partial class WorkspaceField : ObservableObject
         OnPropertyChanged(nameof(WasText));
     }
 
-    partial void OnIsEditingChanged(bool value) => OnPropertyChanged(nameof(ShowValueButton));
+    partial void OnIsEditingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowValueButton));
+        OnPropertyChanged(nameof(ShowMultiplyButton));
+    }
+
+    partial void OnIsMultiplyingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowValueButton));
+        OnPropertyChanged(nameof(ShowMultiplyButton));
+    }
+
+    partial void OnFactorDraftChanged(string value) => OnPropertyChanged(nameof(IsFactorValid));
 
     partial void OnDraftChanged(string value) => OnPropertyChanged(nameof(IsDraftValid));
 

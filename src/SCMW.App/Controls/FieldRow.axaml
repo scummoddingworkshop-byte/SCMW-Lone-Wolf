@@ -64,8 +64,32 @@
              IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
              KeyDown="OnEditorKeyDown" LostFocus="OnEditorLostFocus"/>
 
+    <!-- Multiply: type a factor ("×2", "half", "+50%"), or use a quick choice. -->
+    <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16,0,0,0"
+                IsVisible="{Binding IsMultiplying}">
+      <TextBox Name="FactorEditor" Classes="field" MinWidth="90" MinHeight="30"
+               Watermark="×2, half, +50%…"
+               IsVisible="{Binding IsMultiplying}"
+               Text="{Binding FactorDraft, Mode=TwoWay}"
+               KeyDown="OnFactorKeyDown" LostFocus="OnFactorLostFocus"/>
+      <Button Name="QuickDouble" Classes="valuefield" Padding="6,0" Tag="2"
+              Content="×2" Click="OnQuickFactor"/>
+      <Button Name="QuickHalf" Classes="valuefield" Padding="6,0" Tag="half"
+              Content="half" Click="OnQuickFactor"/>
+      <Button Name="QuickPlus50" Classes="valuefield" Padding="6,0" Tag="+50%"
+              Content="+50%" Click="OnQuickFactor"/>
+    </StackPanel>
+
     <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="6"
                 VerticalAlignment="Top" Margin="6,2,0,0">
+      <Button Name="MultiplyButton" Classes="valuefield" Padding="6,0" Margin="0,0,0,0"
+              VerticalAlignment="Top" IsVisible="{Binding ShowMultiplyButton}"
+              ToolTip.Tip="Multiply this value (×2, half, +50%…)"
+              Command="{Binding $parent[controls:FieldRow].BeginMultiplyCommand}"
+              CommandParameter="{Binding}">
+        <TextBlock Text="×2 / half / +50%" Classes="dim"/>
+      </Button>
       <TextBlock Text="✎" Classes="dim" IsVisible="{Binding ShowValueButton}"/>
       <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
               IsVisible="{Binding IsChanged}">
