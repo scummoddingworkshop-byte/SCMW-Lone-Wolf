@@ -16,10 +16,17 @@ namespace SCMW.App;
 public partial class WorkspaceViewModel : ObservableObject
 {
     private readonly FieldLibrary _library;
+    private readonly IContentSource? _source;
 
     public WorkspaceViewModel() : this(FieldLibraryLoader.LoadDefault()) { }
 
-    public WorkspaceViewModel(FieldLibrary library) => _library = library;
+    public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null)
+    {
+        _library = library;
+        _source = source;
+    }
+
+    public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
 
     /// <summary>The rows shown, one per real field of the open file.</summary>
     public ObservableCollection<WorkspaceField> Fields { get; } = new();
@@ -123,6 +130,37 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         HasFields = Fields.Count > 0;
+    }
+
+    /// <summary>Open a file: remember it, then read and show ITS own fields from the game — the
+    /// rows come from the file itself, never a fixed list for its kind. Never throws.</summary>
+    public async System.Threading.Tasks.Task OpenAsync(ItemSummary asset)
+    {
+        if (asset is null) return;
+
+        SelectedAsset = asset;
+
+        IReadOnlyList<AssetField> fields = Array.Empty<AssetField>();
+        if (_source is not null)
+        {
+            try
+            {
+                fields = await _source.FieldsAsync(asset.AssetId ?? asset.Description).ConfigureAwait(false);
+            }
+            catch
+            {
+                fields = Array.Empty<AssetField>();   // a load failure shows an empty file, not a crash
+            }
+        }
+
+        RunOnUi(() => Show(_kind, asset.Name, fields));
+    }
+
+    /// <summary>Run an action on the UI thread (the field rows are bound to the view).</summary>
+    private static void RunOnUi(Action action)
+    {
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        else Avalonia.Threading.Dispatcher.UIThread.Post(action);
     }
 
     /// <summary>Describe one real field through the library. When the library does not know it,

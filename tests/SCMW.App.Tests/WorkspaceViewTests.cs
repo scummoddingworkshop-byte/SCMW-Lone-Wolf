@@ -192,4 +192,55 @@ public class WorkspaceViewTests
         Assert.True(list.IsVisible);
         Assert.Single(list.GetVisualDescendants().OfType<ItemRow>());
     }
+
+    // --- Per-file truth (Task 2.7, Review Focus 2) ----------------------------------------------
+
+    [AvaloniaFact]
+    public async Task Two_files_of_the_same_kind_show_their_own_fields()
+    {
+        var vm = new WorkspaceViewModel(source: new PerFileSource());
+        vm.Browse("Items", new[]
+        {
+            new ItemSummary("Tomato", "Food", "", editable: true, assetId: "tomato-id"),
+            new ItemSummary("Canned Beans", "Food", "", editable: true, assetId: "beans-id"),
+        });
+
+        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+        var tomato = vm.Fields.Select(f => f.TechnicalName).ToList();
+
+        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Canned Beans"));
+        var beans = vm.Fields.Select(f => f.TechnicalName).ToList();
+
+        Assert.Equal(new[] { "Weight", "MaxQuantity" }, tomato);
+        Assert.Equal(new[] { "Weight", "MaxQuantity", "SpoilTime" }, beans);
+        Assert.NotEqual(tomato, beans);
+        Assert.Equal("Canned Beans", vm.SelectedAsset!.Name);
+    }
+
+    /// <summary>A fake source: two files of one kind, each with its own fields. No game, no disk.</summary>
+    private sealed class PerFileSource : IContentSource
+    {
+        private readonly Dictionary<string, IReadOnlyList<AssetField>> _fields = new()
+        {
+            ["tomato-id"] = new[] { Field("Weight", "20000"), Field("MaxQuantity", "10") },
+            ["beans-id"] = new[] { Field("Weight", "400"), Field("MaxQuantity", "12"), Field("SpoilTime", "7200") },
+        };
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons => throw new NotSupportedException();
+        public IReadOnlyList<string> Categories => new[] { "Food" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult(_fields.TryGetValue(id, out var f) ? f : Array.Empty<AssetField>());
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
 }
