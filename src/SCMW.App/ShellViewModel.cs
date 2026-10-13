@@ -300,6 +300,9 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>The window title, naming the version.</summary>
     public string WindowTitle => $"{AppInfo.Name} {VersionText}";
 
+    /// <summary>The red "on the way" strip's message (design §3 — levels 3–5 are coming).</summary>
+    public string OnTheWayText => OnTheWay.Message;
+
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task LaunchModded() => await RunLaunchAsync(modded: true);
 

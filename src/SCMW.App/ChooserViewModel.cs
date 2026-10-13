@@ -13,9 +13,18 @@ public partial class ChooserViewModel : ObservableObject
 
     public ChooserViewModel(INavigation? nav = null) => _nav = nav ?? NavigationHost.Shared;
 
+    /// <summary>The red "on the way" message shown when a not-yet-built kind is clicked.</summary>
+    public string OnTheWayText => OnTheWay.Message;
+
+    /// <summary>Whether the "on the way" message is showing (a locked tile was clicked).</summary>
+    [ObservableProperty] private bool _showOnTheWayMessage;
+
     [RelayCommand] private void OpenItems() => _nav.GoTo(ScreenKey.Items);
 
     [RelayCommand] private void OpenBaseBuilding() => _nav.GoTo(ScreenKey.BaseBuilding);
 
     [RelayCommand] private void OpenRecipes() => _nav.GoTo(ScreenKey.Recipes);
+
+    /// <summary>A kind we have not built yet (levels 3–5): say so, rather than doing nothing.</summary>
+    [RelayCommand] private void LockedKind() => ShowOnTheWayMessage = true;
 }

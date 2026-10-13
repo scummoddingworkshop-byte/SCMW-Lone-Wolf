@@ -12,6 +12,7 @@
   <SolidColorBrush x:Key="OnAccentBrush"    Color="#12100E"/>
   <SolidColorBrush x:Key="SuccessBrush"     Color="#4CAF6A"/>
   <SolidColorBrush x:Key="WarningBrush"     Color="#D0563F"/>
+  <SolidColorBrush x:Key="WarningSoftBrush" Color="#3A211C"/>
   <SolidColorBrush x:Key="AccentSoftBrush"  Color="#3A2A1C"/>
 
   <!-- Hero band: a subtle warm gradient built from the palette. -->

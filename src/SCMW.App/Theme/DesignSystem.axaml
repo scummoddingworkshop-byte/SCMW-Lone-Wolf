@@ -19,6 +19,15 @@
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
   </Style>
 
+  <!-- The "on the way" strip: a soft red bar for levels 3–5. -->
+  <Style Selector="Border.ontheway">
+    <Setter Property="Background" Value="{StaticResource WarningSoftBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource WarningBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{StaticResource BgPanelBrush}"/>
     <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>

@@ -107,4 +107,15 @@ public class ShellNavigationTests
         Assert.Contains("SHIP", labels);
         Assert.Contains("APP", labels);
     }
+
+    [AvaloniaFact]
+    public void The_shell_shows_the_on_the_way_strip()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Show();
+
+        var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+
+        Assert.Contains(OnTheWay.Message, texts);
+    }
 }

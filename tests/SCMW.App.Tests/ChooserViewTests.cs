@@ -71,4 +71,21 @@ public class ChooserViewTests
 
         Assert.Equal(ScreenKey.Recipes, nav.Current);
     }
+
+    [AvaloniaFact]
+    public void A_locked_kind_surfaces_the_on_the_way_message()
+    {
+        var nav = new NavigationHost();
+        var view = Shown(nav);
+        var vm = (ChooserViewModel)view.DataContext!;
+
+        Assert.False(vm.ShowOnTheWayMessage);
+
+        view.FindControl<Button>("LockedTile")!.Command!.Execute(null);
+
+        Assert.True(vm.ShowOnTheWayMessage);
+        Assert.Equal(ScreenKey.Home, nav.Current);   // a locked tile goes nowhere
+        Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(),
+                        t => t.IsVisible && t.Text == OnTheWay.Message);
+    }
 }

@@ -5,7 +5,7 @@
              x:DataType="vm:ChooserViewModel">
   <StackPanel Spacing="12">
     <TextBlock Classes="h1" FontSize="18" Text="What would you like to change?"/>
-    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
       <Button Grid.Column="0" Name="ItemsTile" Classes="choosetile"
               Command="{Binding OpenItemsCommand}">
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -27,6 +27,17 @@
           <TextBlock Text="Recipes" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
       </Button>
+      <!-- A kind we have not built yet (levels 3–5): a locked tile that explains itself. -->
+      <Button Grid.Column="3" Name="LockedTile" Classes="choosetile"
+              Command="{Binding LockedKindCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Width="22" Height="22" CornerRadius="4"
+                  Background="{StaticResource WarningSoftBrush}"/>
+          <TextBlock Text="New recipes &amp; objects" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
     </Grid>
+    <TextBlock Text="{Binding OnTheWayText}" Foreground="{StaticResource WarningBrush}"
+               TextWrapping="Wrap" IsVisible="{Binding ShowOnTheWayMessage}"/>
   </StackPanel>
 </UserControl>
