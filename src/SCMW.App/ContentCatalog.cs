@@ -8,7 +8,7 @@ using SCMW.Core.Knowledge;
 namespace SCMW.App;
 
 /// <summary>Which family of game objects a browser screen shows.</summary>
-public enum AssetFamily { Items, BaseElements, Recipes }
+public enum AssetFamily { Items, BaseElements, Recipes, LootAndSpawn }
 
 /// <summary>
 /// Turns the engine's real content shapes into the Items screen's shapes. Labels come from the
@@ -59,6 +59,18 @@ public sealed class ContentCatalog
     internal static bool IsRecipe(string assetId) =>
         AssetNames.IsRecipeName(AssetName(assetId));
 
+    /// <summary>The loot &amp; spawn folders the reader indexes as their own family (Task 2.6).</summary>
+    private static readonly string[] SpawnerRoots =
+    {
+        "SCUM/Content/ConZ_Files/Items/SpawnerPresets/",
+        "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/",
+        "SCUM/Content/ConZ_Files/Characters/SpawnerPresets/",
+    };
+
+    /// <summary>True when the asset is a loot/spawn preset (a package under one of the spawner roots).</summary>
+    internal static bool IsSpawnerPreset(string assetId) =>
+        SpawnerRoots.Any(r => assetId.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>True when the asset is a known non-item entry (recipe/ingredient/icon/chopping).</summary>
     internal static bool IsNonItem(string assetId)
     {
@@ -72,10 +84,10 @@ public sealed class ContentCatalog
         return slash >= 0 ? assetId[(slash + 1)..] : assetId;
     }
 
-    /// <summary>One screen row per real item, with non-items and base elements left out.</summary>
+    /// <summary>One screen row per real item, with non-items, base elements and loot/spawn left out.</summary>
     public IReadOnlyList<ItemSummary> MapItems(IReadOnlyList<AssetSummary> assets) =>
         assets
-            .Where(a => !IsNonItem(a.Id) && !IsBaseElement(a.Id))
+            .Where(a => !IsNonItem(a.Id) && !IsBaseElement(a.Id) && !IsSpawnerPreset(a.Id))
             .Select(a => new ItemSummary(
                 name: a.Name,
                 category: string.IsNullOrWhiteSpace(a.Category) ? "Uncategorized" : a.Category,
@@ -113,6 +125,22 @@ public sealed class ContentCatalog
                 // or a recipe would build as "not found".
                 name: a.Name,
                 category: AssetNames.RecipeCategory(a.TechnicalPath),
+                description: a.TechnicalPath,
+                editable: true,
+                assetId: a.Id))
+            .ToList();
+
+    /// <summary>
+    /// One screen row per loot/spawn preset (spawner presets and container loot — Task 2.6). The
+    /// reader gives these a friendly name and the game's own folder as a category; the per-value
+    /// safety rule still decides what may actually be changed.
+    /// </summary>
+    public IReadOnlyList<ItemSummary> MapSpawnerPresets(IReadOnlyList<AssetSummary> assets) =>
+        assets
+            .Where(a => IsSpawnerPreset(a.Id))
+            .Select(a => new ItemSummary(
+                name: a.Name,
+                category: string.IsNullOrWhiteSpace(a.Category) ? "Loot & spawn" : a.Category,
                 description: a.TechnicalPath,
                 editable: true,
                 assetId: a.Id))

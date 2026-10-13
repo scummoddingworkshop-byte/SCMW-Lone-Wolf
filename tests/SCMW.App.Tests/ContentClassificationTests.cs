@@ -80,6 +80,28 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
+    public void Spawner_presets_are_their_own_family_and_not_items()
+    {
+        var catalog = new ContentCatalog(NoSource);
+        var assets = new[]
+        {
+            Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES"),
+            Asset("SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big"),
+            Asset("SCUM/Content/ConZ_Files/Characters/SpawnerPresets/FishSpeciesPresets/SpeciesPreset_River_Big"),
+        };
+
+        // Items list stays item-only; the loot folders get their own family.
+        var item = Assert.Single(catalog.MapItems(assets));
+        Assert.EndsWith("Batteries_ES", item.AssetId);
+
+        var presets = catalog.MapSpawnerPresets(assets);
+        Assert.Equal(2, presets.Count);
+        Assert.Contains(presets, p => p.AssetId!.EndsWith("Examine_Crate_Brown_Big"));
+        Assert.Contains(presets, p => p.AssetId!.EndsWith("SpeciesPreset_River_Big"));
+        Assert.All(presets, p => Assert.True(p.Editable));
+    }
+
+    [AvaloniaFact]
     public void An_es_items_fields_are_editable_and_a_plain_items_are_not()
     {
         var catalog = new ContentCatalog(NoSource);

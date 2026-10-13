@@ -33,6 +33,17 @@ public sealed class PakContentSource : IContentSource
     // blueprint's default object, so the same reading machinery serves them.
     private const string BaseElementsRoot = "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/";
 
+    // Loot & spawn (Task 2.6): the folders the item list deliberately skips (see
+    // ExcludedSubfolders) are read here as their own family. Two live under Items/ and stay
+    // skipped as items; the fish/animal presets live under Characters/. The reader's job is
+    // unchanged — this is just a third place to look, using the same machinery.
+    private static readonly string[] SpawnerRoots =
+    {
+        "SCUM/Content/ConZ_Files/Items/SpawnerPresets/",
+        "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/",
+        "SCUM/Content/ConZ_Files/Characters/SpawnerPresets/",
+    };
+
     // Shown (and returned as the scan Error) when the pak enumerates but its item
     // packages cannot actually be decrypted — a missing/rotated/wrong AES key.
     private const string WrongKeyMessage =
@@ -694,7 +705,8 @@ public sealed class PakContentSource : IContentSource
                 }
             }
 
-            if ((TryMapItem(path, out var summary) || TryMapBaseElement(path, out summary))
+            if ((TryMapItem(path, out var summary) || TryMapBaseElement(path, out summary)
+                 || TryMapSpawnerPreset(path, out summary))
                 && seenIds.Add(summary.Id))
                 items.Add(WithGameCategory(summary));
         }
@@ -825,6 +837,41 @@ public sealed class PakContentSource : IContentSource
             Id: path[..^7],
             Name: AssetNames.BaseElementFriendly(assetName),
             Category: "Base elements",
+            Overall: StatusKind.Unknown,
+            EditableCount: 0,
+            TechnicalPath: path,
+            IconKey: null);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Maps a pak file key to an AssetSummary when it is a loot/spawn preset (a package under one
+    /// of <see cref="SpawnerRoots"/>), otherwise returns false. Same shape as
+    /// <see cref="TryMapItem"/>, so presets flow through the app like items. The two Items/ roots
+    /// stay in <see cref="ExcludedSubfolders"/>, so a preset is never counted as an item.
+    /// </summary>
+    internal static bool TryMapSpawnerPreset(string path, out AssetSummary summary)
+    {
+        summary = null!;
+
+        if (!path.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var root = SpawnerRoots.FirstOrDefault(r => path.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+        if (root is null)
+            return false;
+
+        var relative = path[root.Length..];
+        var fileName = path[(path.LastIndexOf('/') + 1)..];
+        var assetName = fileName[..^7]; // strip ".uasset"
+        var slash = relative.IndexOf('/');
+        var category = slash >= 0 ? relative[..slash] : "Uncategorized";
+
+        summary = new AssetSummary(
+            Id: path[..^7],
+            Name: assetName.Replace('_', ' ').Trim(),
+            Category: category,
             Overall: StatusKind.Unknown,
             EditableCount: 0,
             TechnicalPath: path,

@@ -217,6 +217,62 @@ public class WorkspaceViewTests
         Assert.Equal("Canned Beans", vm.SelectedAsset!.Name);
     }
 
+    // --- Loot & spawn family (Task 2.6) ---------------------------------------------------------
+
+    [AvaloniaFact]
+    public async Task A_spawner_preset_opens_in_the_workspace_and_its_fields_render()
+    {
+        const string presetId =
+            "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big";
+
+        var source = new SpawnerSource();
+        var catalog = new ContentCatalog(source);
+        var assets = catalog.MapSpawnerPresets(new[]
+        {
+            new AssetSummary(presetId, "Examine Crate Brown Big", "Buildings", StatusKind.Unknown, 0,
+                presetId + ".uasset", null),
+        });
+
+        var vm = new WorkspaceViewModel(source: source);
+        vm.Browse(AssetFamily.LootAndSpawn.ToString(), assets);
+        await vm.OpenAsync(vm.VisibleAssets.Single());
+
+        Assert.Equal("Examine Crate Brown Big", vm.SelectedAsset!.Name);
+
+        var fields = vm.Fields.Select(f => f.TechnicalName).ToList();
+        Assert.Contains("SpawnQuantity", fields);
+        Assert.Contains("SpawnRadius", fields);
+
+        // No library entries for this family yet: an unknown field still shows, honestly.
+        Assert.Contains(vm.Fields, f => !f.Described);
+    }
+
+    /// <summary>A fake source that reads one spawner preset's fields. No game, no disk.</summary>
+    private sealed class SpawnerSource : IContentSource
+    {
+        private const string Id =
+            "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big";
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons => throw new NotSupportedException();
+        public IReadOnlyList<string> Categories => new[] { "Buildings" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetField>>(id == Id
+                ? new[] { Field("SpawnQuantity", "3"), Field("SpawnRadius", "500") }
+                : Array.Empty<AssetField>());
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     /// <summary>A fake source: two files of one kind, each with its own fields. No game, no disk.</summary>
     private sealed class PerFileSource : IContentSource
     {

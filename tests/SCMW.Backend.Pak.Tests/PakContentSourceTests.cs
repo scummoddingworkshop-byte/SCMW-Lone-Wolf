@@ -473,6 +473,60 @@ public class PakContentSourceTests
         Assert.Equal("Improvised Bow", bow.Name);
     }
 
+    // --- Loot & spawn: a third "place to look" (Task 2.6) ----------------------------------------
+
+    [Fact]
+    public void A_spawner_preset_is_indexed_from_its_own_folders()
+    {
+        // The two Items/ spawner folders are skipped as items (see ExcludedSubfolders) but read
+        // here as presets; the fish/animal presets live under Characters/.
+        Assert.True(PakContentSource.TryMapSpawnerPreset(
+            "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big.uasset",
+            out var crate));
+        Assert.Equal("Examine Crate Brown Big", crate.Name);
+        Assert.Equal("Buildings", crate.Category);
+
+        Assert.True(PakContentSource.TryMapSpawnerPreset(
+            "SCUM/Content/ConZ_Files/Characters/SpawnerPresets/FishSpeciesPresets/SpeciesPreset_River_Big.uasset",
+            out var fish));
+        Assert.Equal("SpeciesPreset River Big", fish.Name);
+        Assert.Equal("FishSpeciesPresets", fish.Category);
+
+        // A plain item is not a spawner preset.
+        Assert.False(PakContentSource.TryMapSpawnerPreset(
+            Item("Weapons/Ranged_Weapons/Improvised_Bow.uasset"), out _));
+    }
+
+    [Fact]
+    public void A_spawner_preset_is_still_not_counted_as_an_item()
+    {
+        // Guard: the loot folders stay excluded from the item list even though they are now
+        // indexed as presets, so the Items screen cannot drift.
+        Assert.False(PakContentSource.TryMapItem(
+            "SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big.uasset",
+            out _));
+    }
+
+    [Fact]
+    public async Task A_scan_indexes_spawner_presets_alongside_items()
+    {
+        var mount = new FakePakMount();
+        mount.Paths.Add(Item("Weapons/Ranged_Weapons/Improvised_Bow.uasset"));
+        mount.Paths.Add("SCUM/Content/ConZ_Files/Items/SpawnerPresets2/Buildings/Warehouse/Examine_Crate_Brown_Big.uasset");
+        mount.Paths.Add("SCUM/Content/ConZ_Files/Characters/SpawnerPresets/FishSpeciesPresets/SpeciesPreset_River_Big.uasset");
+
+        var src = CreateSource(mount);
+        src.Configure(Path.GetTempPath(), "dummy-key", null);
+        var status = await src.ScanAsync();
+
+        Assert.Equal(ContentSourceState.Ready, status.State);
+
+        var all = await src.SearchAsync("", null, 0, 100);
+        Assert.Contains(all, a => a.TechnicalPath.EndsWith("Improvised_Bow.uasset"));
+        Assert.Contains(all, a => a.TechnicalPath.EndsWith("Examine_Crate_Brown_Big.uasset"));
+        Assert.Contains(all, a => a.TechnicalPath.EndsWith("SpeciesPreset_River_Big.uasset"));
+    }
+
     private sealed class TempDb : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
