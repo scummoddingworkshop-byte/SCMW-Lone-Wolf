@@ -83,4 +83,40 @@ public class WorkspaceViewTests
 
         Assert.Contains("Tomato", titles);
     }
+
+    [AvaloniaFact]
+    public void A_field_the_library_does_not_describe_is_shown_honestly()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Items", "Odd thing", new[] { Field("SomeMysteryNumber", "42") });
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 300 };
+        window.Show();
+
+        var row = view.GetVisualDescendants().OfType<FieldRow>().Single();
+        var field = (WorkspaceField)row.DataContext!;
+
+        Assert.False(field.Described);
+        Assert.Equal(Risk.Unknown, field.Risk);
+        Assert.True(row.IsVisible);                                  // never hidden
+        Assert.Contains("unknown", row.FindControl<Border>("RiskDot")!.Classes);
+        Assert.Equal(WorkspaceField.NotDescribed,
+            row.FindControl<TextBlock>("MeaningText")!.Text);
+        Assert.True(row.FindControl<TextBlock>("MeaningText")!.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void A_described_field_shows_its_plain_meaning_not_the_note()
+    {
+        var view = Shown(out _);
+
+        var weight = view.GetVisualDescendants().OfType<FieldRow>()
+            .Single(r => ((WorkspaceField)r.DataContext!).TechnicalName == "Weight");
+        var field = (WorkspaceField)weight.DataContext!;
+        var meaning = weight.FindControl<TextBlock>("MeaningText")!;
+
+        Assert.True(field.Described);
+        Assert.Equal(field.Meaning, meaning.Text);
+        Assert.NotEqual(WorkspaceField.NotDescribed, meaning.Text);
+    }
 }

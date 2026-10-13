@@ -45,7 +45,7 @@
                MaxWidth="320" Margin="16,0,0,0"/>
 
     <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Name="MeaningText"
-               Classes="dim" Text="{Binding Meaning}" TextWrapping="Wrap" Margin="0,2,0,0"
-               IsVisible="{Binding HasMeaning}"/>
+               Classes="dim" Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,2,0,0"
+               IsVisible="{Binding HasDetail}"/>
   </Grid>
 </UserControl>

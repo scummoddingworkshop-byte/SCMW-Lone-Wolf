@@ -104,6 +104,16 @@ public sealed class WorkspaceField
     /// <summary>True when the field library describes this field.</summary>
     public bool Described { get; }
 
+    /// <summary>The honest line shown for a field we have not worked out yet.</summary>
+    public const string NotDescribed = "We haven't worked out what this does yet.";
+
+    /// <summary>The line under the field: its plain meaning, or the honest note that we have not
+    /// worked it out yet. An undescribed field is never hidden.</summary>
+    public string Detail => Described ? Meaning : NotDescribed;
+
+    /// <summary>True when there is a line to show under the field.</summary>
+    public bool HasDetail => Described ? HasMeaning : true;
+
     public bool IsLow => Risk == Risk.Low;
 
     public bool IsMedium => Risk == Risk.Medium;
