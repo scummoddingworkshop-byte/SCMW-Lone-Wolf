@@ -128,8 +128,25 @@ public class ShellNavigationTests
         var texts = window.GetVisualDescendants().OfType<TextBlock>()
                           .Select(t => t.Text ?? "").ToList();
 
-        // Level 1 must say what it is, not just its number.
-        Assert.Contains(texts, t => t.Contains("Level 1") && t.Contains("change item values"));
+        // A level must say what it is, not just its number.
+        Assert.Contains(texts, t => t.Contains("Change items values") && t.Contains("Mod level 1"));
         Assert.Contains(texts, t => t.Contains("Coming up"));
+    }
+
+    [AvaloniaFact]
+    public void The_strip_can_be_dismissed()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Show();
+
+        var strip = window.GetVisualDescendants().OfType<Border>()
+                          .Single(b => b.Classes.Contains("ontheway"));
+        Assert.True(strip.IsVisible);
+
+        window.GetVisualDescendants().OfType<Button>()
+              .Single(b => b.Name == "DismissOnTheWay")
+              .Command!.Execute(null);
+
+        Assert.False(strip.IsVisible);
     }
 }

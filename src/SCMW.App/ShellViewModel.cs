@@ -300,14 +300,20 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>The window title, naming the version.</summary>
     public string WindowTitle => $"{AppInfo.Name} {VersionText}";
 
-    /// <summary>The red "on the way" strip's message (design §3 — levels 3–5 are coming).</summary>
+    /// <summary>The "on the way" strip's message: the ladder, each level with its plain meaning.</summary>
     public string OnTheWayText => OnTheWay.Message;
+
+    /// <summary>Whether the levels strip is showing (the player can dismiss it for this session).</summary>
+    [ObservableProperty] private bool _showOnTheWay = true;
 
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task LaunchModded() => await RunLaunchAsync(modded: true);
 
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task LaunchUnmodded() => await RunLaunchAsync(modded: false);
+
+    /// <summary>Hides the levels strip for this session (mirrors the Home welcome card).</summary>
+    [RelayCommand] private void DismissOnTheWay() => ShowOnTheWay = false;
 
     /// <summary>Switches the mods on/off as asked, starts SCUM (through Steam), and says what happened.</summary>
     private async Task RunLaunchAsync(bool modded)
