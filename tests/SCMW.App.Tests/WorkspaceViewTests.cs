@@ -432,7 +432,7 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public async Task Adding_a_field_records_it_against_the_files_path_with_the_donor()
+    public async Task Adding_a_field_writes_it_to_the_items_class_file_with_the_donor()
     {
         var (projects, root) = TestProjects.With("Tomato mod");
         try
@@ -453,8 +453,8 @@ public class WorkspaceViewTests
             Assert.Equal(ChangeOperation.AddField, record.Operation);
             Assert.Equal("_autoDestructTime", record.FieldTechnicalName);
             Assert.Equal("0", record.NewValue);
-            Assert.Equal(AddFieldSource.Tomato, record.AssetPath);
-            Assert.Equal(AddFieldSource.Stone, record.DonorPath);
+            Assert.Equal(AddFieldSource.TomatoClass, record.AssetPath);   // the class file, not the item file
+            Assert.Equal(AddFieldSource.TorchClass, record.DonorPath);    // where the shape is borrowed from
             Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
         }
         finally { TestProjects.Cleanup(root); }
@@ -467,8 +467,8 @@ public class WorkspaceViewTests
         try
         {
             var changes = TestProjects.ChangeStore(projects);
-            changes.RecordAddField(AddFieldSource.Tomato, "_autoDestructTime", "0", AddFieldSource.Stone,
-                                   projects.Current!.Id, assetPath: AddFieldSource.Tomato);
+            changes.RecordAddField(AddFieldSource.TomatoClass, "_autoDestructTime", "0", AddFieldSource.TorchClass,
+                                   projects.Current!.Id, assetPath: AddFieldSource.TomatoClass);
 
             var source = new AddFieldSource();
             var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
@@ -488,7 +488,7 @@ public class WorkspaceViewTests
         var vm = new WorkspaceViewModel();
         var addable = new AddableField("Auto-destruct time", "real minutes",
             "How long an item left on the ground lasts before it vanishes.",
-            "_autoDestructTime", "/a/Stone_ES", FieldType.Number);
+            "_autoDestructTime", "/a/Torch", FieldType.Number, "/a/Tomato");
 
         vm.Show("Items", "Tomato", new[] { Field("Weight", "20000") }, "/a/Tomato_ES",
                 new[] { addable });
@@ -504,20 +504,6 @@ public class WorkspaceViewTests
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
         Assert.Contains(texts, t => t.Contains("Fields you could add", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("Auto-destruct time", texts);
-    }
-
-    [AvaloniaFact]
-    public async Task The_add_list_borrows_from_an_items_class_file()
-    {
-        var source = new ClassFileSource();
-        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
-
-        await vm.OpenKindAsync("Items");
-        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
-
-        // The item file lacks the timer and no item carries it; its class file (name without _ES) does.
-        var add = Assert.Single(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
-        Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/Tomato", add.DonorPath);
     }
 
     [AvaloniaFact]
@@ -650,16 +636,19 @@ public class WorkspaceViewTests
         public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    /// <summary>A fake index for the add-a-field test: a tomato (no timer) and a stone (has the timer).</summary>
+    /// <summary>A fake index for the add-a-field test: Tomato lacks the timer; a torch's CLASS file
+    /// (where the game keeps the timer) is the donor. The timer must land on Tomato's class file.</summary>
     private sealed class AddFieldSource : IContentSource
     {
         public const string Tomato = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
-        public const string Stone = "SCUM/Content/ConZ_Files/Items/Food/Stone_ES";
+        public const string TomatoClass = "SCUM/Content/ConZ_Files/Items/Food/Tomato";
+        public const string Torch = "SCUM/Content/ConZ_Files/Items/Food/Torch_ES";
+        public const string TorchClass = "SCUM/Content/ConZ_Files/Items/Food/Torch";
 
         private static readonly IReadOnlyList<AssetSummary> Rows = new[]
         {
             new AssetSummary(Tomato, "Tomato", "Food", StatusKind.Editable, 1, Tomato + ".uasset", null),
-            new AssetSummary(Stone, "Stone", "Food", StatusKind.Editable, 1, Stone + ".uasset", null),
+            new AssetSummary(Torch, "Torch", "Food", StatusKind.Editable, 1, Torch + ".uasset", null),
         };
 
         public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
@@ -672,45 +661,13 @@ public class WorkspaceViewTests
         public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
         public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AssetField>>(id == Tomato
-                ? new[] { Field("Weight", "20000") }                                     // no timer
-                : id == Stone
-                    ? new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5"),
-                              Field("MaxWaterWeightRatio", "1") }   // donors (the last is not addable)
-                    : Array.Empty<AssetField>());
-        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
-        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
-        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    /// <summary>A fake index where the item file lacks the timer but its class file (no "_ES") has it.</summary>
-    private sealed class ClassFileSource : IContentSource
-    {
-        public const string TomatoEs = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
-        public const string TomatoClass = "SCUM/Content/ConZ_Files/Items/Food/Tomato";
-
-        private static readonly IReadOnlyList<AssetSummary> Rows = new[]
-        {
-            new AssetSummary(TomatoEs, "Tomato", "Food", StatusKind.Editable, 1, TomatoEs + ".uasset", null),
-        };
-
-        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
-        public ScanInfo? LastScan => null;
-        public IIconCache Icons => throw new NotSupportedException();
-        public IReadOnlyList<string> Categories => new[] { "Food" };
-        public void Configure(string p, string? k, string? b) { }
-        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(Status);
-        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
-        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AssetField>>(id == TomatoEs
-                ? new[] { Field("Weight", "20000") }                                        // the item file
-                : id == TomatoClass
-                    ? new[] { Field("Weight", "20000"), Field("_autoDestructTime", "0") }   // its class file
-                    : Array.Empty<AssetField>());
+            Task.FromResult<IReadOnlyList<AssetField>>(id switch
+            {
+                Tomato => new[] { Field("Weight", "20000") },                     // item file: no timer
+                TorchClass => new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5"),
+                                      Field("MaxWaterWeightRatio", "1") },        // the donor's class file
+                _ => new[] { Field("Weight", "1000") },                           // Tomato class, Torch item, others
+            });
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
         public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>

@@ -360,11 +360,19 @@ public partial class WorkspaceViewModel : ObservableObject
         if (_source is null || string.IsNullOrEmpty(kind) || string.IsNullOrEmpty(assetPath))
             return Array.Empty<AddableField>();
 
+        var classPath = ClassFileOf(assetPath);
+
+        // What the item already has, on BOTH files: the item file and its class file (the game keeps
+        // item-level values like _autoDestructTime on the class file).
         var presentNames = present.Select(f => f.TechnicalName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (classPath is not null)
+        {
+            foreach (var name in await FieldNamesAsync(classPath).ConfigureAwait(false))
+                presentNames.Add(name);
+        }
 
         var addedNames = Records()
-            .Where(r => r.Operation == ChangeOperation.AddField
-                        && string.Equals(r.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase))
+            .Where(r => r.Operation == ChangeOperation.AddField && IsTargetOf(r, assetPath, classPath))
             .Select(r => r.FieldTechnicalName)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -379,11 +387,23 @@ public partial class WorkspaceViewModel : ObservableObject
             var donor = await FindDonorAsync(kind, definition.Name).ConfigureAwait(false);
             if (donor is null) continue;   // no source — do not offer
 
+            // The field lives where its donor does: on the item file, or on the item's class file.
+            var targetPath = IsClassFile(donor) ? (classPath ?? assetPath) : assetPath;
+
             addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
-                                         definition.Name, donor, definition.Type));
+                                         definition.Name, donor, definition.Type, targetPath));
         }
         return addable;
     }
+
+    /// <summary>True when a record's target is this item's own file or its class file.</summary>
+    private static bool IsTargetOf(ChangeRecord record, string assetPath, string? classPath) =>
+        string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+        || (classPath is not null && string.Equals(record.AssetPath, classPath, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>True when the path is a class file (an item's non-"_ES" sibling).</summary>
+    private static bool IsClassFile(string path) =>
+        !path.EndsWith("_ES", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The first file of the kind that already has the field, or null. An item's own class file (the
@@ -448,7 +468,9 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>Add a field the file lacks: record it, borrowing the donor's shape at build time.
-    /// Refused (nothing recorded) when no project is chosen — the banner explains.</summary>
+    /// The field is written to the file it belongs on — the item file, or the item's class file
+    /// (where the game keeps item-level values like the auto-destruct timer). Refused (nothing
+    /// recorded) when no project is chosen — the banner explains.</summary>
     [RelayCommand]
     private void Add(AddableField? field)
     {
@@ -457,8 +479,9 @@ public partial class WorkspaceViewModel : ObservableObject
         var path = SelectedAsset?.AssetId;
         if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
 
-        _changes.RecordAddField(path!, field.TechnicalName, field.Draft.Trim(), field.DonorPath,
-                                _projects!.Chosen!.Id, assetPath: path);
+        var target = string.IsNullOrEmpty(field.TargetPath) ? path! : field.TargetPath;
+        _changes.RecordAddField(target, field.TechnicalName, field.Draft.Trim(), field.DonorPath,
+                                _projects!.Chosen!.Id, assetPath: target);
 
         AddableFields.Remove(field);
         OnPropertyChanged(nameof(HasAddableFields));
@@ -793,7 +816,7 @@ public partial class WorkspaceField : ObservableObject
 public partial class AddableField : ObservableObject
 {
     public AddableField(string label, string unit, string meaning, string technicalName,
-                        string donorPath, FieldType type)
+                        string donorPath, FieldType type, string targetPath)
     {
         Label = label;
         Unit = unit;
@@ -801,6 +824,7 @@ public partial class AddableField : ObservableObject
         TechnicalName = technicalName;
         DonorPath = donorPath;
         Type = type;
+        TargetPath = targetPath;
     }
 
     /// <summary>What the owner reads.</summary>
@@ -821,6 +845,9 @@ public partial class AddableField : ObservableObject
 
     /// <summary>The game file that already has the field — where the shape is borrowed from.</summary>
     public string DonorPath { get; }
+
+    /// <summary>The file the field is written to: the item file, or its class file.</summary>
+    public string TargetPath { get; }
 
     /// <summary>The kind of value, from the library.</summary>
     public FieldType Type { get; }

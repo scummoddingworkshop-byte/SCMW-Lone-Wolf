@@ -315,29 +315,28 @@ public class RealBuildIntegrationTests
             source.Configure(paks, key, null);
             Assert.Equal(ContentSourceState.Ready, (await source.ScanAsync()).State);
 
-            // Find an item whose own file lacks the timer but whose class file (name without "_ES")
-            // carries it — exactly how the app finds a donor.
+            // A donor class file that already has the timer, and a target class file that does not.
+            // The game keeps the timer on the CLASS file, so that is where we add it.
             string? target = null, donor = null;
             var skip = 0;
-            while (target is null && skip < 3000)
+            while ((target is null || donor is null) && skip < 3000)
             {
                 var page = await source.SearchAsync("", null, skip, 500);
                 if (page.Count == 0) break;
                 foreach (var a in page.Where(x => x.Id.EndsWith("_ES", StringComparison.OrdinalIgnoreCase)))
                 {
                     var classPath = a.Id[..^3];
-                    var fields = await source.FieldsAsync(classPath);
-                    if (fields.Any(f => f.TechnicalName == "_autoDestructTime"))
-                    {
-                        target = a.Id;
-                        donor = classPath;
-                        break;
-                    }
+                    var has = (await source.FieldsAsync(classPath))
+                        .Any(f => f.TechnicalName == "_autoDestructTime");
+                    if (has && donor is null) donor = classPath;
+                    if (!has && target is null) target = classPath;
+                    if (target is not null && donor is not null) break;
                 }
                 skip += page.Count;
             }
             Assert.NotNull(target);
             Assert.NotNull(donor);
+            Assert.NotEqual(target, donor);
 
             using var mount = new PakMount();
             Assert.True(mount.TryMount(paks, key, out var error), error);
@@ -347,7 +346,7 @@ public class RealBuildIntegrationTests
             var targetUasset = ExtractOne(targetFiles!, Path.Combine(work, "target"));
             var donorUasset = ExtractOne(donorFiles!, Path.Combine(work, "donor"));
 
-            // Add the timer to the item, borrowing its exact shape from the class file.
+            // Add the timer to the target CLASS file, borrowing its exact shape from the donor.
             var donors = new Dictionary<string, string> { ["_autoDestructTime"] = donorUasset };
             Assert.True(new UAssetPackageWriter().Apply(targetUasset, new[]
             {
