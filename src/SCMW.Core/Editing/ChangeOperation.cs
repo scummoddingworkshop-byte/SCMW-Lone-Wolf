@@ -22,4 +22,12 @@ public enum ChangeOperation
 
     /// <summary>Remove the entry named by the field's list index.</summary>
     RemoveEntry,
+
+    /// <summary>
+    /// Add a whole new field the file does not have yet, borrowing the field's shape from a
+    /// game item that already carries it (see <see cref="ChangeRecord.DonorPath"/>). Like a list
+    /// change this is a *sequence* record, not a value edit — it is never read as the field's living
+    /// value, because before the add there was no field to read.
+    /// </summary>
+    AddField,
 }

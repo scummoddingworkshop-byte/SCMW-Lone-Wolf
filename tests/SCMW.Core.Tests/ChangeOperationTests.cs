@@ -69,6 +69,30 @@ public class ChangeOperationTests
         Assert.Equal("1", AppliedValue.ResolveForPath(new[] { add }, "/a/Batteries_ES", "Ingredients", "1"));
     }
 
+    [Fact] // an "add a field" change is not a value edit — the file did not have the field to read
+    public void An_add_field_change_is_never_read_as_a_value()
+    {
+        var added = Set("/a/Tomato_ES", "_autoDestructTime", "0") with
+        {
+            Operation = ChangeOperation.AddField,
+            DonorPath = "/a/Stone_ES",
+        };
+
+        Assert.Null(AppliedValue.ResolveForPath(new[] { added }, "/a/Tomato_ES", "_autoDestructTime", null));
+    }
+
+    [Fact] // the donor's own path travels with the record, so the build can fetch its shape
+    public void An_add_field_change_keeps_the_donors_path()
+    {
+        var added = Set("/a/Tomato_ES", "_autoDestructTime", "0") with
+        {
+            Operation = ChangeOperation.AddField,
+            DonorPath = "/a/Stone_ES",
+        };
+
+        Assert.Equal("/a/Stone_ES", added.DonorPath);
+    }
+
     private static ChangeRecord Times(string path, string field, string factor, DateTime? at = null) =>
         new(Guid.NewGuid(), "p1", path, field, null, factor,
             at ?? new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc),
