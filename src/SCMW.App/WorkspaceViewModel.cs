@@ -38,10 +38,6 @@ public partial class WorkspaceViewModel : ObservableObject
         // Choosing (or deleting) a project changes whether editing is allowed — keep the view in step.
         if (_projects is not null)
             _projects.Changed += () => OnPropertyChanged(nameof(NeedsProject));
-
-        // An added field (e.g. the auto-destruct timer) marks its item row straight away.
-        if (_changes is not null)
-            _changes.Changed += OnChangesChanged;
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -218,7 +214,6 @@ public partial class WorkspaceViewModel : ObservableObject
 
     private void RefreshAssets()
     {
-        MarkAddedFields();
         VisibleAssets.Clear();
         foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory))
         {
@@ -228,33 +223,6 @@ public partial class WorkspaceViewModel : ObservableObject
         OnPropertyChanged(nameof(HasAssets));
         OnPropertyChanged(nameof(HasAssetMatches));
         OnPropertyChanged(nameof(ShowAssetNoMatches));
-    }
-
-    /// <summary>Re-mark every row: does this project carry an added field for it?</summary>
-    private void MarkAddedFields()
-    {
-        foreach (var asset in _allAssets)
-            asset.AddedFieldNote = AddedNoteFor(asset);
-    }
-
-    private void OnChangesChanged() => RunOnUi(MarkAddedFields);
-
-    /// <summary>A short note naming the field(s) this project added to the item, or empty.</summary>
-    private string AddedNoteFor(ItemSummary asset)
-    {
-        if (string.IsNullOrEmpty(asset.AssetId)) return "";
-
-        var records = Records();
-        if (records.Count == 0) return "";
-
-        var classPath = ClassFileOf(asset.AssetId);
-        var labels = records
-            .Where(r => r.Operation == ChangeOperation.AddField && IsTargetOf(r, asset.AssetId!, classPath))
-            .Select(r => _library.Lookup(_kind, r.FieldTechnicalName)?.Label ?? r.FieldTechnicalName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return labels.Count == 0 ? "" : string.Join(", ", labels) + " added";
     }
 
     partial void OnSearchChanged(string value) => RefreshAssets();
@@ -399,25 +367,34 @@ public partial class WorkspaceViewModel : ObservableObject
                 presentNames.Add(name);
         }
 
-        var addedNames = Records()
+        var addedRecords = Records()
             .Where(r => r.Operation == ChangeOperation.AddField && IsTargetOf(r, assetPath, classPath))
-            .Select(r => r.FieldTechnicalName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var wanted = _library.ForKind(kind)
-            .Where(d => d.Addable && !presentNames.Contains(d.Name) && !addedNames.Contains(d.Name))
             .ToList();
-        if (wanted.Count == 0) return Array.Empty<AddableField>();
+
+        var candidates = _library.ForKind(kind)
+            .Where(d => d.Addable && !presentNames.Contains(d.Name))
+            .ToList();
 
         var addable = new List<AddableField>();
-        foreach (var definition in wanted)
+        foreach (var definition in candidates)
         {
+            var added = addedRecords.FirstOrDefault(r =>
+                string.Equals(r.FieldTechnicalName, definition.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (added is not null)
+            {
+                // This project already added the field: show it as added, with a Remove option.
+                addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
+                                             definition.Name, added.DonorPath ?? "", definition.Type,
+                                             added.AssetPath ?? assetPath, isAdded: true, recordId: added.Id));
+                continue;
+            }
+
             var donor = await FindDonorAsync(kind, definition.Name).ConfigureAwait(false);
             if (donor is null) continue;   // no source — do not offer
 
             // The field lives where its donor does: on the item file, or on the item's class file.
             var targetPath = IsClassFile(donor) ? (classPath ?? assetPath) : assetPath;
-
             addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
                                          definition.Name, donor, definition.Type, targetPath));
         }
@@ -508,11 +485,24 @@ public partial class WorkspaceViewModel : ObservableObject
         if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
 
         var target = string.IsNullOrEmpty(field.TargetPath) ? path! : field.TargetPath;
-        _changes.RecordAddField(target, field.TechnicalName, field.Draft.Trim(), field.DonorPath,
-                                _projects!.Chosen!.Id, assetPath: target);
+        var id = _changes.RecordAddField(target, field.TechnicalName, field.Draft.Trim(), field.DonorPath,
+                                         _projects!.Chosen!.Id, assetPath: target);
 
-        AddableFields.Remove(field);
-        OnPropertyChanged(nameof(HasAddableFields));
+        // The field is now part of the project: show it as added, with a Remove option.
+        if (id is { } recordId) field.MarkAdded(recordId);
+    }
+
+    /// <summary>Remove a field this project added to the item (undo its add record).</summary>
+    [RelayCommand]
+    private void Remove(AddableField? field)
+    {
+        if (field?.RecordId is not { } id) return;
+
+        var folder = _projects?.Chosen?.FolderPath;
+        if (_changes is null || folder is null) return;
+
+        _changes.Undo(folder, id);
+        field.MarkRemoved();
     }
 
     /// <summary>Run an action on the UI thread (the field rows are bound to the view).</summary>
@@ -844,7 +834,8 @@ public partial class WorkspaceField : ObservableObject
 public partial class AddableField : ObservableObject
 {
     public AddableField(string label, string unit, string meaning, string technicalName,
-                        string donorPath, FieldType type, string targetPath)
+                        string donorPath, FieldType type, string targetPath,
+                        bool isAdded = false, Guid? recordId = null)
     {
         Label = label;
         Unit = unit;
@@ -853,6 +844,8 @@ public partial class AddableField : ObservableObject
         DonorPath = donorPath;
         Type = type;
         TargetPath = targetPath;
+        _isAdded = isAdded;
+        RecordId = recordId;
     }
 
     /// <summary>What the owner reads.</summary>
@@ -876,6 +869,38 @@ public partial class AddableField : ObservableObject
 
     /// <summary>The file the field is written to: the item file, or its class file.</summary>
     public string TargetPath { get; }
+
+    /// <summary>True when this project has already added the field to the item.</summary>
+    [ObservableProperty] private bool _isAdded;
+
+    /// <summary>The add record's id, so it can be removed again (null while not added).</summary>
+    public Guid? RecordId { get; private set; }
+
+    /// <summary>True when the "type a value and Add" controls should show.</summary>
+    public bool ShowAdd => !IsAdded;
+
+    /// <summary>True when the "added — Remove" controls should show.</summary>
+    public bool ShowRemove => IsAdded;
+
+    /// <summary>Mark the field as added by this project (after a successful Add).</summary>
+    public void MarkAdded(Guid recordId)
+    {
+        RecordId = recordId;
+        IsAdded = true;
+    }
+
+    /// <summary>Mark the field as no longer added (after a Remove).</summary>
+    public void MarkRemoved()
+    {
+        RecordId = null;
+        IsAdded = false;
+    }
+
+    partial void OnIsAddedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowAdd));
+        OnPropertyChanged(nameof(ShowRemove));
+    }
 
     /// <summary>The kind of value, from the library.</summary>
     public FieldType Type { get; }

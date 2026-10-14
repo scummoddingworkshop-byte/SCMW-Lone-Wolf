@@ -432,7 +432,7 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public async Task Adding_a_field_writes_it_to_the_items_class_file_with_the_donor()
+    public async Task Adding_a_field_writes_it_to_the_items_class_file_and_marks_it_added()
     {
         var (projects, root) = TestProjects.With("Tomato mod");
         try
@@ -455,18 +455,45 @@ public class WorkspaceViewTests
             Assert.Equal("0", record.NewValue);
             Assert.Equal(AddFieldSource.TomatoClass, record.AssetPath);   // the class file, not the item file
             Assert.Equal(AddFieldSource.TorchClass, record.DonorPath);    // where the shape is borrowed from
-            Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
 
-            // The item row now shows that a field was added.
-            var row = vm.VisibleAssets.Single(a => a.Name == "Tomato");
-            Assert.True(row.HasAddedFieldNote);
-            Assert.Contains("added", row.AddedFieldNote);
+            // The card now shows the field as added (with a Remove option), not gone.
+            var still = Assert.Single(vm.AddableFields);
+            Assert.True(still.IsAdded);
+            Assert.Equal(record.Id, still.RecordId);
         }
         finally { TestProjects.Cleanup(root); }
     }
 
     [AvaloniaFact]
-    public async Task A_field_already_added_is_not_offered_again()
+    public async Task Removing_an_added_field_undoes_it()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            add.Draft = "0";
+            vm.AddCommand.Execute(add);
+            Assert.Single(changes.For(projects.Current!.FolderPath));
+
+            vm.RemoveCommand.Execute(add);
+
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+            Assert.False(add.IsAdded);            // back to the "add" controls
+            Assert.Null(add.RecordId);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_field_already_added_shows_as_added()
     {
         var (projects, root) = TestProjects.With("Tomato mod");
         try
@@ -482,7 +509,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-            Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
+            Assert.True(Assert.Single(vm.AddableFields).IsAdded);
         }
         finally { TestProjects.Cleanup(root); }
     }

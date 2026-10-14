@@ -108,11 +108,20 @@
                                    IsVisible="{Binding HasUnit}"/>
                       </StackPanel>
                       <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                  VerticalAlignment="Top">
+                                  VerticalAlignment="Top" IsVisible="{Binding ShowAdd}">
                         <TextBox Name="AddDraft" Classes="field" MinWidth="120" MinHeight="30"
                                  Watermark="new value…" Text="{Binding Draft, Mode=TwoWay}"/>
                         <Button Name="AddButton" Classes="primary" Content="Add"
                                 Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCommand}"
+                                CommandParameter="{Binding}"/>
+                      </StackPanel>
+                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                  VerticalAlignment="Top" IsVisible="{Binding ShowRemove}">
+                        <Border Classes="chip" VerticalAlignment="Center">
+                          <TextBlock Text="added" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+                        </Border>
+                        <Button Name="RemoveButton" Classes="secondary" Content="Remove"
+                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveCommand}"
                                 CommandParameter="{Binding}"/>
                       </StackPanel>
                       <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="dim"
