@@ -59,6 +59,40 @@ public sealed class ItemIconExtractorTests : IDisposable
         Assert.Contains(progress.Reports, p => p is { Done: 1, Total: 1 });
     }
 
+    [Fact]
+    public void An_older_extractor_version_retries_items_recorded_as_no_icon()
+    {
+        var dir = NewDir();
+        var cache = new FileIconCache(dir);
+
+        // A no-icon record written by an older extractor (a stale "# extract 1" header).
+        File.WriteAllLines(IconCachePaths.ManifestPathFor(dir), new[] { "# extract 1", Bow });
+
+        var source = new FakeIconSource()
+            .Resolves(Bow, "TEX_BOW")
+            .Decodes("TEX_BOW", () => Bitmap(64, 64));
+
+        var result = new ItemIconExtractor(source, cache, "build-1", 1).Extract(new[] { Bow });
+
+        Assert.NotNull(cache.GetIconPath(Bow));   // retried and written, not skipped
+        Assert.Equal(1, result.Done);
+        Assert.Equal(0, result.Skipped);
+    }
+
+    [Fact]
+    public void A_recorded_no_icon_item_is_skipped_on_the_next_run()
+    {
+        var dir = NewDir();
+        var cache = new FileIconCache(dir);
+        var source = new FakeIconSource().NoIcon(Bow);
+
+        new ItemIconExtractor(source, cache, "build-1", 1).Extract(new[] { Bow });   // records it
+        var second = new ItemIconExtractor(source, cache, "build-1", 1).Extract(new[] { Bow });
+
+        Assert.Equal(0, second.Done);
+        Assert.Equal(1, second.Skipped);
+    }
+
     [Theory]
     [InlineData(512, 256, 128, 64)]
     [InlineData(256, 512, 64, 128)]

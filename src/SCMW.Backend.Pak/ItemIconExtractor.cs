@@ -241,7 +241,15 @@ public sealed class ItemIconExtractor
 internal sealed class IconNoIconManifest
 {
     private const string BuildHeaderPrefix = "# build ";
+    private const string ExtractHeaderPrefix = "# extract ";
     private const string FileHeader = "# Items that loaded fine but have no icon; do not retry.";
+
+    /// <summary>
+    /// The icon-resolution logic's version. Bump it whenever <see cref="PakIconSource"/> learns to find
+    /// an icon it could not before (e.g. recipes, base elements), so the no-icon list is discarded and
+    /// every asset is retried. Without this, a fix could never take effect for already-recorded items.
+    /// </summary>
+    public const string ExtractVersion = "2";
 
     private readonly string _path;
     private readonly HashSet<string> _ids;
@@ -260,6 +268,7 @@ internal sealed class IconNoIconManifest
         var path = IconCachePaths.ManifestPathFor(iconsDirectory);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         string? storedBuild = null;
+        string? storedExtract = null;
         var fileExists = File.Exists(path);
 
         if (fileExists)
@@ -269,6 +278,11 @@ internal sealed class IconNoIconManifest
                 var line = raw.Trim();
                 if (line.Length == 0)
                     continue;
+                if (line.StartsWith(ExtractHeaderPrefix, StringComparison.Ordinal))
+                {
+                    storedExtract = line[ExtractHeaderPrefix.Length..].Trim();
+                    continue;
+                }
                 if (line.StartsWith(BuildHeaderPrefix, StringComparison.Ordinal))
                 {
                     storedBuild = line[BuildHeaderPrefix.Length..].Trim();
@@ -282,14 +296,24 @@ internal sealed class IconNoIconManifest
 
         var manifest = new IconNoIconManifest(path, ids, buildId);
 
-        // A new game build invalidates the no-icon list: it may now ship icons.
+        // A newer extractor invalidates the no-icon list outright: it may now find an icon where it
+        // could not before (recipes and base elements were the case), so everything is retried.
+        // A new game build also invalidates it: the game may now ship icons.
         // (An old file with no build header keeps its ids and just gains a header.)
-        if (fileExists && !string.IsNullOrWhiteSpace(buildId) &&
-            !string.Equals(storedBuild, buildId, StringComparison.Ordinal))
+        var extractChanged = fileExists && !string.Equals(storedExtract, ExtractVersion, StringComparison.Ordinal);
+        var buildChanged = fileExists && !string.IsNullOrWhiteSpace(buildId)
+                           && !string.Equals(storedBuild, buildId, StringComparison.Ordinal);
+
+        if (extractChanged)
+        {
+            ids.Clear();
+            manifest.Rewrite(buildId);
+        }
+        else if (buildChanged)
         {
             if (!string.IsNullOrWhiteSpace(storedBuild))
                 ids.Clear();
-            manifest.Rewrite(buildId!);
+            manifest.Rewrite(buildId);
         }
 
         return manifest;
@@ -311,7 +335,8 @@ internal sealed class IconNoIconManifest
 
             if (!File.Exists(_path))
             {
-                var header = $"{FileHeader}{Environment.NewLine}";
+                var header = $"{FileHeader}{Environment.NewLine}"
+                           + $"{ExtractHeaderPrefix}{ExtractVersion}{Environment.NewLine}";
                 if (!string.IsNullOrWhiteSpace(_buildId))
                     header += $"{BuildHeaderPrefix}{_buildId}{Environment.NewLine}";
                 File.WriteAllText(_path, header);
@@ -321,12 +346,15 @@ internal sealed class IconNoIconManifest
         }
     }
 
-    /// <summary>Rewrites the file from the current ids and the new build header.</summary>
-    private void Rewrite(string buildId)
+    /// <summary>Rewrites the file from the current ids and the header lines.</summary>
+    private void Rewrite(string? buildId)
     {
         lock (_gate)
         {
-            var text = $"{FileHeader}{Environment.NewLine}{BuildHeaderPrefix}{buildId}{Environment.NewLine}";
+            var text = $"{FileHeader}{Environment.NewLine}"
+                     + $"{ExtractHeaderPrefix}{ExtractVersion}{Environment.NewLine}";
+            if (!string.IsNullOrWhiteSpace(buildId))
+                text += $"{BuildHeaderPrefix}{buildId}{Environment.NewLine}";
             foreach (var id in _ids)
                 text += id + Environment.NewLine;
             File.WriteAllText(_path, text);
