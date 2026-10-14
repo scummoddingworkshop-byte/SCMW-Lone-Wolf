@@ -270,6 +270,16 @@ public partial class ProjectsViewModel : ObservableObject
         _nav.GoTo(ScreenKey.Workspace);
     }
 
+    /// <summary>Undo one recorded change (Task 4.2) — removes exactly that record, nothing else.</summary>
+    [RelayCommand]
+    private void UndoChange(ProjectChangeRow? row)
+    {
+        var chosen = _store.Chosen;
+        if (row is null || chosen is null || _changes is null) return;
+
+        _changes.Undo(chosen.FolderPath, row.Id);   // raises Changed → Refresh rebuilds the list
+    }
+
     [RelayCommand]
     private void DuplicateProject(ProjectSummary? project)
     {

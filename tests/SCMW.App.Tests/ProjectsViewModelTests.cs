@@ -208,6 +208,36 @@ public class ProjectsViewModelTests
         finally { Cleanup(root); }
     }
 
+    [AvaloniaFact] // Task 4.2: undo removes exactly one change, not the whole list
+    public void Undoing_a_change_removes_exactly_one()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id, assetPath: "/a/Duct_Tape");
+            changes.RecordEdit("Duct Tape", "Weight", "5", "3", project.Id, assetPath: "/a/Duct_Tape");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            Assert.Equal(2, vm.Changes.Count);
+
+            var first = vm.Changes[0];
+            vm.UndoChangeCommand.Execute(first);
+
+            var left = Assert.Single(vm.Changes);
+            Assert.NotEqual(first.Id, left.Id);                       // the other change stayed
+            var folder = store.All().Single(p => p.Id == project.Id).FolderPath;
+            Assert.DoesNotContain(changes.For(folder), r => r.Id == first.Id);
+            Assert.Equal(1, vm.VisibleProjects.Single(p => p.Id == project.Id).ChangeCount);
+        }
+        finally { Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void Search_filters_and_restores()
     {
