@@ -146,8 +146,8 @@
     "type": "Text",
     "unit": "",
     "risk": "Medium",
-    "writable": true,
-    "meaning": "The item's shown name. Stored as a string-table key, not the words themselves."
+    "writable": false,
+    "meaning": "The item's shown name. It is kept as a string-table key — the words live in the game's own text tables — so we show the key and do not let you type over it."
   },
   {
     "kind": "Items",
@@ -156,8 +156,8 @@
     "type": "Text",
     "unit": "",
     "risk": "Medium",
-    "writable": true,
-    "meaning": "The item's description. Stored as a string-table key, not the words themselves."
+    "writable": false,
+    "meaning": "The item's description. Like the name, it is a string-table key, not the words themselves — so it is shown, but not typed over."
   },
   {
     "kind": "Items",

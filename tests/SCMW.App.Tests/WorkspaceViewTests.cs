@@ -369,6 +369,21 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // Review Focus 5: a string-table key is shown, but never as editable words
+    public void A_string_table_key_field_is_shown_without_an_editor()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Items", "Batteries", new[]
+        {
+            new AssetField("Caption", "Caption", StatusKind.ReadOnly, "Recipe_AnyBluntTool"),
+        });
+
+        var caption = vm.Fields.Single();
+        Assert.Equal("Recipe_AnyBluntTool", caption.Value);   // the key is shown honestly
+        Assert.False(caption.Writable);
+        Assert.False(caption.ShowValueButton);                // and there is no editor
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {

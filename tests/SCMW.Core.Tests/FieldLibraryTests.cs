@@ -116,4 +116,21 @@ public class FieldLibraryTests
 
         Assert.NotNull(lib.Lookup("Items", "Weight"));
     }
+
+    [Fact] // Review Focus 5: a string-table key is not presentable as editable words
+    public void A_string_table_key_field_is_not_writable()
+    {
+        var lib = FieldLibraryLoader.LoadDefault();
+
+        Assert.False(lib.Lookup("Items", "Caption")!.Writable);
+        Assert.False(lib.Lookup("Items", "Description")!.Writable);
+    }
+
+    [Fact] // but a real tag field (the game matches it exactly) stays writable
+    public void A_tag_field_stays_writable()
+    {
+        var lib = FieldLibraryLoader.LoadDefault();
+
+        Assert.True(lib.Lookup("Items", "GridInventorySortGroup.TagName")!.Writable);
+    }
 }
