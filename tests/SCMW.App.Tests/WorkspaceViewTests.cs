@@ -514,6 +514,20 @@ public class WorkspaceViewTests
         Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/Tomato", add.DonorPath);
     }
 
+    [AvaloniaFact]
+    public async Task Each_item_row_carries_its_icon()
+    {
+        var source = new IconSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                        new ContentCatalog(source, source.Icons));
+
+        await vm.OpenKindAsync("Items");
+
+        var row = Assert.Single(vm.VisibleAssets);
+        Assert.Equal(IconSource.IconPath, row.IconPath);
+        Assert.Contains(IconSource.Batteries, source.ExtractedIcons);
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {
@@ -663,5 +677,49 @@ public class WorkspaceViewTests
         public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
         public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    /// <summary>A fake source with one item and an icon cache, so the icon path can be checked.</summary>
+    private sealed class IconSource : IContentSource
+    {
+        public const string Batteries = "SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES";
+        public const string IconPath = @"C:\icons\batteries.png";
+
+        public readonly List<string> ExtractedIcons = new();
+
+        private static readonly IReadOnlyList<AssetSummary> Rows = new[]
+        {
+            new AssetSummary(Batteries, "Batteries ES", "Equipment", StatusKind.Editable, 1,
+                Batteries + ".uasset", null),
+        };
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons { get; } = new FakeIconCache();
+        public IReadOnlyList<string> Categories => new[] { "Equipment" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetField>>(Array.Empty<AssetField>());
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default)
+        {
+            ExtractedIcons.AddRange(ids);
+            return Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        }
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+
+        private sealed class FakeIconCache : IIconCache
+        {
+            public string IconsDirectory => "";
+            public string? GetIconPath(string assetId) => IconPath;
+            public int Count => 1;
+            public long TotalBytes => 0;
+            public void Clear() { }
+        }
     }
 }
