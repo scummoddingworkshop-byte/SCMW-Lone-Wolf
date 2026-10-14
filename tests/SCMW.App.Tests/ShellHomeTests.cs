@@ -28,8 +28,8 @@ public class ShellHomeTests
 
         vm.Home.BrowseItemsCommand.Execute(null);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
-        Assert.Equal(ScreenKey.Items, vm.SelectedEntry.Key);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, vm.SelectedEntry.Key);
     }
 
     [AvaloniaFact]
@@ -94,7 +94,7 @@ public class ShellHomeTests
         // Tiles in order: new · open · browse items · build & play.
         tiles[2].Command!.Execute(null);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
-        Assert.Equal(ScreenKey.Items, vm.SelectedEntry.Key);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, vm.SelectedEntry.Key);
     }
 }

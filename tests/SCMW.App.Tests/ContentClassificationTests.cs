@@ -124,40 +124,19 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
-    public async Task Only_es_items_are_listed()
+    public void Only_es_items_are_listed()
     {
-        var source = new TwoItemSource();
-        var vm = new ItemsViewModel(source: source, catalog: new ContentCatalog(source));
-        await vm.LoadFromSourceAsync();
+        var catalog = new ContentCatalog(NoSource);
+
+        var items = catalog.MapItems(new[]
+        {
+            Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES"),
+            Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries"),
+        });
 
         // Only the item file (_ES) is listed; the class file is never shown.
-        Assert.Contains(vm.VisibleItems, i => i.AssetId!.EndsWith("Batteries_ES"));
-        Assert.DoesNotContain(vm.VisibleItems, i => i.AssetId!.EndsWith("/Batteries"));
-    }
-
-    /// <summary>One _ES item and one plain item; no game, no disk.</summary>
-    private sealed class TwoItemSource : IContentSource
-    {
-        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
-        public ScanInfo? LastScan => null;
-        public IIconCache Icons => throw new NotSupportedException();
-        public IReadOnlyList<string> Categories => new[] { "Equipment" };
-        public void Configure(string p, string? k, string? b) { }
-        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(Status);
-        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AssetSummary>>(new[]
-            {
-                Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES"),
-                Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries"),
-            });
-        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<AssetField>>(Array.Empty<AssetField>());
-        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
-        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
-            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
-        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+        var item = Assert.Single(items);
+        Assert.EndsWith("Batteries_ES", item.AssetId);
     }
 
     /// <summary>A do-nothing source for mapping tests; no game, no disk.</summary>

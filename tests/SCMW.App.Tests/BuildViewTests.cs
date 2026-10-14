@@ -154,11 +154,7 @@ public class BuildViewTests : IDisposable
             var vm = new ShellViewModel(new NavigationHost(), projects: projects);
 
             // Change a value on Items...
-            vm.Items.SelectedItem = vm.Items.VisibleItems.First(i => i.Name == "Duct Tape");
-            var stack = vm.Items.SelectedItem!.Values.First(v => v.Name == "Max stack");
-            vm.Items.BeginEditCommand.Execute(stack);
-            stack.Draft = "25";
-            vm.Items.CommitEditCommand.Execute(stack);
+            vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", vm.ProjectStore.Current!.Id);
 
             // ...then open Build and find it listed.
             vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Build);

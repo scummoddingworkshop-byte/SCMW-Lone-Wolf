@@ -32,12 +32,6 @@ public partial class ShellViewModel : ObservableObject
     private readonly BulkTableView _bulkView;
     private readonly ProjectsViewModel _projects;
     private readonly ProjectsView _projectsView;
-    private readonly ItemsViewModel _items;
-    private readonly ItemsView _itemsView;
-    private readonly ItemsViewModel _baseElements;
-    private readonly ItemsView _baseElementsView;
-    private readonly ItemsViewModel _recipes;
-    private readonly ItemsView _recipesView;
     private readonly ItemChangeStore _itemChanges;
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
@@ -97,17 +91,6 @@ public partial class ShellViewModel : ObservableObject
         _homeView = new HomeView { DataContext = _home };
         _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges);
         _projectsView = new ProjectsView { DataContext = _projects };
-        _items = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
-                                    catalog: new ContentCatalog(ContentSource, ContentSource.Icons));
-        _itemsView = new ItemsView { DataContext = _items };
-        _baseElements = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
-                                           catalog: new ContentCatalog(ContentSource, ContentSource.Icons),
-                                           family: AssetFamily.BaseElements);
-        _baseElementsView = new ItemsView { DataContext = _baseElements };
-        _recipes = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
-                                      catalog: new ContentCatalog(ContentSource, ContentSource.Icons),
-                                      family: AssetFamily.Recipes);
-        _recipesView = new ItemsView { DataContext = _recipes };
         _modList = new ModList();
         _saves = new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
@@ -133,9 +116,6 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.BulkEdit, "Change many"),
             Nav(ScreenKey.Home, "Home"),
             Nav(ScreenKey.Projects, "Projects"),
-            Nav(ScreenKey.Items, "Items"),
-            Nav(ScreenKey.BaseBuilding, "Base building"),
-            Nav(ScreenKey.Recipes, "Recipes"),
             Nav(ScreenKey.Preview, "Preview"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods"),
@@ -166,10 +146,7 @@ public partial class ShellViewModel : ObservableObject
         SyncActiveProject();
         Sync();
 
-        // Fill Items and Base building with the real data when a game is configured (no-op otherwise).
-        _ = _items.LoadFromSourceAsync();
-        _ = _baseElements.LoadFromSourceAsync();
-        _ = _recipes.LoadFromSourceAsync();
+        // Fill the Workspace and the bulk table with the real data when a game is configured (no-op otherwise).
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
         _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
     }
@@ -185,9 +162,6 @@ public partial class ShellViewModel : ObservableObject
 
     /// <summary>Projects' view model (kept alive so the screen's state survives switching areas).</summary>
     public ProjectsViewModel Projects => _projects;
-
-    /// <summary>Items' view model (kept alive so the screen's state survives switching areas).</summary>
-    public ItemsViewModel Items => _items;
 
     /// <summary>The one store of project change records — what Build will make.</summary>
     public ItemChangeStore ItemChanges => _itemChanges;
@@ -264,9 +238,6 @@ public partial class ShellViewModel : ObservableObject
         _build.UseGame(_buildService, _launcher);
         _mods.UseService(_modsService);
         _home.RefreshWelcome();                  // the "set up SCUM first" card can retire
-        _ = _items.LoadFromSourceAsync();
-        _ = _baseElements.LoadFromSourceAsync();
-        _ = _recipes.LoadFromSourceAsync();
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
         _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
     }
@@ -276,17 +247,14 @@ public partial class ShellViewModel : ObservableObject
     {
         try
         {
-            await _items.LoadFromSourceAsync();
-            await _baseElements.LoadFromSourceAsync();
-            await _recipes.LoadFromSourceAsync();
             await _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
             await _bulk.OpenKindAsync(_bulk.SelectedKind);
-            _settings.RefreshFinished(_items.IsUsingRealItems
+
+            var ready = ContentSource.Status.State == SCMW.Core.Content.ContentSourceState.Ready;
+            _settings.RefreshFinished(ready
                 ? "Done — SCMW — Lone Wolf re-read your items from SCUM."
-                : string.IsNullOrWhiteSpace(_items.SourceNote)
-                    ? "Done, but no items were found to read."
-                    : "Done. " + _items.SourceNote,
-                good: _items.IsUsingRealItems);
+                : "The re-read didn't finish — check your SCUM folder, then try again.",
+                good: ready);
         }
         catch
         {
@@ -426,9 +394,6 @@ public partial class ShellViewModel : ObservableObject
             ScreenKey.BulkEdit => _bulkView,
             ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
-            ScreenKey.Items => _itemsView,
-            ScreenKey.BaseBuilding => _baseElementsView,
-            ScreenKey.Recipes => _recipesView,
             ScreenKey.Preview => _previewView,
             ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,

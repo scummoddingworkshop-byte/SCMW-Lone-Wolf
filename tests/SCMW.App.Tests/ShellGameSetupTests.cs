@@ -6,10 +6,10 @@ namespace SCMW.App.Tests;
 
 public class ShellGameSetupTests
 {
-    /// <summary>A content source that is always ready; counts scans so we can see a re-read.</summary>
+    /// <summary>A content source that is always ready; counts reads so we can see a re-read.</summary>
     private sealed class ReadyContent : IContentSource
     {
-        public int Scans;
+        public int Reads;
 
         public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", null);
         public ScanInfo? LastScan => null;
@@ -18,10 +18,10 @@ public class ShellGameSetupTests
         public void Configure(string p, string? k, string? b) { }
 
         public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default)
-        { Scans++; return Task.FromResult(Status); }
+        { Reads++; return Task.FromResult(Status); }
 
         public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>());
+        { Reads++; return Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>()); }
         public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<AssetField>>(Array.Empty<AssetField>());
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default)
@@ -60,7 +60,7 @@ public class ShellGameSetupTests
             var vm = new ShellViewModel(new NavigationHost(), settingsStore: store, contentSource: content);
 
             Assert.False(vm.CanLaunch);                       // nothing configured at startup
-            var scansBefore = content.Scans;
+            var readsBefore = content.Reads;
 
             // The player sets up SCUM during the session...
             store.Save(new AppSettings(WorkspacePath: Path.Combine(root, "ws"), GamePath: game, AesKey: "KEY"));
@@ -69,7 +69,7 @@ public class ShellGameSetupTests
             // ...and the whole app comes alive, with no restart.
             Assert.True(vm.CanLaunch);                        // sidebar launch woke up
             Assert.True(vm.Build.CanLaunch);                  // Build's launch woke up
-            Assert.True(content.Scans > scansBefore);         // Items re-read the game
+            Assert.True(content.Reads > readsBefore);         // the Workspace re-read the game
             Assert.Single(vm.Mods.Mods);                      // Mods found the real folder
         }
         finally

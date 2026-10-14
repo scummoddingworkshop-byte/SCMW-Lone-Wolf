@@ -68,7 +68,7 @@ public class ShellNavigationTests
             {
                 ScreenKey.Workspace,
                 ScreenKey.BulkEdit,
-                ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
+                ScreenKey.Home, ScreenKey.Projects,
             },
             vm.Bands[0].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },

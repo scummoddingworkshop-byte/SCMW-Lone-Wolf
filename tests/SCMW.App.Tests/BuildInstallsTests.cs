@@ -119,11 +119,7 @@ public class BuildInstallsTests : IDisposable
             var vm = new ShellViewModel(new NavigationHost(), projects: projects);
 
             // Change a value, build it, then look in Mods.
-            vm.Items.SelectedItem = vm.Items.VisibleItems.First(i => i.Name == "Duct Tape");
-            var stack = vm.Items.SelectedItem!.Values.First(v => v.Name == "Max stack");
-            vm.Items.BeginEditCommand.Execute(stack);
-            stack.Draft = "25";
-            vm.Items.CommitEditCommand.Execute(stack);
+            vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", vm.ProjectStore.Current!.Id);
 
             vm.Build.BuildCommand.Execute(null);
             for (var i = 0; i < 5; i++) vm.Build.Advance();

@@ -13,9 +13,9 @@ public class NavigationHostTests
         var raised = 0;
         nav.Changed += () => raised++;
 
-        nav.GoTo(ScreenKey.Items);
+        nav.GoTo(ScreenKey.Workspace);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
         Assert.Equal(1, raised);
     }
 

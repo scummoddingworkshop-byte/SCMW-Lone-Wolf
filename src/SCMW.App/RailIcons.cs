@@ -24,9 +24,6 @@ public static class RailIcons
         ScreenKey.BulkEdit => "items",              // placeholder icon (a list) for now
         ScreenKey.Home => "home",
         ScreenKey.Projects => "projects",
-        ScreenKey.Items => "items",
-        ScreenKey.BaseBuilding => "basebuilding",   // placeholder icon (a copy of build) for now
-        ScreenKey.Recipes => "recipes",             // placeholder icon (a copy of items) for now
         ScreenKey.Preview => "build",               // placeholder icon (a copy of build) for now
         ScreenKey.Build => "build",
         ScreenKey.Mods => "mods",

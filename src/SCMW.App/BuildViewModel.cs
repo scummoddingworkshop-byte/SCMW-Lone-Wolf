@@ -561,7 +561,7 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand]
     private void RestartAsAdmin() => _elevation?.RestartAsAdmin();
 
-    [RelayCommand] private void GoToItems() => _nav.GoTo(ScreenKey.Items);
+    [RelayCommand] private void GoToItems() => _nav.GoTo(ScreenKey.Workspace);
 
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task Launch()

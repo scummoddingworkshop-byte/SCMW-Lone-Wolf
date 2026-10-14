@@ -14,8 +14,7 @@ public class ShellViewModelTests
             {
                 ScreenKey.Workspace,
                 ScreenKey.BulkEdit,
-                ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding,
-                ScreenKey.Recipes,
+                ScreenKey.Home, ScreenKey.Projects,
                 ScreenKey.Preview,
                 ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,
             },
@@ -26,11 +25,11 @@ public class ShellViewModelTests
     public void The_shell_reopens_on_the_last_screen()
     {
         var store = new InMemorySettingsStore();
-        store.Save(store.Load() with { LastScreen = "Recipes" });
+        store.Save(store.Load() with { LastScreen = "Mods" });
 
         var vm = new ShellViewModel(new NavigationHost(), settingsStore: store);
 
-        Assert.Equal(ScreenKey.Recipes, vm.Current);
+        Assert.Equal(ScreenKey.Mods, vm.Current);
     }
 
     [AvaloniaFact]

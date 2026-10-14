@@ -25,13 +25,12 @@ public static class NavBands
     public static IReadOnlyList<NavBand> All { get; } =
         new[] { NavBand.Make, NavBand.Ship, NavBand.App };
 
-    /// <summary>The rail rows in the order the design lists them. Workspace leads Make; the kind
-    /// families (Items, Base building, Recipes) and Home follow it until Phase 2's Workspace absorbs them.</summary>
+    /// <summary>The rail rows in the order the design lists them. Workspace leads Make.</summary>
     private static readonly ScreenKey[] RailOrder =
     {
         ScreenKey.Workspace,
         ScreenKey.BulkEdit,
-        ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
+        ScreenKey.Home, ScreenKey.Projects,
         ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
         ScreenKey.Settings, ScreenKey.Help,
     };
@@ -42,12 +41,7 @@ public static class NavBands
         ScreenKey.Workspace => NavBand.Make,
         ScreenKey.BulkEdit => NavBand.Make,
         ScreenKey.Projects => NavBand.Make,
-        // The kinds (Items, Base building, Recipes) and Home are make-work: they fold into the
-        // Workspace and its chooser, so they live in Make until they are retired.
         ScreenKey.Home => NavBand.Make,
-        ScreenKey.Items => NavBand.Make,
-        ScreenKey.BaseBuilding => NavBand.Make,
-        ScreenKey.Recipes => NavBand.Make,
         ScreenKey.Preview => NavBand.Ship,
         ScreenKey.Build => NavBand.Ship,
         ScreenKey.Mods => NavBand.Ship,

@@ -63,17 +63,12 @@ public class NexusMediaTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void Media_items()
+    public void Media_workspace()
     {
         var vm = ConfiguredShell("Inventory Rebalance");
-        vm.Items.LoadFromSourceAsync().GetAwaiter().GetResult();
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Items);
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Workspace);
 
-        vm.Items.SelectedItem = vm.Items.VisibleItems.First(i => i.Name == "Improvised Bow");
-        vm.Items.ShowAllValues = true;
-        vm.Items.LoadFieldsAsync(vm.Items.SelectedItem).GetAwaiter().GetResult();
-
-        Save(new MainWindow { DataContext = vm }, "nexus-items");
+        Save(new MainWindow { DataContext = vm }, "nexus-workspace");
     }
 
     [AvaloniaFact]

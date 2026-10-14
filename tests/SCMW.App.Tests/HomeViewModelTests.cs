@@ -17,7 +17,7 @@ public class HomeViewModelTests
         Assert.Equal(ScreenKey.Projects, nav.Current);
 
         vm.BrowseItemsCommand.Execute(null);
-        Assert.Equal(ScreenKey.Items, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
 
         vm.BuildPlayCommand.Execute(null);
         Assert.Equal(ScreenKey.Build, nav.Current);

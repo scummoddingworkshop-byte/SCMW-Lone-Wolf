@@ -19,6 +19,7 @@ public partial class HomeViewModel : ObservableObject
     private readonly ProjectStore? _store;
     private readonly IReadOnlyList<ProjectSummary>? _samples;
     private readonly Func<bool>? _gameReady;
+    private readonly WorkspaceViewModel? _workspace;
     private bool _welcomeDismissed;
 
     public HomeViewModel(INavigation? nav = null, IReadOnlyList<ProjectSummary>? projects = null,
@@ -29,6 +30,7 @@ public partial class HomeViewModel : ObservableObject
         _store = store;
         _samples = projects;
         _gameReady = gameReady;
+        _workspace = workspace;
         Chooser = new ChooserViewModel(_nav, workspace);
 
         if (_store is not null) _store.Changed += Refresh;
@@ -59,7 +61,11 @@ public partial class HomeViewModel : ObservableObject
 
     [RelayCommand] private void OpenProject() => _nav.GoTo(ScreenKey.Projects);
 
-    [RelayCommand] private void BrowseItems() => _nav.GoTo(ScreenKey.Items);
+    [RelayCommand] private void BrowseItems()
+    {
+        if (_workspace is not null) _ = _workspace.OpenKindAsync("Items");
+        _nav.GoTo(ScreenKey.Workspace);
+    }
 
     [RelayCommand] private void BuildPlay() => _nav.GoTo(ScreenKey.Build);
 

@@ -136,58 +136,6 @@ public class ScreenshotTests
         Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
     }
 
-    [AvaloniaFact]
-    public void Capture_items()
-    {
-        var vm = new ShellViewModel(new NavigationHost(), projects: RealProjects(1));
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Items);
-
-        // Open an item and change a value, so the picture shows both states.
-        var item = vm.Items.VisibleItems.First(i => i.Name == "Duct Tape");
-        vm.Items.SelectedItem = item;
-        var stack = item.Values.First(v => v.Name == "Max stack");
-        vm.Items.BeginEditCommand.Execute(stack);
-        stack.Draft = "25";
-        vm.Items.CommitEditCommand.Execute(stack);
-
-        var window = new MainWindow { DataContext = vm };
-        window.Width = 1280;
-        window.Height = 900;
-        window.Show();
-
-        var path = Screenshot.Capture(window, "items");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
-    public void Capture_items_real()
-    {
-        var (projects, root) = TestProjects.With("My first mod");
-        try
-        {
-            var source = new ReadyItemsSource();
-            var vm = new ShellViewModel(new NavigationHost(), projects: projects, contentSource: source);
-            vm.Items.LoadFromSourceAsync().GetAwaiter().GetResult();
-            vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Items);
-            vm.Items.SelectedItem = vm.Items.VisibleItems.First(i => i.Name == "Improvised Bow");
-            vm.Items.ShowAllValues = true;          // the real fields are read-only; show them
-            vm.Items.LoadFieldsAsync(vm.Items.SelectedItem).GetAwaiter().GetResult();
-
-            var window = new MainWindow { DataContext = vm };
-            window.Width = 1280;
-            window.Height = 900;
-            window.Show();
-
-            var path = Screenshot.Capture(window, "items-real");
-
-            Assert.True(File.Exists(path), path);
-            Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-        }
-        finally { TestProjects.Cleanup(root); }
-    }
-
     /// <summary>A frozen, ready source with real SCUM item names — for pictures only.</summary>
     internal sealed class ReadyItemsSource : SCMW.Core.Content.IContentSource
     {
@@ -242,56 +190,6 @@ public class ScreenshotTests
             IEnumerable<string> ids, IProgress<SCMW.Core.Content.IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new SCMW.Core.Content.IconExtractionProgress(0, 0, 0, 0));
         public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    [AvaloniaFact]
-    public void Capture_items_machinery()
-    {
-        var vm = new ShellViewModel(new NavigationHost(), projects: RealProjects(1));
-
-        // A change saved in the current project, then loaded back — the machinery picture.
-        var current = vm.ProjectStore.Current!;
-        vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", current.Id);
-
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Items);
-        vm.Items.SelectedItem = vm.Items.VisibleItems.First(i => i.Name == "Duct Tape");
-
-        var window = new MainWindow { DataContext = vm };
-        window.Width = 1280;
-        window.Height = 900;
-        window.Show();
-
-        var path = Screenshot.Capture(window, "items-machinery");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
-    public void Capture_items_none_selected()
-    {
-        var view = new ItemsView { DataContext = new ItemsViewModel() };
-        var window = new Window { Content = view, Width = 1280, Height = 900 };
-        window.Show();
-
-        var path = Screenshot.Capture(window, "items-none-selected");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
-    public void Capture_items_no_matches()
-    {
-        var vm = new ItemsViewModel { Search = "zzz-no-match" };
-        var view = new ItemsView { DataContext = vm };
-        var window = new Window { Content = view, Width = 1280, Height = 900 };
-        window.Show();
-
-        var path = Screenshot.Capture(window, "items-no-matches");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
     }
 
     [AvaloniaFact]

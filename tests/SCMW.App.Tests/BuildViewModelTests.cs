@@ -134,7 +134,7 @@ public class BuildViewModelTests
 
         vm.GoToItemsCommand.Execute(null);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
     }
 
     [AvaloniaFact]
