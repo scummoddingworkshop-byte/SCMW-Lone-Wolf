@@ -464,7 +464,8 @@ public partial class BuildViewModel : ObservableObject
             if (record.Operation == SCMW.Core.Editing.ChangeOperation.Set)
                 latestValue[record.FieldTechnicalName] = record;
             else
-                listChanges.Add(new FieldChange(record.FieldTechnicalName, record.NewValue, record.Operation));
+                listChanges.Add(new FieldChange(record.FieldTechnicalName, record.NewValue,
+                                                record.Operation, record.DonorPath));
         }
 
         var changes = new List<FieldChange>(listChanges);

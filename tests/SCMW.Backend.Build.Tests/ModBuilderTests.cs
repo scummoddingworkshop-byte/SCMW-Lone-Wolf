@@ -1,4 +1,5 @@
 using SCMW.Backend.Build;
+using SCMW.Core.Editing;
 
 namespace SCMW.Backend.Build.Tests;
 
@@ -21,10 +22,13 @@ public class ModBuilderTests : IDisposable
     {
         public WriteResult Next = new(true, null);
         public readonly List<FieldChange> Applied = new();
-        public WriteResult Apply(string uasset, IReadOnlyList<FieldChange> changes)
+        public IReadOnlyDictionary<string, string>? Donors;
+        public WriteResult Apply(string uasset, IReadOnlyList<FieldChange> changes,
+                                 IReadOnlyDictionary<string, string>? donors = null)
         {
             if (!Next.Ok) return Next;
             Applied.AddRange(changes);
+            Donors = donors;
             File.WriteAllText(uasset, "edited");            // stand in for the real rewrite
             File.WriteAllText(Path.ChangeExtension(uasset, ".uexp"), "edited");
             return Next;
@@ -169,6 +173,45 @@ public class ModBuilderTests : IDisposable
         // Both edits land on the one copy — neither silently overwrites the other.
         Assert.Contains(writer.Applied, c => c.Field == "MaxStackSize" && c.NewValue == "25");
         Assert.Contains(writer.Applied, c => c.Field == "Weight" && c.NewValue == "0.5");
+    }
+
+    [Fact]
+    public async Task An_added_field_hands_the_writer_the_donors_file()
+    {
+        var (builder, reader, writer, _, resolver) = New();
+        const string target = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
+        const string donor = "SCUM/Content/ConZ_Files/Items/Food/Stone_ES";
+        AddPackage(reader, target);
+        AddPackage(reader, donor);
+        resolver.Map[target] = new AssetResolution(target, null);
+        resolver.Map[donor] = new AssetResolution(donor, null);
+
+        var change = new FieldChange("_autoDestructTime", "0", ChangeOperation.AddField, donor);
+        var request = new BuildRequest("M", "1.0.0", new[] { new BuildItem(target, new[] { change }) });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.NotNull(writer.Donors);
+        Assert.True(writer.Donors!.ContainsKey("_autoDestructTime"));
+        Assert.EndsWith(".uasset", writer.Donors["_autoDestructTime"]);
+    }
+
+    [Fact]
+    public async Task An_added_field_with_no_donor_leaves_the_writer_without_one()
+    {
+        var (builder, reader, writer, _, resolver) = New();
+        const string target = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
+        AddPackage(reader, target);
+        resolver.Map[target] = new AssetResolution(target, null);
+
+        var change = new FieldChange("_autoDestructTime", "0", ChangeOperation.AddField,
+                                    "SCUM/Content/ConZ_Files/Items/Food/Ghost_ES");
+        var request = new BuildRequest("M", "1.0.0", new[] { new BuildItem(target, new[] { change }) });
+
+        await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.Null(writer.Donors);   // nothing to hand over; the writer will fail plainly
     }
 
     private sealed class ThrowingReader : IPackageReader

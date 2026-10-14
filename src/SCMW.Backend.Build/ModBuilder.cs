@@ -1,5 +1,7 @@
 namespace SCMW.Backend.Build;
 
+using SCMW.Core.Editing;
+
 /// <summary>
 /// The build pipeline: resolve each item, read it from the current paks, write its values on a
 /// copy, lay the copy out on the game's own tree, then pack. Any failure stops the whole build —
@@ -95,7 +97,9 @@ public sealed class ModBuilder : IModBuilder
                 if (uassetPath is null)
                     return new BuildOutcome(false, null, $"\"{name}\" had no .uasset file to change.");
 
-                var written = _writer.Apply(uassetPath, changes);
+                var donors = await ExtractDonorsAsync(changes, work, ct).ConfigureAwait(false);
+
+                var written = _writer.Apply(uassetPath, changes, donors);
                 if (!written.Ok)
                     return new BuildOutcome(false, null, written.Error ?? $"\"{name}\" could not be changed.");
 
@@ -145,5 +149,46 @@ public sealed class ModBuilder : IModBuilder
             return new BuildOutcome(false, null,
                 "The mod could not be made. Something went wrong while reading or writing the game files.");
         }
+    }
+
+    /// <summary>
+    /// Extracts, into the work folder, the donor item's `.uasset` for each "add a field" change —
+    /// keyed by the field's own name — so the writer can copy the field's exact shape. Returns null
+    /// when no change adds a field. A donor that cannot be found or read is simply left out; the
+    /// writer then fails plainly rather than guessing a shape.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>?> ExtractDonorsAsync(
+        IReadOnlyList<FieldChange> changes, string work, CancellationToken ct)
+    {
+        var addChanges = changes.Where(c => c.Operation == ChangeOperation.AddField).ToList();
+        if (addChanges.Count == 0) return null;
+
+        var donors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var change in addChanges)
+        {
+            if (donors.ContainsKey(change.Field) || string.IsNullOrEmpty(change.DonorPath))
+                continue;
+
+            var resolved = await _resolver.ResolveAsync(change.DonorPath, ct).ConfigureAwait(false);
+            if (resolved.PackagePath is null) continue;
+
+            if (!_reader.TryReadPackage(resolved.PackagePath, out var files) || files is null || files.Count == 0)
+                continue;
+
+            var donorDir = Path.Combine(work, "donor-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(donorDir);
+
+            string? donorUasset = null;
+            foreach (var pair in files)
+            {
+                var destination = Path.Combine(donorDir, pair.Key);
+                File.WriteAllBytes(destination, pair.Value);
+                if (destination.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) donorUasset = destination;
+            }
+
+            if (donorUasset is not null) donors[change.Field] = donorUasset;
+        }
+
+        return donors.Count > 0 ? donors : null;
     }
 }

@@ -16,7 +16,8 @@ public sealed class UAssetPackageWriter : IPackageWriter
     /// <summary>The most entries one list may grow to in a single build, so a mistake cannot run away.</summary>
     private const int MaxListEntries = 32;
 
-    public WriteResult Apply(string uassetFilePath, IReadOnlyList<FieldChange> changes)
+    public WriteResult Apply(string uassetFilePath, IReadOnlyList<FieldChange> changes,
+                             IReadOnlyDictionary<string, string>? donorUassets = null)
     {
         UAsset asset;
         try
@@ -60,6 +61,14 @@ public sealed class UAssetPackageWriter : IPackageWriter
 
                 if (!applied)
                     return new WriteResult(false, $"\"{change.Field}\" was not found in this item.");
+                continue;
+            }
+
+            // A whole new field: its exact shape is copied from a donor item that already has it.
+            if (change.Operation == ChangeOperation.AddField)
+            {
+                if (!TryApplyAddField(asset, exports, change, donorUassets, out var addError))
+                    return new WriteResult(false, addError);
                 continue;
             }
 
@@ -140,6 +149,117 @@ public sealed class UAssetPackageWriter : IPackageWriter
         var kept = array.Value.ToList();
         kept.RemoveAt(index);
         array.Value = kept.ToArray();
+        return true;
+    }
+
+    /// <summary>
+    /// Adds a whole new field to the target: opens the donor item that already has it, copies the
+    /// property's exact shape, sets the value, and inserts it into the matching target export (the
+    /// same object the donor kept it on, else the class default object). Fails plainly when there is
+    /// no donor file or no such field in it — never a guessed shape.
+    /// </summary>
+    private static bool TryApplyAddField(
+        UAsset asset, List<NormalExport> exports, FieldChange change,
+        IReadOnlyDictionary<string, string>? donorUassets, out string? error)
+    {
+        error = null;
+
+        if (donorUassets is null || !donorUassets.TryGetValue(change.Field, out var donorPath)
+            || string.IsNullOrEmpty(donorPath))
+        {
+            error = $"The game file that has \"{change.Field}\" to copy from was not found.";
+            return false;
+        }
+
+        UAsset donor;
+        try
+        {
+            donor = new UAsset(donorPath, EngineVersion.VER_UE4_27);
+        }
+        catch (Exception ex)
+        {
+            SCMW.Core.Logging.Log.Warn($"Opening the donor file for an added field failed ({ex.GetType().Name}).");
+            error = "The game file to copy the new field from could not be opened.";
+            return false;
+        }
+
+        var donorCdoName = $"Default__{Path.GetFileNameWithoutExtension(donorPath)}_C";
+        var donorExports = donor.Exports.OfType<NormalExport>()
+            .OrderByDescending(e => e.ObjectName.ToString() == donorCdoName)
+            .ToList();
+
+        PropertyData? shape = null;
+        string? holderName = null;
+        foreach (var candidate in donorExports)
+        {
+            shape = PropertyPath.Resolve(candidate.Data, change.Field);
+            if (shape is not null)
+            {
+                holderName = candidate.ObjectName.ToString();
+                break;
+            }
+        }
+
+        if (shape is null)
+        {
+            error = $"\"{change.Field}\" was not found in the file we copy it from.";
+            return false;
+        }
+
+        // Put the field back where the donor kept it — its own object, or the same component — and
+        // fall back to the class default object when the target has no export going by that name.
+        var target = exports.FirstOrDefault(e => e.ObjectName.ToString() == holderName) ?? exports[0];
+
+        return TryInsertClonedField(target.Data, shape, change.Field, change.NewValue, asset, out error);
+    }
+
+    /// <summary>
+    /// Copies a donor property's exact shape (its UE type) under <paramref name="field"/>, sets the
+    /// value on the copy, and adds it to the target export's property list. Refuses plainly — adding
+    /// nothing — when the target already has the field, when the value does not fit the shape, or when
+    /// the shape is a kind we cannot write; a guessed shape would break the "pak must load" guard.
+    /// </summary>
+    internal static bool TryInsertClonedField(
+        List<PropertyData> targetProperties, PropertyData donor, string field, string newValue,
+        INameMap targetNames, out string? error)
+    {
+        error = null;
+
+        var names = targetProperties.Select(p => p.Name.ToString()).ToList();
+        if (FindPropertyIndex(names, field) >= 0)
+        {
+            error = $"\"{field}\" is already in this file — change its value instead of adding it.";
+            return false;
+        }
+
+        if (donor.Clone() is not PropertyData clone)
+        {
+            error = $"\"{field}\" could not be copied.";
+            return false;
+        }
+
+        // The copy keeps the donor's exact type, but its name is re-taken from the target's own name
+        // map (the donor's name index means nothing in the target package).
+        clone.Name = FName.FromString(targetNames, field);
+
+        switch (clone)
+        {
+            // The simple value kinds, and a plain byte. Richer shapes (structs, lists, object links,
+            // enums) borrow a shape that needs more than a name to travel — left for later.
+            case FloatPropertyData or DoublePropertyData or IntPropertyData or Int64PropertyData
+                 or BoolPropertyData or StrPropertyData or TextPropertyData or NamePropertyData:
+                break;
+            case BytePropertyData b when b.ByteType == BytePropertyType.Byte:
+                break;
+            default:
+                error = $"\"{field}\" is a kind of value the mod maker cannot add yet.";
+                return false;
+        }
+
+        if (!PropertyValue.TrySet(clone, targetNames, newValue, out error))
+            return false;
+
+        targetProperties.Add(clone);
         return true;
     }
 
