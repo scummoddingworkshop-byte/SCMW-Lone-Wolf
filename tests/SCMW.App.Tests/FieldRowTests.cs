@@ -73,6 +73,29 @@ public class FieldRowTests
         Assert.True(row.FindControl<TextBlock>("ReadOnlyText")!.IsVisible);
     }
 
+    [AvaloniaFact]
+    public void Row_shows_a_pencil_beside_the_label_for_a_field_we_can_write()
+    {
+        var row = NewRow(Field(writable: true));
+        row.Measure(new Size(400, 60));
+
+        var cell = row.FindControl<StackPanel>("LabelCell")!;
+        Assert.Contains(cell.Children.OfType<TextBlock>(), t => t.Name == "EditIcon" && t.IsVisible);
+        Assert.False(row.FindControl<Avalonia.Controls.Shapes.Path>("LockIcon")!.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Row_shows_a_padlock_beside_the_label_for_a_field_we_cannot_write()
+    {
+        var row = NewRow(Field(writable: false));
+        row.Measure(new Size(400, 60));
+
+        var cell = row.FindControl<StackPanel>("LabelCell")!;
+        Assert.Contains(cell.Children.OfType<Avalonia.Controls.Shapes.Path>(),
+                        p => p.Name == "LockIcon" && p.IsVisible);
+        Assert.False(row.FindControl<TextBlock>("EditIcon")!.IsVisible);
+    }
+
     private static (FieldRow row, WorkspaceField field) Wired()
     {
         var vm = new WorkspaceViewModel();
