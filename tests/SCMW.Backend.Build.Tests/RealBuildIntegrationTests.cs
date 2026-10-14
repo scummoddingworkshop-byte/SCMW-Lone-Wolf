@@ -298,6 +298,79 @@ public class RealBuildIntegrationTests
         finally { Directory.Delete(scratch, true); }
     }
 
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public async Task An_added_field_is_written_from_a_real_class_file_donor()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        var work = Path.Combine(Path.GetTempPath(), "scmw-addreal-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(work);
+        try
+        {
+            var source = new PakContentSource(new PakMount(), new AssetIndex(),
+                Path.Combine(work, "a.db"), new FileIconCache(Path.Combine(work, "icons")));
+            source.Configure(paks, key, null);
+            Assert.Equal(ContentSourceState.Ready, (await source.ScanAsync()).State);
+
+            // Find an item whose own file lacks the timer but whose class file (name without "_ES")
+            // carries it — exactly how the app finds a donor.
+            string? target = null, donor = null;
+            var skip = 0;
+            while (target is null && skip < 3000)
+            {
+                var page = await source.SearchAsync("", null, skip, 500);
+                if (page.Count == 0) break;
+                foreach (var a in page.Where(x => x.Id.EndsWith("_ES", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var classPath = a.Id[..^3];
+                    var fields = await source.FieldsAsync(classPath);
+                    if (fields.Any(f => f.TechnicalName == "_autoDestructTime"))
+                    {
+                        target = a.Id;
+                        donor = classPath;
+                        break;
+                    }
+                }
+                skip += page.Count;
+            }
+            Assert.NotNull(target);
+            Assert.NotNull(donor);
+
+            using var mount = new PakMount();
+            Assert.True(mount.TryMount(paks, key, out var error), error);
+            Assert.True(mount.TryReadPackage(target!, out var targetFiles));
+            Assert.True(mount.TryReadPackage(donor!, out var donorFiles));
+
+            var targetUasset = ExtractOne(targetFiles!, Path.Combine(work, "target"));
+            var donorUasset = ExtractOne(donorFiles!, Path.Combine(work, "donor"));
+
+            // Add the timer to the item, borrowing its exact shape from the class file.
+            var donors = new Dictionary<string, string> { ["_autoDestructTime"] = donorUasset };
+            Assert.True(new UAssetPackageWriter().Apply(targetUasset, new[]
+            {
+                new FieldChange("_autoDestructTime", "0", ChangeOperation.AddField, donor),
+            }, donors).Ok);
+
+            // The file still loads and now carries the timer, as a float set to 0.
+            var reloaded = new UAsset(targetUasset, EngineVersion.VER_UE4_27);
+            var added = reloaded.Exports.OfType<NormalExport>().SelectMany(e => e.Data)
+                .First(p => p.Name.ToString() == "_autoDestructTime");
+            Assert.IsType<FloatPropertyData>(added);
+            Assert.Equal(0f, ((FloatPropertyData)added).Value, 3);
+        }
+        finally { Directory.Delete(work, true); }
+    }
+
+    private static string ExtractOne(IReadOnlyDictionary<string, byte[]> files, string folder)
+    {
+        Directory.CreateDirectory(folder);
+        foreach (var pair in files) File.WriteAllBytes(Path.Combine(folder, pair.Key), pair.Value);
+        return Directory.GetFiles(folder, "*.uasset").Single();
+    }
+
     private static async Task<string?> FindItemWithField(IContentSource source, string fieldName)
     {
         var skip = 0;        while (skip < 5000)

@@ -356,7 +356,12 @@ public partial class WorkspaceViewModel : ObservableObject
         return addable;
     }
 
-    /// <summary>The first file of the kind that has the field, or null. Cached per kind+field.</summary>
+    /// <summary>
+    /// The first game file we can find that already has the field, or null. An item's own class file
+    /// is checked too: it is the item's name without its "_ES" suffix (Radio_ES -> Radio), which is
+    /// where the game keeps item-level values the item file does not carry (like _autoDestructTime).
+    /// Cached per kind+field.
+    /// </summary>
     private async System.Threading.Tasks.Task<string?> FindDonorAsync(string kind, string fieldName)
     {
         var key = kind + "\u001f" + fieldName;
@@ -367,29 +372,50 @@ public partial class WorkspaceViewModel : ObservableObject
         var scanned = 0;
         foreach (var asset in _allAssets)
         {
-            var path = asset.AssetId;
-            if (string.IsNullOrEmpty(path)) continue;
             if (scanned++ >= DonorScanLimit) break;
 
-            IReadOnlyList<AssetField> fields;
-            try
+            // The item itself first, then its class file (the name without "_ES").
+            foreach (var candidate in new[] { asset.AssetId, ClassFileOf(asset.AssetId) })
             {
-                fields = await _source!.FieldsAsync(path).ConfigureAwait(false);
+                if (string.IsNullOrEmpty(candidate)) continue;
+                if (await HasFieldAsync(candidate, fieldName).ConfigureAwait(false))
+                {
+                    donor = candidate;
+                    break;
+                }
             }
-            catch
-            {
-                continue;   // an unreadable file is simply skipped
-            }
-
-            if (fields.Any(f => string.Equals(f.TechnicalName, fieldName, StringComparison.OrdinalIgnoreCase)))
-            {
-                donor = path;
-                break;
-            }
+            if (donor is not null) break;
         }
 
         _donorCache[key] = donor ?? string.Empty;
         return donor;
+    }
+
+    /// <summary>True when the file at <paramref name="packagePath"/> already has the field. Never throws.</summary>
+    private async System.Threading.Tasks.Task<bool> HasFieldAsync(string packagePath, string fieldName)
+    {
+        try
+        {
+            var fields = await _source!.FieldsAsync(packagePath).ConfigureAwait(false);
+            return fields.Any(f => string.Equals(f.TechnicalName, fieldName, StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;   // an unreadable file is simply skipped
+        }
+    }
+
+    /// <summary>An item's class file: an "_ES" package path with the suffix dropped (Radio_ES ->
+    /// Radio), in the same folder. Null when the name is not an "_ES" one.</summary>
+    internal static string? ClassFileOf(string? packagePath)
+    {
+        if (string.IsNullOrEmpty(packagePath)
+            || !packagePath.EndsWith("_ES", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return packagePath[..^3];
     }
 
     /// <summary>Add a field the file lacks: record it, borrowing the donor's shape at build time.
