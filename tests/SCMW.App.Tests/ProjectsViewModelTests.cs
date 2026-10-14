@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using SCMW.Core.Editing;
 using SCMW.Core.Projects;
 using SCMW.Core.Settings;
 using SCMW.Core.Workspace;
@@ -60,13 +61,21 @@ public class ProjectsViewModelTests
     [AvaloniaFact]
     public void The_list_comes_from_the_workspace()
     {
-        var (vm, _, _, root) = NewVm(3);
+        var (vm, store, _, root) = NewVm(3);
         try
         {
             Assert.True(vm.HasProjects);
             Assert.Equal(3, vm.VisibleProjects.Count);
             Assert.False(vm.ShowEmptyState);
-            Assert.Single(vm.VisibleProjects.Where(p => p.IsCurrent));
+
+            // Nothing is marked as "your mod" until the player picks one — no quiet fall-back.
+            Assert.DoesNotContain(vm.VisibleProjects, p => p.IsCurrent);
+
+            var chosen = store.All()[1];
+            store.SetCurrent(chosen.Id);
+
+            var marked = Assert.Single(vm.VisibleProjects.Where(p => p.IsCurrent));
+            Assert.Equal(chosen.Id, marked.Id);
         }
         finally { Cleanup(root); }
     }
@@ -153,7 +162,7 @@ public class ProjectsViewModelTests
     }
 
     [AvaloniaFact]
-    public void Open_makes_it_current_and_goes_to_items()
+    public void Open_makes_it_current_and_goes_to_the_workspace()
     {
         var (vm, store, nav, root) = NewVm(2);
         try
@@ -163,7 +172,38 @@ public class ProjectsViewModelTests
             vm.OpenProjectCommand.Execute(project);
 
             Assert.Equal(project.Id, store.Current!.Id);
-            Assert.Equal(ScreenKey.Items, nav.Current);
+            Assert.Equal(ScreenKey.Workspace, nav.Current);   // editing lives in the Workspace now
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // "one project = one mod": each project holds its own change list
+    public void Two_projects_keep_their_own_change_lists()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var a = store.Create("Project A", "").Project!;
+            var b = store.Create("Project B", "").Project!;
+            store.SetCurrent(b.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", a.Id, assetPath: "/a/Duct_Tape");
+            changes.RecordEdit("AK-15", "Damage", "45", "60", a.Id, assetPath: "/a/AK");
+            changes.RecordEdit("Batteries", "Weight", "400", "800", b.Id, assetPath: "/b/Bat");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+
+            var rowA = vm.VisibleProjects.Single(p => p.Name == "Project A");
+            var rowB = vm.VisibleProjects.Single(p => p.Name == "Project B");
+            Assert.Equal(2, rowA.ChangeCount);          // A has its own two
+            Assert.Equal(1, rowB.ChangeCount);          // B has its own one
+
+            // The chosen project's list is the one shown (here B, one change).
+            var row = Assert.Single(vm.Changes);
+            Assert.Equal("Batteries", row.Asset);
         }
         finally { Cleanup(root); }
     }

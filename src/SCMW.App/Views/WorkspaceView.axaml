@@ -6,10 +6,17 @@
              x:DataType="vm:WorkspaceViewModel">
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
-  <Grid ColumnDefinitions="2*,12,3*" Margin="24,8,24,24">
+  <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="24,8,24,24">
+
+    <!-- "One project = one mod": with nothing chosen, editing is refused and explained here. -->
+    <Border Grid.Row="0" Grid.ColumnSpan="3" Name="NeedsProjectWarning" Classes="card"
+            IsVisible="{Binding NeedsProject}" Margin="0,0,0,12">
+      <TextBlock Text="{Binding ProjectWarning}" TextWrapping="Wrap"
+                 Foreground="{StaticResource WarningBrush}"/>
+    </Border>
 
     <!-- Left: find + browse -->
-    <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
+    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
       <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
                ItemsSource="{Binding Kinds}"
                SelectedItem="{Binding SelectedKind, Mode=TwoWay}">
@@ -65,7 +72,7 @@
     </Grid>
 
     <!-- Right: the open file's real fields, explained -->
-    <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+    <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,Auto,*">
       <TextBlock Grid.Row="0" Name="TitleText" Classes="h1" Text="{Binding Title}"
                  IsVisible="{Binding HasFields}"/>
 

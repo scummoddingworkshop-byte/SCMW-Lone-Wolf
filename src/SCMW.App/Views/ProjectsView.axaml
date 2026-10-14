@@ -84,6 +84,22 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
+      <!-- The chosen mod's own change list ("one project = one mod"). -->
+      <Border Name="ChangeList" Classes="card" IsVisible="{Binding HasChosenProject}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="What this mod changes" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+          <TextBlock Name="ChangeSummaryText" Text="{Binding ChangeSummary}" Classes="dim"/>
+          <ItemsControl Name="ChangeRows" ItemsSource="{Binding Changes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProjectChangeRow">
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
       <!-- No matches. -->
       <Border Name="NoMatches" Classes="card" IsVisible="{Binding ShowNoMatches}">
         <TextBlock Text="No projects match that" Classes="dim"/>

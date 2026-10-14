@@ -24,14 +24,14 @@ public class HomeViewModelTests
     }
 
     [AvaloniaFact]
-    public void Opening_a_recent_project_goes_to_items()
+    public void Opening_a_recent_project_goes_to_the_workspace()
     {
         var nav = new NavigationHost();
         var vm = new HomeViewModel(nav);
 
         vm.OpenRecentProjectCommand.Execute(vm.RecentProjects[0]);
 
-        Assert.Equal(ScreenKey.Items, nav.Current);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
     }
 
     [AvaloniaFact]

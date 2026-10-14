@@ -23,6 +23,7 @@
       </StackPanel>
 
       <TextBlock Name="WhenText" Classes="dim"/>
+      <TextBlock Name="ChangesText" Classes="dim"/>
       <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"/>
 
       <!-- Actions: separate buttons side by side, never one inside another. -->

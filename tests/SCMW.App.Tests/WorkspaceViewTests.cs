@@ -347,6 +347,43 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // "one project = one mod": editing with nothing chosen is refused, not silently retargeted
+    public async Task An_edit_with_no_chosen_project_is_refused_and_explained()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            projects.SetCurrent("");   // projects exist, but the player has not picked one
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new BrowseSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Batteries"));
+
+            Assert.True(vm.NeedsProject);
+
+            var weight = vm.Fields.Single(f => f.TechnicalName == "Weight");
+            vm.BeginEditCommand.Execute(weight);
+            weight.Draft = "999";
+            vm.CommitEditCommand.Execute(weight);
+
+            Assert.Empty(changes.For(projects.Current!.FolderPath));   // nothing recorded
+            Assert.False(string.IsNullOrWhiteSpace(vm.ProjectWarning)); // and it says why
+
+            // Pick the project: the same edit now records.
+            projects.SetCurrent(projects.Current!.Id);
+            Assert.False(vm.NeedsProject);
+
+            vm.BeginEditCommand.Execute(weight);
+            weight.Draft = "77";
+            vm.CommitEditCommand.Execute(weight);
+            Assert.Single(changes.For(projects.Current!.FolderPath));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // Review Focus 4: two files with one name show their own change, by path
     public void Two_files_that_share_a_display_name_show_their_own_value()
     {

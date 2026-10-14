@@ -70,7 +70,7 @@ public class ShellHomeTests
 
             inner.Command!.Execute(inner.CommandParameter);
 
-            Assert.Equal(ScreenKey.Items, nav.Current);
+            Assert.Equal(ScreenKey.Workspace, nav.Current);
         }
         finally { TestProjects.Cleanup(root); }
     }

@@ -43,4 +43,25 @@ public class HeaderTests
         }
         finally { TestProjects.Cleanup(root); }
     }
+
+    [AvaloniaFact] // "one project = one mod": the header never names a project you did not pick
+    public void The_header_names_only_the_chosen_project_never_a_fall_back()
+    {
+        var (store, root) = TestProjects.With("Duct Tape Expanded");
+        try
+        {
+            store.SetCurrent("");   // projects exist, but nothing is chosen yet
+            var vm = new ShellViewModel(new NavigationHost(), projects: store);
+            var window = new MainWindow { DataContext = vm };
+            window.Show();
+
+            var header = window.FindControl<HeaderBar>("Header")!;
+            var shown = header.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.IsVisible).Select(t => t.Text).ToList();
+
+            Assert.Contains("No project open", shown);
+            Assert.DoesNotContain("Duct Tape Expanded", shown);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
 }

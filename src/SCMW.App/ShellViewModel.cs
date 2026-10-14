@@ -86,7 +86,7 @@ public partial class ShellViewModel : ObservableObject
                                   gameReady: () => IsScumConfigured(store),
                                   workspace: _workspaceVm);
         _homeView = new HomeView { DataContext = _home };
-        _projects = new ProjectsViewModel(_projectStore, _nav);
+        _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges);
         _projectsView = new ProjectsView { DataContext = _projects };
         _items = new ItemsViewModel(_itemChanges, _projectStore, source: ContentSource,
                                     catalog: new ContentCatalog(ContentSource, ContentSource.Icons));
@@ -218,7 +218,7 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>Keeps the header's project card in step with the real current project.</summary>
     private void SyncActiveProject()
     {
-        var current = _projectStore.Current;
+        var current = _projectStore.Chosen;
         ActiveProjectText = current?.Name ?? "No project open";
         CurrentProject = current is null ? null : ProjectSummary.From(current, true);
     }

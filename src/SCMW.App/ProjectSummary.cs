@@ -35,15 +35,30 @@ public partial class ProjectSummary : ObservableObject
     /// <summary>True for the one project currently open.</summary>
     [ObservableProperty] private bool _isCurrent;
 
+    /// <summary>How many changes this project holds — its own list, never another project's.</summary>
+    public int ChangeCount { get; init; }
+
+    /// <summary>Plain words for the count: "No changes yet", "1 change", "3 changes".</summary>
+    public string ChangeCountText => ChangeCount switch
+    {
+        0 => "No changes yet",
+        1 => "1 change",
+        _ => $"{ChangeCount} changes",
+    };
+
+    /// <summary>True when this project has at least one change.</summary>
+    public bool HasChanges => ChangeCount > 0;
+
     /// <summary>True while this project's inline delete confirmation is showing.</summary>
     [ObservableProperty] private bool _isConfirmingDelete;
 
     /// <summary>Builds a screen row from a project on disk.</summary>
-    public static ProjectSummary From(ProjectRecord record, bool isCurrent) =>
+    public static ProjectSummary From(ProjectRecord record, bool isCurrent, int changeCount = 0) =>
         new(record.Name, record.Description, Describe(record.ModifiedUtc), LoadPicture(record.IconPath))
         {
             Id = record.Id,
             IsCurrent = isCurrent,
+            ChangeCount = changeCount,
         };
 
     /// <summary>Plain "2 hours ago" text.</summary>

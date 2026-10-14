@@ -3,6 +3,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using SCMW.App.Controls;
 using SCMW.App.Views;
+using SCMW.Core.Editing;
 using SCMW.Core.Projects;
 using SCMW.Core.Settings;
 using SCMW.Core.Workspace;
@@ -66,6 +67,35 @@ public class ProjectsViewTests
             Assert.False(withProjects.FindControl<Border>("EmptyState")!.IsVisible);
         }
         finally { Cleanup(root2); }
+    }
+
+    [AvaloniaFact] // "one project = one mod": the chosen project's own change list shows on screen
+    public void The_chosen_projects_change_list_is_shown()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id,
+                               assetPath: "/a/Duct_Tape");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            var view = new ProjectsView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1100, Height = 900 };
+            window.Show();
+
+            var texts = view.GetVisualDescendants().OfType<TextBlock>()
+                .Select(t => t.Text).ToList();
+
+            Assert.Contains("What this mod changes", texts);
+            Assert.Contains(texts, t => t is not null && t.Contains("Duct Tape") && t.Contains("25"));
+        }
+        finally { Cleanup(root); }
     }
 
     [AvaloniaFact]
@@ -157,7 +187,7 @@ public class ProjectsViewTests
             Assert.NotNull(openButton.Command);
             openButton.Command!.Execute(openButton.CommandParameter);
 
-            Assert.Equal(ScreenKey.Items, nav.Current);
+            Assert.Equal(ScreenKey.Workspace, nav.Current);
         }
         finally { TestProjects.Cleanup(root); }
     }

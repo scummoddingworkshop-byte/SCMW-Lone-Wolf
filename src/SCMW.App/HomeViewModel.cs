@@ -75,7 +75,7 @@ public partial class HomeViewModel : ObservableObject
         ShowWelcome = false;
     }
 
-    /// <summary>Opens a card's project: it becomes current, then Items opens.</summary>
+    /// <summary>Opens a card's project: it becomes the chosen mod, then the Workspace opens.</summary>
     [RelayCommand]
     private void OpenRecentProject(ProjectSummary? project)
     {
@@ -84,12 +84,12 @@ public partial class HomeViewModel : ObservableObject
             _store.SetCurrent(project.Id);
         }
 
-        _nav.GoTo(ScreenKey.Items);
+        _nav.GoTo(ScreenKey.Workspace);
     }
 
     private void Refresh()
     {
-        var currentId = _store?.Current?.Id;
+        var currentId = _store?.Chosen?.Id;
 
         var rows = _store is null
             ? _samples ?? SampleProjects()

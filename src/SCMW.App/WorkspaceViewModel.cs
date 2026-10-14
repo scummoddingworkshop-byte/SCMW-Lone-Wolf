@@ -34,6 +34,10 @@ public partial class WorkspaceViewModel : ObservableObject
         _catalog = catalog;
         _changes = changes;
         _projects = projects;
+
+        // Choosing (or deleting) a project changes whether editing is allowed — keep the view in step.
+        if (_projects is not null)
+            _projects.Changed += () => OnPropertyChanged(nameof(NeedsProject));
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -46,6 +50,17 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>True when the open file has at least one field to show.</summary>
     [ObservableProperty] private bool _hasFields;
+
+    // --- Which mod you are editing (Task 4.1) ----------------------------------------------------
+    // "One project = one mod": an edit is saved into the project the player picked. With none
+    // picked, the Workspace refuses (and says so) rather than quietly targeting the newest project.
+
+    /// <summary>True when a project store is wired but the player has not chosen a project yet.</summary>
+    public bool NeedsProject => _changes is not null && !(_projects?.HasChosenProject ?? false);
+
+    /// <summary>Plain words shown when <see cref="NeedsProject"/> — never jargon.</summary>
+    public string ProjectWarning =>
+        "Choose a project first — that's the mod your changes are saved into.";
 
     // --- The kind picker (Task 3.0) --------------------------------------------------------------
     // Only the kinds we have released for browsing. Loot & spawn is built, but not offered yet.
@@ -285,10 +300,10 @@ public partial class WorkspaceViewModel : ObservableObject
     // A change is recorded against the file's own PATH (never its display name), so two files that
     // share a name can never be confused.
 
-    /// <summary>The current project's recorded changes (empty when no project is open).</summary>
+    /// <summary>The chosen project's recorded changes (empty when no project is chosen).</summary>
     private IReadOnlyList<ChangeRecord> Records()
     {
-        var folder = _projects?.Current?.FolderPath;
+        var folder = _projects?.Chosen?.FolderPath;
         if (folder is null || _changes is null) return Array.Empty<ChangeRecord>();
         return _changes.For(folder);
     }
@@ -323,10 +338,17 @@ public partial class WorkspaceViewModel : ObservableObject
         var path = SelectedAsset?.AssetId;
 
         // Not wired to a project (a bare/preview screen): keep the change in memory only.
-        if (_changes is null || _projects?.Current is null || string.IsNullOrEmpty(path))
+        if (_changes is null || string.IsNullOrEmpty(path))
         {
             field.Value = draft;
             field.IsEditing = false;
+            return;
+        }
+
+        // No project chosen yet: refuse — never quietly save into the newest project.
+        if (NeedsProject)
+        {
+            field.IsEditing = false;   // leave the shown value alone; the banner says why
             return;
         }
 
@@ -341,7 +363,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
         field.Value = draft;
         field.IsEditing = false;
-        _changes.RecordEdit(path!, field.TechnicalName, field.OriginalValue, draft, _projects!.Current!.Id,
+        _changes.RecordEdit(path!, field.TechnicalName, field.OriginalValue, draft, _projects!.Chosen!.Id,
                             assetPath: path);
     }
 
@@ -383,15 +405,22 @@ public partial class WorkspaceViewModel : ObservableObject
         var product = Multiplier.Apply(field.GameValue, factor);
         var path = SelectedAsset?.AssetId;
 
+        // No project chosen yet: refuse — never quietly save into the newest project.
+        if (NeedsProject)
+        {
+            field.IsMultiplying = false;   // leave the shown value alone; the banner says why
+            return;
+        }
+
         field.IsMultiplying = false;
         field.Load(product ?? field.GameValue, field.GameValue);
 
         // Not wired to a project (a bare/preview screen): keep the change in memory only.
-        if (_changes is null || _projects?.Current is null || string.IsNullOrEmpty(path)) return;
+        if (_changes is null || string.IsNullOrEmpty(path)) return;
 
         _changes.RecordMultiply(path!, field.TechnicalName, field.GameValue,
                                 factor.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                _projects!.Current!.Id, assetPath: path);
+                                _projects!.Chosen!.Id, assetPath: path);
     }
 
     [RelayCommand]

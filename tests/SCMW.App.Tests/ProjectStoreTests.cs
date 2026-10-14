@@ -115,6 +115,32 @@ public class ProjectStoreTests
     }
 
     [AvaloniaFact]
+    public void The_chosen_project_is_only_the_one_the_player_picked()
+    {
+        var (store, _, root) = NewStore();
+        try
+        {
+            var first = store.Create("First", "").Project!;
+            var second = store.Create("Second", "").Project!;
+
+            // Creating projects does not choose one — nothing is "your mod" yet.
+            Assert.Null(store.Chosen);
+            Assert.False(store.HasChosenProject);
+
+            store.SetCurrent(second.Id);
+            Assert.Equal(second.Id, store.Chosen!.Id);
+            Assert.True(store.HasChosenProject);
+
+            // The chosen one is deleted: nothing quietly takes its place.
+            store.Delete(second.Id);
+            Assert.Null(store.Chosen);
+            Assert.False(store.HasChosenProject);
+            Assert.Equal(first.Id, store.Current!.Id);   // the display fall-back still stands in
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public void Deleting_moves_the_folder_into_the_backups()
     {
         var (store, ws, root) = NewStore();

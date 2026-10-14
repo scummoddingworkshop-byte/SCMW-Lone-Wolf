@@ -110,6 +110,7 @@ public partial class ProjectTile : UserControl
 
         var nameText = this.FindControl<TextBlock>("NameText");
         var whenText = this.FindControl<TextBlock>("WhenText");
+        var changesText = this.FindControl<TextBlock>("ChangesText");
         var descriptionText = this.FindControl<TextBlock>("DescriptionText");
         var picture = this.FindControl<Image>("Picture");
         var defaultMark = this.FindControl<TextBlock>("DefaultMark");
@@ -124,6 +125,7 @@ public partial class ProjectTile : UserControl
 
         nameText.Text = project?.Name ?? "";
         whenText!.Text = project?.When ?? "";
+        changesText!.Text = project?.ChangeCountText ?? "";
         descriptionText!.Text = project?.Description ?? "";
 
         picture.Source = project?.Picture;

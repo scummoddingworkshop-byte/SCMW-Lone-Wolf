@@ -7,6 +7,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SCMW.Core.Editing;
+using SCMW.Core.Projects;
 
 namespace SCMW.App;
 
@@ -19,14 +21,17 @@ public partial class ProjectsViewModel : ObservableObject
 {
     private readonly ProjectStore _store;
     private readonly INavigation _nav;
+    private readonly ItemChangeStore? _changes;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
 
-    public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null)
+    public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
+        _changes = changes;
         _store.Changed += Refresh;
+        if (_changes is not null) _changes.Changed += Refresh;
 
         VisibleProjects = new ObservableCollection<ProjectSummary>();
         Refresh();
@@ -34,6 +39,23 @@ public partial class ProjectsViewModel : ObservableObject
 
     /// <summary>The projects currently shown (the filtered view of the workspace).</summary>
     public ObservableCollection<ProjectSummary> VisibleProjects { get; }
+
+    /// <summary>The chosen project's recorded changes, in plain words (empty when none is chosen).</summary>
+    public ObservableCollection<ProjectChangeRow> Changes { get; } = new();
+
+    /// <summary>True when the chosen project has at least one change.</summary>
+    public bool HasChanges => Changes.Count > 0;
+
+    /// <summary>True when the player has chosen a project (the one this screen's list belongs to).</summary>
+    public bool HasChosenProject => _store.HasChosenProject;
+
+    /// <summary>Plain words for how many changes the chosen project holds.</summary>
+    public string ChangeSummary => Changes.Count switch
+    {
+        0 => "No changes yet",
+        1 => "1 change",
+        _ => $"{Changes.Count} changes",
+    };
 
     /// <summary>Search text; filters the list live.</summary>
     [ObservableProperty] private string _search = "";
@@ -89,10 +111,10 @@ public partial class ProjectsViewModel : ObservableObject
 
     private void Refresh()
     {
-        var currentId = _store.Current?.Id;
+        var chosen = _store.Chosen;
 
         _rows = _store.All()
-            .Select(record => ProjectSummary.From(record, record.Id == currentId))
+            .Select(record => ProjectSummary.From(record, record.Id == chosen?.Id, ChangeCountFor(record)))
             .ToList();
 
         var query = Search.Trim();
@@ -103,11 +125,32 @@ public partial class ProjectsViewModel : ObservableObject
             VisibleProjects.Add(row);
         }
 
+        RefreshChanges(chosen);
+
         OnPropertyChanged(nameof(HasProjects));
         OnPropertyChanged(nameof(HasMatches));
         OnPropertyChanged(nameof(ShowEmptyState));
         OnPropertyChanged(nameof(ShowNoMatches));
         OnPropertyChanged(nameof(ShowGrid));
+    }
+
+    /// <summary>How many changes a project holds — read from its own change list.</summary>
+    private int ChangeCountFor(ProjectRecord record) =>
+        _changes?.For(record.FolderPath).Count ?? 0;
+
+    /// <summary>Show the chosen project's change list, in plain words (nothing when none is chosen).</summary>
+    private void RefreshChanges(ProjectRecord? chosen)
+    {
+        Changes.Clear();
+        if (chosen is not null && _changes is not null)
+        {
+            foreach (var record in _changes.For(chosen.FolderPath))
+                Changes.Add(new ProjectChangeRow(record));
+        }
+
+        OnPropertyChanged(nameof(HasChanges));
+        OnPropertyChanged(nameof(HasChosenProject));
+        OnPropertyChanged(nameof(ChangeSummary));
     }
 
     [RelayCommand]
@@ -222,8 +265,9 @@ public partial class ProjectsViewModel : ObservableObject
     {
         if (project is null) return;
 
+        // Choosing a project is deliberate: it becomes the mod you edit, in the Workspace.
         _store.SetCurrent(project.Id);
-        _nav.GoTo(ScreenKey.Items);
+        _nav.GoTo(ScreenKey.Workspace);
     }
 
     [RelayCommand]
@@ -257,4 +301,40 @@ public partial class ProjectsViewModel : ObservableObject
     {
         if (project is not null) project.IsConfirmingDelete = value;
     }
+}
+
+/// <summary>
+/// One recorded change, in plain words, for the Projects screen's change list. Kept tiny — it is a
+/// reading of the engine's <see cref="ChangeRecord"/>, never a second source of truth.
+/// </summary>
+public sealed class ProjectChangeRow
+{
+    public ProjectChangeRow(ChangeRecord record)
+    {
+        Id = record.Id;
+        Asset = record.AssetId;
+        Field = record.FieldTechnicalName;
+        Value = record.Operation switch
+        {
+            ChangeOperation.Multiply => "×" + record.NewValue,
+            ChangeOperation.AddEntry => "added an entry",
+            ChangeOperation.RemoveEntry => "removed an entry",
+            _ => "→ " + record.NewValue,
+        };
+    }
+
+    /// <summary>The record's id (used later for per-change undo).</summary>
+    public Guid Id { get; }
+
+    /// <summary>The item or file the change lands on.</summary>
+    public string Asset { get; }
+
+    /// <summary>The field that changed.</summary>
+    public string Field { get; }
+
+    /// <summary>The change in plain words ("→ 25", "×2", "added an entry").</summary>
+    public string Value { get; }
+
+    /// <summary>One plain line: "Duct Tape · Max stack → 25".</summary>
+    public string Summary => $"{Asset} · {Field} {Value}";
 }

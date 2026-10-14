@@ -64,6 +64,24 @@ public sealed class ProjectStore
     }
 
     /// <summary>
+    /// The project the player explicitly chose, or null. Never a fall-back: when nothing is chosen
+    /// (or the chosen one is gone) this is null, so editing can refuse rather than quietly target
+    /// the newest project. This is the "one project = one mod" selection.
+    /// </summary>
+    public ProjectRecord? Chosen
+    {
+        get
+        {
+            var id = _settings.Load().ActiveProjectId;
+            if (string.IsNullOrWhiteSpace(id)) return null;
+            return All().FirstOrDefault(p => p.Id == id);
+        }
+    }
+
+    /// <summary>True when the player has explicitly chosen a project that still exists.</summary>
+    public bool HasChosenProject => Chosen is not null;
+
+    /// <summary>
     /// True when the current project was chosen for the player rather than by them — none was
     /// opened (or the saved one is gone), so the newest stands in. Screens can say so instead of
     /// silently re-targeting.
