@@ -42,6 +42,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly BuildView _buildView;
     private readonly PreviewViewModel _preview;
     private readonly PreviewView _previewView;
+    private readonly ISaveBackupsService _saves;
     private readonly ModsViewModel _mods;
     private readonly ModsView _modsView;
     private readonly BackupsViewModel _backups;
@@ -102,9 +103,10 @@ public partial class ShellViewModel : ObservableObject
                                       family: AssetFamily.Recipes);
         _recipesView = new ItemsView { DataContext = _recipes };
         _modList = new ModList();
+        _saves = new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, _launcher, source: ContentSource,
-                                    elevation: WindowsElevation.Default);
+                                    elevation: WindowsElevation.Default, saves: _saves);
         _buildView = new BuildView { DataContext = _build };
         _preview = new PreviewViewModel(_itemChanges, _projectStore);
         _previewView = new PreviewView { DataContext = _preview };

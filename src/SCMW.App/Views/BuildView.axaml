@@ -8,8 +8,11 @@
 
       <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" Classes="h1"/>
       <TextBlock Name="ProjectFallbackText" Classes="dim"
-                 Text="No project selected — showing the most recent one."
-                 IsVisible="{Binding ShowProjectFallback}"/>
+                 Text="No project chosen — pick one in Projects; that's the mod you build."
+                 IsVisible="{Binding NeedsProject}"/>
+      <TextBlock Name="SaveNoteText" Text="{Binding SaveNote}" Classes="dim" TextWrapping="Wrap"
+                 Foreground="{StaticResource WarningBrush}"
+                 IsVisible="{Binding SaveNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
       <!-- What's in this mod -->
       <StackPanel Spacing="10">

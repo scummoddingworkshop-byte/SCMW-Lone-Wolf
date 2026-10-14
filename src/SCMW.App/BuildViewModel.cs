@@ -30,6 +30,7 @@ public partial class BuildViewModel : ObservableObject
     private IGameLauncher? _launcher;
     private readonly IContentSource? _source;
     private readonly IElevation? _elevation;
+    private readonly ISaveBackupsService? _saves;
     private DispatcherTimer? _timer;
     private int _stepIndex;
     private IReadOnlyList<BuildChange> _lines = Array.Empty<BuildChange>();
@@ -40,7 +41,7 @@ public partial class BuildViewModel : ObservableObject
                           TimeSpan? stepInterval = null, ModList? mods = null,
                           ProjectStore? projects = null, IBuildService? service = null,
                           IGameLauncher? launcher = null, IContentSource? source = null,
-                          IElevation? elevation = null)
+                          IElevation? elevation = null, ISaveBackupsService? saves = null)
     {
         _changes = changes;
         _nav = nav ?? NavigationHost.Shared;
@@ -51,6 +52,7 @@ public partial class BuildViewModel : ObservableObject
         _launcher = launcher;
         _source = source;
         _elevation = elevation;
+        _saves = saves;
 
         if (_projects is not null)
         {
@@ -73,18 +75,21 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>What the Advanced "Rename" box edits; applied only when the player commits.</summary>
     [ObservableProperty] private string _renameDraft = "";
 
-    /// <summary>Keeps the shown name (and the rename draft) in step with the real current project.</summary>
+    /// <summary>A plain note about the automatic save backup taken before installing (empty when fine).</summary>
+    [ObservableProperty] private string _saveNote = "";
+
+    /// <summary>Keeps the shown name (and the rename draft) in step with the chosen project.</summary>
     private void SyncProjectName()
     {
-        ProjectName = _projects!.Current?.Name ?? "No project open";
-        RenameDraft = _projects.Current?.Name ?? "";
+        ProjectName = _projects!.Chosen?.Name ?? "No project open";
+        RenameDraft = _projects.Chosen?.Name ?? "";
     }
 
-    /// <summary>Renames the current project once, when the player finishes editing — not per keystroke.</summary>
+    /// <summary>Renames the chosen project once, when the player finishes editing — not per keystroke.</summary>
     [RelayCommand]
     private void CommitRename()
     {
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (current is null) return;
 
         var name = RenameDraft.Trim();
@@ -93,14 +98,14 @@ public partial class BuildViewModel : ObservableObject
         _projects!.Rename(current.Id, name);   // raises Changed → SyncProjectName re-reads the name
     }
 
-    /// <summary>True when the shown project was chosen for the player, not by them (say so).</summary>
-    public bool ShowProjectFallback => _projects?.CurrentIsFallback ?? false;
+    /// <summary>True when no project is chosen yet — Build builds a chosen mod, never a fall-back.</summary>
+    public bool NeedsProject => _projects is not null && !_projects.HasChosenProject;
 
-    /// <summary>The current project changed: follow its name and re-read its records.</summary>
+    /// <summary>The chosen project changed: follow its name and re-read its records.</summary>
     private void OnProjectsChanged()
     {
         SyncProjectName();
-        OnPropertyChanged(nameof(ShowProjectFallback));
+        OnPropertyChanged(nameof(NeedsProject));
         ResetOutcomeAndRefresh();
     }
 
@@ -125,7 +130,7 @@ public partial class BuildViewModel : ObservableObject
         BuiltVersion = null;
         _builtStamp = null;
         _installedStamp = null;
-        HasInstalled = _service?.IsInstalled(_projects?.Current?.Id ?? "") ?? false;
+        HasInstalled = _service?.IsInstalled(_projects?.Chosen?.Id ?? "") ?? false;
         NotifyInstallState();
     }
 
@@ -135,7 +140,7 @@ public partial class BuildViewModel : ObservableObject
     /// </summary>
     private void RefreshChanges()
     {
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (current is null || _changes is null)
         {
             _lines = Array.Empty<BuildChange>();
@@ -160,7 +165,7 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand]
     private void RemoveItem(BuildChange? row)
     {
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (row is null || current is null || _changes is null) return;
 
         _changes.RemoveItem(current.FolderPath, row.ItemName);   // raises Changed → refresh
@@ -311,7 +316,7 @@ public partial class BuildViewModel : ObservableObject
         BuiltPakPath = null;
         _builtStamp = null;
         _installedStamp = null;
-        HasInstalled = service?.IsInstalled(_projects?.Current?.Id ?? "") ?? false;
+        HasInstalled = service?.IsInstalled(_projects?.Chosen?.Id ?? "") ?? false;
         CanRestartAsAdmin = false;
         State = BuildState.Idle;
         NotifyInstallState();
@@ -337,7 +342,7 @@ public partial class BuildViewModel : ObservableObject
 
     public bool HasChanges => _lines.Count > 0;
     public bool ShowNudge => !HasChanges;
-    public bool CanBuild => _projects?.Current is not null && HasChanges && State != BuildState.Running;
+    public bool CanBuild => _projects?.Chosen is not null && HasChanges && State != BuildState.Running;
     public bool IsRunning => State == BuildState.Running;
     public bool IsSucceeded => State == BuildState.Succeeded;
     public bool IsFailed => State == BuildState.Failed;
@@ -361,7 +366,7 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanBuild))]
     private async Task BuildAsync()
     {
-        var project = _projects?.Current;
+        var project = _projects?.Chosen;
         if (_service is null || project is null)
         {
             // The bare/preview screen keeps the original simulated run.
@@ -407,7 +412,7 @@ public partial class BuildViewModel : ObservableObject
 
         // If the project or the changes moved while we were building, this outcome is stale.
         var currentRecords = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
-        if (_projects?.Current?.Id != projectId || RecordsToken(currentRecords) != token)
+        if (_projects?.Chosen?.Id != projectId || RecordsToken(currentRecords) != token)
         {
             ShowFailure("Your changes changed while the mod was being made.",
                 "That build was for an earlier set of changes, so it was set aside and not offered to install.",
@@ -476,9 +481,10 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanInstall))]
     private async Task Install()
     {
-        var project = _projects?.Current;
+        var project = _projects?.Chosen;
         if (_service is null || project is null || BuiltPakPath is null) return;
 
+        BackUpSaveQuietly();   // keep the save before the mod can touch it (design §11)
         var outcome = await _service.InstallAsync(project.Id, project.Name, BuiltVersion ?? ModVersion,
             BuiltPakPath, CancellationToken.None);
         if (outcome.Ok)
@@ -501,7 +507,7 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanRemove))]
     private async Task Remove()
     {
-        var project = _projects?.Current;
+        var project = _projects?.Chosen;
         if (_service is null || project is null) return;
 
         var outcome = await _service.RemoveAsync(project.Id, CancellationToken.None);
@@ -586,6 +592,17 @@ public partial class BuildViewModel : ObservableObject
         };
     }
 
+    /// <summary>
+    /// Keep a copy of the saved game before a mod is installed (design §11): a pak never touches the
+    /// game's files, but a mod can leave a mark in a save. Best-effort — a failure is said plainly,
+    /// never blocking the install.
+    /// </summary>
+    private void BackUpSaveQuietly()
+    {
+        if (_saves is null) return;
+        SaveNote = _saves.BackUp() ?? "";
+    }
+
     private void FinishSuccess()
     {
         foreach (var step in Steps)
@@ -596,6 +613,7 @@ public partial class BuildViewModel : ObservableObject
 
         StopTimer();
         StatusText = "";
+        BackUpSaveQuietly();
         if (_service is null) _mods?.Install(ProjectName);
         _builtStamp = CurrentStamp();
         State = BuildState.Succeeded;
@@ -606,7 +624,7 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>A fingerprint of what was just built: the version plus the current changes.</summary>
     private string CurrentStamp()
     {
-        var project = _projects?.Current;
+        var project = _projects?.Chosen;
         if (project is null || _changes is null) return ModVersion;
         return ModVersion + "|" + RecordsToken(_changes.For(project.FolderPath));
     }

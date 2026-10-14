@@ -65,6 +65,51 @@ public class BuildInstallsTests : IDisposable
         Assert.Empty(mods.Mods);
     }
 
+    [AvaloniaFact] // design §11: keep a copy of the saved game before installing a mod
+    public void An_install_backs_up_the_saved_game_first()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+
+        var saves = new RecordingSaves();
+        var build = new BuildViewModel(changes, mods: new ModList(), projects: projects, saves: saves);
+
+        build.BuildCommand.Execute(null);
+        for (var i = 0; i < 5; i++) build.Advance();
+
+        Assert.True(saves.BackedUp);
+    }
+
+    [AvaloniaFact] // "one project = one mod": Build won't build a project the player did not choose
+    public void Build_needs_a_chosen_project()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+        projects.SetCurrent("");   // a project with a change exists, but none is chosen
+
+        var build = new BuildViewModel(changes, mods: new ModList(), projects: projects);
+
+        Assert.True(build.NeedsProject);
+        Assert.Empty(build.Changes);
+        Assert.False(build.CanBuild);
+    }
+
+    /// <summary>A stand-in save service that only records whether a backup was taken.</summary>
+    private sealed class RecordingSaves : ISaveBackupsService
+    {
+        public bool BackedUp { get; private set; }
+        public bool IsAvailable => true;
+        public string SaveFolder => "";
+        public IReadOnlyList<SaveSnapshot> List() => Array.Empty<SaveSnapshot>();
+        public string? BackUp() { BackedUp = true; return null; }
+        public string? Restore(string snapshotId) => null;
+        public string? Delete(string snapshotId) => null;
+    }
+
     [AvaloniaFact]
     public void The_shell_end_to_end_build_lands_in_mods()
     {
