@@ -84,11 +84,11 @@
     "name": "_autoDestructTime",
     "label": "Auto-destruct time",
     "type": "Number",
-    "unit": "real minutes",
+    "unit": "(in real minutes)",
     "risk": "Low",
     "writable": true,
     "addable": true,
-    "meaning": "How long an item left on the ground lasts before it vanishes. It counts down only while you are away from it. 0 means never."
+    "meaning": "This controls how long an item left on the ground or on a surface (like a table) lasts before it vanishes. If you want it to stay permanently, set it to 0. It counts only while you are away from it or logged out."
   },
   {
     "kind": "Items",

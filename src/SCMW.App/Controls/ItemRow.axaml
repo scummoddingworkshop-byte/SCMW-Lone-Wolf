@@ -1,6 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="SCMW.App.Controls.ItemRow">
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Controls.ItemRow"
+             x:DataType="vm:ItemSummary">
   <StackPanel Orientation="Horizontal" Spacing="10">
     <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
       <Panel>
@@ -14,5 +16,10 @@
       <TextBlock Name="NameText" FontSize="13"/>
       <TextBlock Name="CategoryText" Classes="dim"/>
     </StackPanel>
+    <!-- A field this project added to the item (e.g. the auto-destruct timer). -->
+    <Border Name="AddedChip" Classes="chip" VerticalAlignment="Center"
+            IsVisible="{Binding HasAddedFieldNote}">
+      <TextBlock Text="{Binding AddedFieldNote}" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+    </Border>
   </StackPanel>
 </UserControl>

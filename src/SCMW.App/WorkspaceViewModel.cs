@@ -38,6 +38,10 @@ public partial class WorkspaceViewModel : ObservableObject
         // Choosing (or deleting) a project changes whether editing is allowed — keep the view in step.
         if (_projects is not null)
             _projects.Changed += () => OnPropertyChanged(nameof(NeedsProject));
+
+        // An added field (e.g. the auto-destruct timer) marks its item row straight away.
+        if (_changes is not null)
+            _changes.Changed += OnChangesChanged;
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -214,6 +218,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     private void RefreshAssets()
     {
+        MarkAddedFields();
         VisibleAssets.Clear();
         foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory))
         {
@@ -223,6 +228,33 @@ public partial class WorkspaceViewModel : ObservableObject
         OnPropertyChanged(nameof(HasAssets));
         OnPropertyChanged(nameof(HasAssetMatches));
         OnPropertyChanged(nameof(ShowAssetNoMatches));
+    }
+
+    /// <summary>Re-mark every row: does this project carry an added field for it?</summary>
+    private void MarkAddedFields()
+    {
+        foreach (var asset in _allAssets)
+            asset.AddedFieldNote = AddedNoteFor(asset);
+    }
+
+    private void OnChangesChanged() => RunOnUi(MarkAddedFields);
+
+    /// <summary>A short note naming the field(s) this project added to the item, or empty.</summary>
+    private string AddedNoteFor(ItemSummary asset)
+    {
+        if (string.IsNullOrEmpty(asset.AssetId)) return "";
+
+        var records = Records();
+        if (records.Count == 0) return "";
+
+        var classPath = ClassFileOf(asset.AssetId);
+        var labels = records
+            .Where(r => r.Operation == ChangeOperation.AddField && IsTargetOf(r, asset.AssetId!, classPath))
+            .Select(r => _library.Lookup(_kind, r.FieldTechnicalName)?.Label ?? r.FieldTechnicalName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return labels.Count == 0 ? "" : string.Join(", ", labels) + " added";
     }
 
     partial void OnSearchChanged(string value) => RefreshAssets();
@@ -347,10 +379,6 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>True when at least one field could be added to the open file.</summary>
     public bool HasAddableFields => AddableFields.Count > 0;
-
-    /// <summary>Plain line under the add section's heading.</summary>
-    public string AddableNote =>
-        "These aren't in this file, but the game has them on other items — we can copy the shape across.";
 
     /// <summary>Work out the addable fields for a file: described and flagged addable, not already
     /// present, not already added, and with a donor file somewhere in the kind. Never throws.</summary>

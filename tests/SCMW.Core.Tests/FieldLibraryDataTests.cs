@@ -34,7 +34,7 @@ public class FieldLibraryDataTests
 
     [Theory]
     [InlineData("ShelfLife", "in-game hours")]
-    [InlineData("_autoDestructTime", "real minutes")]
+    [InlineData("_autoDestructTime", "(in real minutes)")]
     public void The_two_item_timers_are_described_with_their_units(string field, string unit)
     {
         var def = Library.Lookup("Items", field);

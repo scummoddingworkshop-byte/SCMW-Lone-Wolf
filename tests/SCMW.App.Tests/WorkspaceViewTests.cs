@@ -456,6 +456,11 @@ public class WorkspaceViewTests
             Assert.Equal(AddFieldSource.TomatoClass, record.AssetPath);   // the class file, not the item file
             Assert.Equal(AddFieldSource.TorchClass, record.DonorPath);    // where the shape is borrowed from
             Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
+
+            // The item row now shows that a field was added.
+            var row = vm.VisibleAssets.Single(a => a.Name == "Tomato");
+            Assert.True(row.HasAddedFieldNote);
+            Assert.Contains("added", row.AddedFieldNote);
         }
         finally { TestProjects.Cleanup(root); }
     }

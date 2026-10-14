@@ -96,27 +96,27 @@
           <Border Name="AddableSection" Classes="card" Margin="0,12,0,0"
                   IsVisible="{Binding HasAddableFields}">
             <StackPanel>
-              <TextBlock Classes="section" Text="Fields you could add"/>
-              <TextBlock Classes="dim" TextWrapping="Wrap" Margin="0,2,0,10"
-                         Text="{Binding AddableNote}"/>
+              <TextBlock Classes="section" Text="Fields you could add" Margin="0,0,0,10"/>
               <ItemsControl Name="AddableList" ItemsSource="{Binding AddableFields}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:AddableField">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
-                      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,14">
+                      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6"
+                                  VerticalAlignment="Top" Margin="0,7,0,0">
                         <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextDimBrush}"/>
                         <TextBlock Text="{Binding Unit}" Classes="dim" VerticalAlignment="Center"
                                    IsVisible="{Binding HasUnit}"/>
                       </StackPanel>
-                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                  VerticalAlignment="Top">
                         <TextBox Name="AddDraft" Classes="field" MinWidth="120" MinHeight="30"
                                  Watermark="new value…" Text="{Binding Draft, Mode=TwoWay}"/>
-                        <Button Name="AddButton" Classes="valuefield" Content="Add"
+                        <Button Name="AddButton" Classes="primary" Content="Add"
                                 Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCommand}"
                                 CommandParameter="{Binding}"/>
                       </StackPanel>
                       <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="dim"
-                                 TextWrapping="Wrap" Margin="0,2,0,0" Text="{Binding Meaning}"
+                                 TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding Meaning}"
                                  IsVisible="{Binding HasMeaning}"/>
                     </Grid>
                   </DataTemplate>

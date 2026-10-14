@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SCMW.App;
 
@@ -8,7 +9,7 @@ namespace SCMW.App;
 /// One item in the catalogue: what it is called, its category, a one-line description,
 /// an optional picture, whether its values can be changed (the "_ES" idea), and its values.
 /// </summary>
-public sealed class ItemSummary
+public sealed partial class ItemSummary : ObservableObject
 {
     public ItemSummary(string name, string category, string description, bool editable,
                        IImage? picture = null, IReadOnlyList<ItemValue>? values = null,
@@ -49,4 +50,15 @@ public sealed class ItemSummary
 
     /// <summary>The cached icon PNG path once extracted, or null (the row shows a letter tile).</summary>
     public string? IconPath { get; set; }
+
+    /// <summary>
+    /// A short note naming a field this project has ADDED to the item (empty when none), so the row
+    /// shows at a glance that the item carries an added field (e.g. "Auto-destruct time added").
+    /// </summary>
+    [ObservableProperty] private string _addedFieldNote = "";
+
+    /// <summary>True when the row should show the "field added" marker.</summary>
+    public bool HasAddedFieldNote => !string.IsNullOrWhiteSpace(AddedFieldNote);
+
+    partial void OnAddedFieldNoteChanged(string value) => OnPropertyChanged(nameof(HasAddedFieldNote));
 }
