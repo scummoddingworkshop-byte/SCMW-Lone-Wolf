@@ -310,8 +310,9 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>How many of a kind's files we read looking for a donor before giving a field up.</summary>
     private const int DonorScanLimit = 40;
 
-    /// <summary>Remembers, per kind+field, the donor file found ("" for "none") so we scan once.</summary>
-    private readonly Dictionary<string, string> _donorCache = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Per kind, which game file to copy each addable field's shape from (built once, then
+    /// reused, so opening a file does not re-scan the kind's files for every field).</summary>
+    private readonly Dictionary<string, Dictionary<string, string>> _donorMaps = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The described fields the open file lacks that we can add by copying a donor's shape.</summary>
     public ObservableCollection<AddableField> AddableFields { get; } = new();
@@ -344,11 +345,12 @@ public partial class WorkspaceViewModel : ObservableObject
             .ToList();
         if (wanted.Count == 0) return Array.Empty<AddableField>();
 
+        var donors = await DonorMapAsync(kind).ConfigureAwait(false);
+
         var addable = new List<AddableField>();
         foreach (var definition in wanted)
         {
-            var donor = await FindDonorAsync(kind, definition.Name).ConfigureAwait(false);
-            if (donor is null) continue;   // nowhere to borrow the shape from — do not offer it
+            if (!donors.TryGetValue(definition.Name, out var donor)) continue;   // no source — do not offer
 
             addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
                                          definition.Name, donor, definition.Type));
@@ -357,51 +359,43 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The first game file we can find that already has the field, or null. An item's own class file
-    /// is checked too: it is the item's name without its "_ES" suffix (Radio_ES -> Radio), which is
-    /// where the game keeps item-level values the item file does not carry (like _autoDestructTime).
-    /// Cached per kind+field.
+    /// Which game file to copy each field's shape from, for one kind: a map of field name to the
+    /// first file that has it. Built in one pass over the kind's files — each file, and its class file
+    /// (the name without "_ES", where the game keeps item-level values like _autoDestructTime) — then
+    /// cached, so opening a file does not re-read the kind for every field it lacks.
     /// </summary>
-    private async System.Threading.Tasks.Task<string?> FindDonorAsync(string kind, string fieldName)
+    private async System.Threading.Tasks.Task<Dictionary<string, string>> DonorMapAsync(string kind)
     {
-        var key = kind + "\u001f" + fieldName;
-        if (_donorCache.TryGetValue(key, out var cached))
-            return cached.Length == 0 ? null : cached;
+        if (_donorMaps.TryGetValue(kind, out var cached)) return cached;
 
-        string? donor = null;
-        var scanned = 0;
-        foreach (var asset in _allAssets)
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var asset in _allAssets.Take(DonorScanLimit))
         {
-            if (scanned++ >= DonorScanLimit) break;
-
-            // The item itself first, then its class file (the name without "_ES").
-            foreach (var candidate in new[] { asset.AssetId, ClassFileOf(asset.AssetId) })
+            foreach (var path in new[] { asset.AssetId, ClassFileOf(asset.AssetId) })
             {
-                if (string.IsNullOrEmpty(candidate)) continue;
-                if (await HasFieldAsync(candidate, fieldName).ConfigureAwait(false))
+                if (string.IsNullOrEmpty(path)) continue;
+                foreach (var name in await FieldNamesAsync(path).ConfigureAwait(false))
                 {
-                    donor = candidate;
-                    break;
+                    if (!map.ContainsKey(name)) map[name] = path;
                 }
             }
-            if (donor is not null) break;
         }
 
-        _donorCache[key] = donor ?? string.Empty;
-        return donor;
+        _donorMaps[kind] = map;
+        return map;
     }
 
-    /// <summary>True when the file at <paramref name="packagePath"/> already has the field. Never throws.</summary>
-    private async System.Threading.Tasks.Task<bool> HasFieldAsync(string packagePath, string fieldName)
+    /// <summary>The field names a file has, or none when it cannot be read. Never throws.</summary>
+    private async System.Threading.Tasks.Task<IReadOnlyList<string>> FieldNamesAsync(string packagePath)
     {
         try
         {
             var fields = await _source!.FieldsAsync(packagePath).ConfigureAwait(false);
-            return fields.Any(f => string.Equals(f.TechnicalName, fieldName, StringComparison.OrdinalIgnoreCase));
+            return fields.Select(f => f.TechnicalName).ToList();
         }
         catch
         {
-            return false;   // an unreadable file is simply skipped
+            return Array.Empty<string>();   // an unreadable file is simply skipped
         }
     }
 
