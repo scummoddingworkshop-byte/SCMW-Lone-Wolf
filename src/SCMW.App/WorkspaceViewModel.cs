@@ -334,12 +334,13 @@ public partial class WorkspaceViewModel : ObservableObject
     // No flag, no donor, no offer — never a blank "invent a field" box. Only the auto-destruct timer
     // is flagged for now; the seam is here to widen later.
 
-    /// <summary>How many of a kind's files we read looking for a donor before giving a field up.</summary>
-    private const int DonorScanLimit = 40;
+    /// <summary>How many of a kind's files we read looking for a donor before giving a field up. The
+    /// auto-destruct timer's first donor sits ~90 items into the Items list, so this must clear that;
+    /// the search stops at the first hit, and the answer is cached.</summary>
+    private const int DonorScanLimit = 150;
 
-    /// <summary>Per kind, which game file to copy each addable field's shape from (built once, then
-    /// reused, so opening a file does not re-scan the kind's files for every field).</summary>
-    private readonly Dictionary<string, Dictionary<string, string>> _donorMaps = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Per kind+field, the donor file found ("" when there is none), so we scan once.</summary>
+    private readonly Dictionary<string, string> _donorCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The described fields the open file lacks that we can add by copying a donor's shape.</summary>
     public ObservableCollection<AddableField> AddableFields { get; } = new();
@@ -372,12 +373,11 @@ public partial class WorkspaceViewModel : ObservableObject
             .ToList();
         if (wanted.Count == 0) return Array.Empty<AddableField>();
 
-        var donors = await DonorMapAsync(kind).ConfigureAwait(false);
-
         var addable = new List<AddableField>();
         foreach (var definition in wanted)
         {
-            if (!donors.TryGetValue(definition.Name, out var donor)) continue;   // no source — do not offer
+            var donor = await FindDonorAsync(kind, definition.Name).ConfigureAwait(false);
+            if (donor is null) continue;   // no source — do not offer
 
             addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
                                          definition.Name, donor, definition.Type));
@@ -386,30 +386,38 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Which game file to copy each field's shape from, for one kind: a map of field name to the
-    /// first file that has it. Built in one pass over the kind's files — each file, and its class file
-    /// (the name without "_ES", where the game keeps item-level values like _autoDestructTime) — then
-    /// cached, so opening a file does not re-read the kind for every field it lacks.
+    /// The first file of the kind that already has the field, or null. An item's own class file (the
+    /// name without "_ES") is checked too, since that is where the game keeps item-level values like
+    /// _autoDestructTime. Scans at most <see cref="DonorScanLimit"/> files, stopping at the first hit;
+    /// the answer is cached per kind+field, so a field is only ever searched for once.
     /// </summary>
-    private async System.Threading.Tasks.Task<Dictionary<string, string>> DonorMapAsync(string kind)
+    private async System.Threading.Tasks.Task<string?> FindDonorAsync(string kind, string fieldName)
     {
-        if (_donorMaps.TryGetValue(kind, out var cached)) return cached;
+        var key = kind + "\u001f" + fieldName;
+        if (_donorCache.TryGetValue(key, out var cached))
+            return cached.Length == 0 ? null : cached;
 
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var asset in _allAssets.Take(DonorScanLimit))
+        string? donor = null;
+        var scanned = 0;
+        foreach (var asset in _allAssets)
         {
+            if (scanned++ >= DonorScanLimit) break;
+
             foreach (var path in new[] { asset.AssetId, ClassFileOf(asset.AssetId) })
             {
                 if (string.IsNullOrEmpty(path)) continue;
-                foreach (var name in await FieldNamesAsync(path).ConfigureAwait(false))
+                var names = await FieldNamesAsync(path).ConfigureAwait(false);
+                if (names.Any(n => string.Equals(n, fieldName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (!map.ContainsKey(name)) map[name] = path;
+                    donor = path;
+                    break;
                 }
             }
+            if (donor is not null) break;
         }
 
-        _donorMaps[kind] = map;
-        return map;
+        _donorCache[key] = donor ?? string.Empty;
+        return donor;
     }
 
     /// <summary>The field names a file has, or none when it cannot be read. Never throws.</summary>

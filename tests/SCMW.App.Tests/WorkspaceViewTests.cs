@@ -551,6 +551,21 @@ public class WorkspaceViewTests
         Assert.Contains(IconSource.Recipe, source.ExtractedIcons);
     }
 
+    [AvaloniaFact]
+    public async Task The_donor_search_looks_past_the_first_forty_items()
+    {
+        var source = new DeepDonorSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
+
+        await vm.OpenKindAsync("Items");
+        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Target"));
+
+        // The only donor sits at item 46, past the old 40-item cap.
+        var add = Assert.Single(vm.AddableFields);
+        Assert.Equal("_autoDestructTime", add.TechnicalName);
+        Assert.Equal(DeepDonorSource.DonorClass, add.DonorPath);
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {
@@ -751,5 +766,46 @@ public class WorkspaceViewTests
             public long TotalBytes => 0;
             public void Clear() { }
         }
+    }
+
+    /// <summary>A fake index whose only timer donor sits at item 46 — past the old 40-item cap.</summary>
+    private sealed class DeepDonorSource : IContentSource
+    {
+        public const string Target = "SCUM/Content/ConZ_Files/Items/A/Target_ES";
+        public const string DonorItem = "SCUM/Content/ConZ_Files/Items/A/DeepDonor_ES";
+        public const string DonorClass = "SCUM/Content/ConZ_Files/Items/A/DeepDonor";
+
+        private static readonly IReadOnlyList<AssetSummary> Rows = Build();
+
+        private static IReadOnlyList<AssetSummary> Build()
+        {
+            var rows = new List<AssetSummary> { Row(Target) };
+            for (var i = 0; i < 44; i++) rows.Add(Row($"SCUM/Content/ConZ_Files/Items/A/Filler{i:D2}_ES"));
+            rows.Add(Row(DonorItem));
+            for (var i = 44; i < 49; i++) rows.Add(Row($"SCUM/Content/ConZ_Files/Items/A/Filler{i:D2}_ES"));
+            return rows;
+        }
+
+        private static AssetSummary Row(string id) =>
+            new(id, id, "Equipment", StatusKind.Editable, 1, id + ".uasset", null);
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons => throw new NotSupportedException();
+        public IReadOnlyList<string> Categories => new[] { "Equipment" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetField>>(id == DonorClass
+                ? new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5") }   // the donor's class file
+                : new[] { Field("Weight", "1000") });
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 }
