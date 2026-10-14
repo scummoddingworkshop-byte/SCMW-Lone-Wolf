@@ -126,8 +126,9 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
-    /// Remove every recorded change for one item (matched by the recorded name), so it reverts to
-    /// the game's own values. Returns null on success, otherwise one plain message.
+    /// Remove every recorded change for one item — matched by the file's path when the row carries
+    /// one, otherwise by the recorded name — so it reverts to the game's own values. Returns null on
+    /// success, otherwise one plain message.
     /// </summary>
     public string? RemoveItem(string projectFolder, string assetName)
     {
@@ -135,7 +136,8 @@ public sealed class ItemChangeStore
             return "That project folder is unavailable.";
 
         var ids = _store.Load(projectFolder)
-            .Where(r => string.Equals(r.AssetId, assetName, StringComparison.OrdinalIgnoreCase))
+            .Where(r => string.Equals(r.AssetId, assetName, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(r.AssetPath, assetName, StringComparison.OrdinalIgnoreCase))
             .Select(r => r.Id)
             .ToList();
 

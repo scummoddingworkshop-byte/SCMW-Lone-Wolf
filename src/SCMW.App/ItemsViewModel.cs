@@ -541,12 +541,14 @@ public partial class ItemsViewModel : ObservableObject
     {
         // List changes (add/remove an ingredient slot) first, then the value edits on top — the
         // same order the build applies them, so what is shown matches what is built.
-        item.ReplaceValues(ApplyListOps(item.GameValues, records, item.Name));
+        item.ReplaceValues(ApplyListOps(item.GameValues, records, item.AssetId, item.Name));
 
         foreach (var value in item.Values)
         {
-            var applied = AppliedValue.Resolve(records, item.Name, value.TechnicalName, value.GameValue);
-            value.OriginalValue = FirstOldValue(records, item.Name, value.TechnicalName) ?? value.GameValue;
+            var applied = AppliedValue.ResolveForAsset(records, item.AssetId, item.Name,
+                                                       value.TechnicalName, value.GameValue);
+            value.OriginalValue = AppliedValue.OriginalForAsset(records, item.AssetId, item.Name,
+                                                               value.TechnicalName) ?? value.GameValue;
             value.Value = applied ?? value.GameValue;
         }
     }
@@ -556,11 +558,11 @@ public partial class ItemsViewModel : ObservableObject
 
     /// <summary>Applies the recorded add/remove list changes to the game's values, in order.</summary>
     private static IReadOnlyList<ItemValue> ApplyListOps(
-        IReadOnlyList<ItemValue> gameValues, IReadOnlyList<ChangeRecord> records, string assetName)
+        IReadOnlyList<ItemValue> gameValues, IReadOnlyList<ChangeRecord> records,
+        string? assetPath, string assetName)
     {
         var ops = records
-            .Where(r => r.Operation != ChangeOperation.Set
-                        && string.Equals(r.AssetId, assetName, StringComparison.OrdinalIgnoreCase))
+            .Where(r => r.Operation != ChangeOperation.Set && MatchesAsset(r, assetPath, assetName))
             .ToList();
         if (ops.Count == 0) return gameValues;
 
@@ -665,20 +667,11 @@ public partial class ItemsViewModel : ObservableObject
             : "";
     }
 
-    private static string? FirstOldValue(
-        IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records, string assetId, string field)
-    {
-        foreach (var record in records)
-        {
-            if (string.Equals(record.AssetId, assetId, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
-            {
-                return record.OldValue;
-            }
-        }
-
-        return null;
-    }
+    /// <summary>Whether a record belongs to the asset: by the file's path when it has one, else by name.</summary>
+    private static bool MatchesAsset(ChangeRecord record, string? assetPath, string assetName)
+        => string.IsNullOrEmpty(assetPath)
+            ? string.Equals(record.AssetId, assetName, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase);
 
     [RelayCommand]
     private void BeginEdit(ItemValue? value)

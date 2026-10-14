@@ -347,6 +347,28 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // Review Focus 4: two files with one name show their own change, by path
+    public void Two_files_that_share_a_display_name_show_their_own_value()
+    {
+        var (projects, root) = TestProjects.With("Dup mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            changes.RecordEdit("Duct Tape", "Weight", "10", "20", projects.Current!.Id,
+                               assetPath: "/a/Duct_Tape");
+
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), changes: changes, projects: projects);
+            var fields = new[] { Field("Weight", "10") };
+
+            vm.Show("Items", "Duct Tape", fields, "/a/Duct_Tape");
+            Assert.Equal("20", vm.Fields.Single().Value);   // the edit landed on file A
+
+            vm.Show("Items", "Duct Tape", fields, "/b/Duct_Tape");
+            Assert.Equal("10", vm.Fields.Single().Value);   // file B, same name, is untouched
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {

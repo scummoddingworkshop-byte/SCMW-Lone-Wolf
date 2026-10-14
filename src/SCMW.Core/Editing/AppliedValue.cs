@@ -71,4 +71,45 @@ public static class AppliedValue
 
         return gameValue;
     }
+
+    /// <summary>
+    /// The value a field should show for an asset addressed first by its PATH and, only when it has
+    /// no path, by its name. This is the one home for "which change belongs to this file": a file
+    /// with a path is matched by path alone (so two files that share a name never see each other's
+    /// changes), and a sample item with no file falls back to its name.
+    /// </summary>
+    public static string? ResolveForAsset(
+        IReadOnlyList<ChangeRecord> records, string? assetPath, string assetName, string field, string? gameValue)
+        => string.IsNullOrEmpty(assetPath)
+            ? Resolve(records, assetName, field, gameValue)
+            : ResolveForPath(records, assetPath, field, gameValue);
+
+    /// <summary>
+    /// The value an asset's field had before the project's first change to it, matched the same way
+    /// as <see cref="ResolveForAsset"/> (path first, name only when there is no path).
+    /// </summary>
+    public static string? OriginalForAsset(
+        IReadOnlyList<ChangeRecord> records, string? assetPath, string assetName, string field)
+    {
+        var byPath = !string.IsNullOrEmpty(assetPath);
+
+        foreach (var record in records)
+        {
+            // Only a value change carries a baseline; a list change does not.
+            if (record.Operation != ChangeOperation.Set && record.Operation != ChangeOperation.Multiply)
+                continue;
+
+            var assetMatches = byPath
+                ? string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(record.AssetId, assetName, StringComparison.OrdinalIgnoreCase);
+
+            if (assetMatches
+                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
+            {
+                return record.OldValue;
+            }
+        }
+
+        return null;
+    }
 }

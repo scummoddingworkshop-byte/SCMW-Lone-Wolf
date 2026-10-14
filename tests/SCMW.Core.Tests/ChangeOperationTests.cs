@@ -139,4 +139,56 @@ public class ChangeOperationTests
         => Assert.Equal("1e308",
             AppliedValue.ResolveForPath(new[] { Times("/a/Batteries_ES", "Weight", "2") },
                 "/a/Batteries_ES", "Weight", "1e308"));
+
+    // --- The shared lookup: path first, name only when the asset has no path (Task 3.3) --------------
+
+    [Fact] // a file with a path is matched by PATH, so a same-named file is left alone
+    public void A_file_with_a_path_is_matched_by_path_even_when_a_name_is_given()
+    {
+        var records = new[] { Set("/a/Duct_Tape", "Weight", "20") };
+
+        Assert.Equal("20", AppliedValue.ResolveForAsset(records, "/a/Duct_Tape", "Duct Tape", "Weight", "1"));
+        Assert.Equal("1", AppliedValue.ResolveForAsset(records, "/b/Duct_Tape", "Duct Tape", "Weight", "1"));
+    }
+
+    [Fact] // a sample item with no file falls back to its name
+    public void A_file_with_no_path_falls_back_to_its_name()
+    {
+        var legacy = new ChangeRecord(Guid.NewGuid(), "p1", "Duct Tape", "Weight", null, "20",
+            new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc), StatusKind.Editable);
+
+        Assert.Equal("20", AppliedValue.ResolveForAsset(new[] { legacy }, null, "Duct Tape", "Weight", "1"));
+    }
+
+    [Fact] // a multiply is scaled through the same shared lookup
+    public void ResolveForAsset_scales_a_multiply_by_path()
+        => Assert.Equal("20",
+            AppliedValue.ResolveForAsset(new[] { Times("/a/Duct_Tape", "Weight", "2") },
+                "/a/Duct_Tape", "Duct Tape", "Weight", "10"));
+
+    private static ChangeRecord SetWithOld(string path, string field, string oldValue, string newValue) =>
+        new(Guid.NewGuid(), "p1", path, field, oldValue, newValue,
+            new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc), StatusKind.Editable, AssetPath: path);
+
+    [Fact] // the "was …" baseline follows the file's path, so same-named files keep their own
+    public void The_baseline_is_read_by_path()
+    {
+        var records = new[]
+        {
+            SetWithOld("/a/Duct_Tape", "Weight", "5", "20"),
+            SetWithOld("/b/Duct_Tape", "Weight", "7", "30"),
+        };
+
+        Assert.Equal("5", AppliedValue.OriginalForAsset(records, "/a/Duct_Tape", "Duct Tape", "Weight"));
+        Assert.Equal("7", AppliedValue.OriginalForAsset(records, "/b/Duct_Tape", "Duct Tape", "Weight"));
+    }
+
+    [Fact] // with no path, the baseline falls back to the name
+    public void The_baseline_falls_back_to_the_name_when_there_is_no_path()
+    {
+        var legacy = new ChangeRecord(Guid.NewGuid(), "p1", "Duct Tape", "Weight", "5", "20",
+            new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc), StatusKind.Editable);
+
+        Assert.Equal("5", AppliedValue.OriginalForAsset(new[] { legacy }, null, "Duct Tape", "Weight"));
+    }
 }

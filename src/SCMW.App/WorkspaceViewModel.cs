@@ -213,14 +213,18 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         // Show the project's recorded values for this file, addressed by its own PATH (Task 3.1).
+        // The shared lookup is path-first, so two files that share a name never see each other's
+        // changes; the Workspace always browses real files, so the guard keeps it path-only.
         if (!string.IsNullOrEmpty(assetPath) && Fields.Count > 0)
         {
             var records = Records();
             foreach (var field in Fields)
             {
-                var applied = AppliedValue.ResolveForPath(records, assetPath, field.TechnicalName, field.GameValue);
+                var applied = AppliedValue.ResolveForAsset(records, assetPath, title,
+                                                           field.TechnicalName, field.GameValue);
                 field.Load(applied ?? field.GameValue,
-                           FirstOldValue(records, assetPath, field.TechnicalName) ?? field.GameValue);
+                           AppliedValue.OriginalForAsset(records, assetPath, title, field.TechnicalName)
+                               ?? field.GameValue);
             }
         }
 
@@ -287,22 +291,6 @@ public partial class WorkspaceViewModel : ObservableObject
         var folder = _projects?.Current?.FolderPath;
         if (folder is null || _changes is null) return Array.Empty<ChangeRecord>();
         return _changes.For(folder);
-    }
-
-    /// <summary>The value a field had before the project's first change to it, or null.</summary>
-    private static string? FirstOldValue(IReadOnlyList<ChangeRecord> records, string assetPath, string field)
-    {
-        foreach (var record in records)
-        {
-            if (record.Operation != ChangeOperation.Set && record.Operation != ChangeOperation.Multiply) continue;
-            if (string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(record.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
-            {
-                return record.OldValue;
-            }
-        }
-
-        return null;
     }
 
     /// <summary>Open the inline editor on one field; only one editor at a time.</summary>

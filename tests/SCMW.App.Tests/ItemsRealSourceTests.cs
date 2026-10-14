@@ -200,6 +200,47 @@ public class ItemsRealSourceTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // Review Focus 4: two files with one display name keep their own edits (by path)
+    public async Task Two_items_that_share_a_display_name_keep_their_own_edited_values()
+    {
+        const string pathA = "SCUM/Content/A/Duct_Tape_ES";
+        const string pathB = "SCUM/Content/B/Duct_Tape_ES";
+
+        var source = new FakeSource(
+            new[]
+            {
+                new AssetSummary(pathA, "Duct Tape ES", "Equipment", StatusKind.Editable, 1, pathA + ".uasset", null),
+                new AssetSummary(pathB, "Duct Tape ES", "Equipment", StatusKind.Editable, 1, pathB + ".uasset", null),
+            },
+            new Dictionary<string, IReadOnlyList<AssetField>>
+            {
+                [pathA] = new[] { new AssetField("_weight", "_weight", StatusKind.Editable, "10") },
+                [pathB] = new[] { new AssetField("_weight", "_weight", StatusKind.Editable, "10") },
+            },
+            new ContentSourceStatus(ContentSourceState.Ready, "mounted", "1"));
+
+        var (projects, root) = TestProjects.With("Dup mod");
+        try
+        {
+            var store = TestProjects.ChangeStore(projects);
+
+            // Edit only the FIRST file; the two share the display name "Duct Tape ES".
+            store.RecordEdit("Duct Tape ES", "_weight", "10", "20", projects.Current!.Id, assetPath: pathA);
+
+            var vm = new ItemsViewModel(store, projects, source: source, catalog: new ContentCatalog(source));
+            await vm.LoadFromSourceAsync();
+
+            var a = vm.VisibleItems.Single(i => i.AssetId == pathA);
+            var b = vm.VisibleItems.Single(i => i.AssetId == pathB);
+            await vm.LoadFieldsAsync(a);
+            await vm.LoadFieldsAsync(b);
+
+            Assert.Equal("20", a.Values.Single(v => v.TechnicalName == "_weight").Value);   // A got the edit
+            Assert.Equal("10", b.Values.Single(v => v.TechnicalName == "_weight").Value);   // B is untouched
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public async Task A_nested_value_is_shown_and_recorded_by_its_dotted_path()
     {
