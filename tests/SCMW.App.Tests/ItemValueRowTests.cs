@@ -95,6 +95,30 @@ public class ItemValueRowTests
         Assert.Null(row.FindControl<TextBlock>("LockedText"));   // the repeated sentence is gone
     }
 
+    [AvaloniaFact] // the pencil sits beside the label, matching the padlock (owner, 2026-10-14)
+    public void Row_shows_the_pencil_beside_the_label_for_an_editable_value()
+    {
+        var row = NewRow(new ItemValue("Max stack", "Inventory", "10"));
+        row.Measure(new Size(400, 60));
+
+        var label = row.FindControl<StackPanel>("LabelCell")!;
+        var pencils = row.GetLogicalDescendants().OfType<TextBlock>()
+            .Where(t => t.Text == "✎").ToList();
+
+        Assert.Single(pencils);   // one pencil, by the label — not a second one by the value
+        Assert.Contains(pencils[0], label.GetLogicalDescendants());
+    }
+
+    [AvaloniaFact]
+    public void Row_hides_the_pencil_for_a_locked_value()
+    {
+        var row = NewRow(new ItemValue("Tags", "Item settings", "(tags)",
+            editable: false, band: ValueBand.Locked));
+        row.Measure(new Size(400, 60));
+
+        Assert.False(row.FindControl<TextBlock>("EditIcon")!.IsVisible);
+    }
+
     private static (ItemValueRow row, ItemValue value) Wired()
     {
         var vm = new ItemsViewModel();

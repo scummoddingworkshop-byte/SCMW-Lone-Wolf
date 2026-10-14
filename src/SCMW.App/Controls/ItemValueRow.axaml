@@ -8,15 +8,19 @@
        read as different things. The value column is capped (MaxWidth) so a long paragraph wraps
        narrow, and a left margin keeps a clear gap between the label and its value. -->
   <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
-    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+    <StackPanel Grid.Row="0" Grid.Column="0" Name="LabelCell" Orientation="Horizontal" Spacing="6"
+                VerticalAlignment="Top">
       <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                  Foreground="{StaticResource TextDimBrush}"/>
-      <!-- A locked value shows a little padlock instead of a repeated sentence; hover it for why. -->
+      <!-- A locked value shows a little padlock beside its label; an editable one shows a pencil in
+           the same spot — so "can I change this?" reads the same way for every field. -->
       <Path Name="LockIcon" IsVisible="{Binding IsLocked}" Width="10" Height="12"
             Stretch="Uniform" VerticalAlignment="Center"
             Data="M3,6.5 L3,4.5 A2,2 0 0 1 7,4.5 L7,6.5 M1.5,6.5 L8.5,6.5 L8.5,11.5 L1.5,11.5 Z"
             Stroke="{StaticResource TextDimBrush}" StrokeThickness="1.1" Fill="Transparent"
             ToolTip.Tip="{Binding LockedTooltip}"/>
+      <TextBlock Name="EditIcon" Text="✎" Classes="dim" VerticalAlignment="Center"
+                 IsVisible="{Binding ShowValueButton}"/>
     </StackPanel>
 
     <Button Grid.Row="0" Grid.Column="1" Name="ValueButton" Classes="valuefield"
@@ -46,7 +50,6 @@
 
     <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6"
                 VerticalAlignment="Top" Margin="6,2,0,0">
-      <TextBlock Text="✎" Classes="dim" IsVisible="{Binding ShowValueButton}"/>
       <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
               IsVisible="{Binding IsChanged}">
         <TextBlock Text="changed" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
