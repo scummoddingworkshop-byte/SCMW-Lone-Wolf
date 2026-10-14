@@ -39,6 +39,23 @@ public class ItemsChangeTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // "one project = one mod": even the old screen never quietly saves to a fall-back project
+    public void Editing_with_no_chosen_project_is_refused()
+    {
+        var (store, projects, root) = Workspace("My first mod");
+        try
+        {
+            projects.SetCurrent("");   // projects exist, but none is chosen
+            var vm = new ItemsViewModel(store, projects);
+
+            Edit(vm, "Duct Tape", "Max stack", "25");
+
+            Assert.Empty(store.For(projects.Current!.FolderPath));   // nothing recorded
+            Assert.False(string.IsNullOrWhiteSpace(vm.RefusalMessage));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void A_fresh_screen_shows_the_edited_value_and_marks_it_changed()
     {

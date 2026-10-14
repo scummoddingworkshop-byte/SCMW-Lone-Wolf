@@ -510,7 +510,7 @@ public partial class ItemsViewModel : ObservableObject
     /// </summary>
     private void ApplyChanges()
     {
-        var folder = _projects?.Current?.FolderPath;
+        var folder = _projects?.Chosen?.FolderPath;
         IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records =
             folder is not null && _changes is not null
                 ? _changes.For(folder)
@@ -528,7 +528,7 @@ public partial class ItemsViewModel : ObservableObject
     /// <summary>Applies the current project's records to one item's values (used on load and selection).</summary>
     private void ApplyChangesTo(ItemSummary item)
     {
-        var folder = _projects?.Current?.FolderPath;
+        var folder = _projects?.Chosen?.FolderPath;
         IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records =
             folder is not null && _changes is not null
                 ? _changes.For(folder)
@@ -642,7 +642,7 @@ public partial class ItemsViewModel : ObservableObject
     [RelayCommand]
     private void AddIngredient()
     {
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (_changes is null || SelectedItem is not { } item) return;
         if (current is null) { RefusalMessage = "Open or create a project first, then change its values."; return; }
 
@@ -654,7 +654,7 @@ public partial class ItemsViewModel : ObservableObject
     [RelayCommand]
     private void RemoveIngredient(string? slotPath)
     {
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (_changes is null || SelectedItem is not { } item || string.IsNullOrEmpty(slotPath)) return;
         if (current is null) { RefusalMessage = "Open or create a project first, then change its values."; return; }
 
@@ -713,7 +713,7 @@ public partial class ItemsViewModel : ObservableObject
             return;
         }
 
-        var current = _projects?.Current;
+        var current = _projects?.Chosen;
         if (current is null)
         {
             RefusalMessage = "Open or create a project first, then change its values.";
