@@ -488,6 +488,7 @@ public class WorkspaceViewTests
             Assert.Empty(changes.For(projects.Current!.FolderPath));
             Assert.False(add.IsAdded);            // back to the "add" controls
             Assert.Null(add.RecordId);
+            Assert.Equal("", add.Draft);          // the old value is cleared, so the row looks fresh
         }
         finally { TestProjects.Cleanup(root); }
     }

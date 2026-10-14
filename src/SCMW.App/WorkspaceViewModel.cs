@@ -889,10 +889,11 @@ public partial class AddableField : ObservableObject
         IsAdded = true;
     }
 
-    /// <summary>Mark the field as no longer added (after a Remove).</summary>
+    /// <summary>Mark the field as no longer added (after a Remove): back to a clean "add" row.</summary>
     public void MarkRemoved()
     {
         RecordId = null;
+        Draft = "";        // do not leave the old value looking like the field is still set
         IsAdded = false;
     }
 
