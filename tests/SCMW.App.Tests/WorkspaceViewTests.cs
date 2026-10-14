@@ -528,6 +528,23 @@ public class WorkspaceViewTests
         Assert.Contains(IconSource.Batteries, source.ExtractedIcons);
     }
 
+    [AvaloniaFact]
+    public async Task Base_parts_and_recipes_also_carry_their_icon()
+    {
+        var source = new IconSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                        new ContentCatalog(source, source.Icons));
+
+        await vm.OpenKindAsync("Base building");
+        Assert.Equal(IconSource.IconPath, Assert.Single(vm.VisibleAssets).IconPath);
+
+        await vm.OpenKindAsync("Recipes");
+        Assert.Equal(IconSource.IconPath, Assert.Single(vm.VisibleAssets).IconPath);
+
+        Assert.Contains(IconSource.BaseWell, source.ExtractedIcons);
+        Assert.Contains(IconSource.Recipe, source.ExtractedIcons);
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {
@@ -683,6 +700,8 @@ public class WorkspaceViewTests
     private sealed class IconSource : IContentSource
     {
         public const string Batteries = "SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES";
+        public const string BaseWell = "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/BP_Base_Well";
+        public const string Recipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_Wooden_Arrow";
         public const string IconPath = @"C:\icons\batteries.png";
 
         public readonly List<string> ExtractedIcons = new();
@@ -691,6 +710,10 @@ public class WorkspaceViewTests
         {
             new AssetSummary(Batteries, "Batteries ES", "Equipment", StatusKind.Editable, 1,
                 Batteries + ".uasset", null),
+            new AssetSummary(BaseWell, "Well (base)", "Base elements", StatusKind.Editable, 1,
+                BaseWell + ".uasset", null),
+            new AssetSummary(Recipe, "Wooden Arrow", "Items", StatusKind.Editable, 1,
+                Recipe + ".uasset", null),
         };
 
         public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");

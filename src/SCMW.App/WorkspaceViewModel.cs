@@ -127,7 +127,7 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         // Point each row at its icon (extracted into the reader's cache) before the list is shown.
-        await AttachIconsAsync(family, assets).ConfigureAwait(false);
+        await AttachIconsAsync(assets).ConfigureAwait(false);
 
         RunOnUi(() =>
         {
@@ -140,12 +140,12 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>
     /// Extract each item's icon into the reader's cache and point its row at it, so the browse list
-    /// is easy to scan. Items only for now — base parts and recipes keep their letter tiles. A missing
-    /// icon (or an extraction failure) just leaves the row's tile; it never stops the list showing.
+    /// is easy to scan. Works for every kind — an asset with no icon of its own (many base parts and
+    /// recipes) simply keeps its letter tile, and an extraction failure never stops the list showing.
     /// </summary>
-    private async System.Threading.Tasks.Task AttachIconsAsync(AssetFamily family, IReadOnlyList<ItemSummary> assets)
+    private async System.Threading.Tasks.Task AttachIconsAsync(IReadOnlyList<ItemSummary> assets)
     {
-        if (family != AssetFamily.Items || _source is null || _catalog is null) return;
+        if (_source is null || _catalog is null) return;
 
         var ids = assets.Where(a => !string.IsNullOrEmpty(a.AssetId)).Select(a => a.AssetId!).ToList();
         if (ids.Count == 0) return;
