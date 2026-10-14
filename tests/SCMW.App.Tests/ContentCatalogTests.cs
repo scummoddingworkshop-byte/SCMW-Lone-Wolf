@@ -16,12 +16,12 @@ public class ContentCatalogTests
         var catalog = new ContentCatalog(new NullSource());
         var items = catalog.MapItems(new[]
         {
-            new AssetSummary("SCUM/.../Items/Weapons/Ranged_Weapons/Improvised_Bow", "Improvised Bow",
-                "Weapons", StatusKind.Unknown, 0, "SCUM/.../Improvised_Bow.uasset", null),
+            new AssetSummary("SCUM/.../Items/Weapons/Ranged_Weapons/Improvised_Bow_ES", "Improvised Bow ES",
+                "Weapons", StatusKind.Unknown, 0, "SCUM/.../Improvised_Bow_ES.uasset", null),
         });
 
         var item = Assert.Single(items);
-        Assert.Equal("Improvised Bow", item.Name);
+        Assert.Equal("Improvised Bow", item.Name);   // the trailing "ES" is dropped
         Assert.Equal("Weapons", item.Category);
     }
 

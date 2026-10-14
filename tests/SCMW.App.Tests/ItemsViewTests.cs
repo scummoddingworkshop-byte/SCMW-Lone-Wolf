@@ -24,7 +24,6 @@ public class ItemsViewTests
 
         Assert.NotNull(view.FindControl<TextBox>("SearchBox"));
         Assert.NotNull(view.FindControl<ListBox>("CategoryChips"));
-        Assert.NotNull(view.FindControl<CheckBox>("OnlyEditableBox"));
         Assert.NotNull(view.FindControl<ListBox>("ItemList"));
         Assert.Contains("Duct Tape", texts);
         Assert.True(view.FindControl<Border>("Hint")!.IsVisible);       // nothing selected yet

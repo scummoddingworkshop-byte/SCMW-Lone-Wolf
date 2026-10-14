@@ -50,10 +50,6 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <CheckBox Grid.Row="3" Name="OnlyEditableBox" Margin="0,12,0,0"
-                Content="Show only what this mod can change"
-                IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
-
       <ScrollViewer Grid.Row="4" Margin="0,8,0,0">
         <ItemsControl Name="AssetChecks" ItemsSource="{Binding Rows}">
           <ItemsControl.ItemTemplate>

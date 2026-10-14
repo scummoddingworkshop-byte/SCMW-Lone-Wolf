@@ -5,10 +5,9 @@ using System.Linq;
 namespace SCMW.App;
 
 /// <summary>
-/// The one place the browse bar's three filters live — shared by the Items screen and the
+/// The one place the browse bar's two filters live — shared by the Items screen and the
 /// Workspace so the two can never drift. Search matches a row's name; the category matches the
-/// game's own tag word (its <c>GridInventorySortGroup.TagName</c>, carried on the row);
-/// "only editable" hides rows the writer cannot change.
+/// game's own tag word (its <c>GridInventorySortGroup.TagName</c>, carried on the row).
 /// </summary>
 public static class AssetFilter
 {
@@ -19,16 +18,15 @@ public static class AssetFilter
                 .Distinct().OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
             .ToList();
 
-    /// <summary>The rows that pass all three filters (name, category, only-editable).</summary>
+    /// <summary>The rows that pass both filters (name, category).</summary>
     public static IEnumerable<ItemSummary> Apply(IEnumerable<ItemSummary> assets, string? search,
-                                                 string? category, bool onlyEditable)
+                                                 string? category)
     {
         var query = (search ?? string.Empty).Trim();
         var cat = string.IsNullOrEmpty(category) ? "All" : category;
 
         return assets.Where(a =>
             (cat == "All" || a.Category == cat) &&
-            (!onlyEditable || a.Editable) &&
             (query.Length == 0 || a.Name.Contains(query, StringComparison.OrdinalIgnoreCase)));
     }
 }

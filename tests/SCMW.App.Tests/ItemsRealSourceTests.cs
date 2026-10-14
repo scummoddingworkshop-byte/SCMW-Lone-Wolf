@@ -384,7 +384,6 @@ public class ItemsRealSourceTests
         const int total = 1200;
         var source = new PagedSource(total);
         var vm = new ItemsViewModel(source: source, catalog: new ContentCatalog(source));
-        vm.OnlyEditable = false;   // no _ES filter, so the visible count is the whole set
 
         await vm.LoadFromSourceAsync();
 

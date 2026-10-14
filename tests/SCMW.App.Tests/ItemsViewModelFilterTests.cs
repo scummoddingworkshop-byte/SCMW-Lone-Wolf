@@ -14,7 +14,6 @@ public class ItemsViewModelFilterTests
         Assert.True(vm.HasItems);
         Assert.NotEmpty(vm.VisibleItems);
         Assert.Equal("All", vm.SelectedCategory);
-        Assert.True(vm.OnlyEditable);
         Assert.Contains("All", vm.Categories);
         Assert.Contains("Weapons", vm.Categories);
     }
@@ -51,19 +50,6 @@ public class ItemsViewModelFilterTests
     }
 
     [AvaloniaFact]
-    public void Only_editable_hides_the_read_only_items()
-    {
-        var vm = NewVm();
-
-        vm.OnlyEditable = false;
-        var all = vm.VisibleItems.Count;
-
-        vm.OnlyEditable = true;
-        Assert.True(vm.VisibleItems.Count <= all);
-        Assert.All(vm.VisibleItems, i => Assert.True(i.Editable));
-    }
-
-    [AvaloniaFact]
     public void An_empty_catalogue_shows_the_empty_state()
     {
         var vm = new ItemsViewModel(items: Array.Empty<ItemSummary>());
@@ -79,7 +65,6 @@ public class ItemsViewModelFilterTests
         var vm = NewVm();
 
         vm.SelectCategoryCommand.Execute("Weapons");
-        vm.OnlyEditable = true;
         vm.Search = "beans";           // matches Canned Beans (Food), not any Weapon
 
         Assert.Empty(vm.VisibleItems);

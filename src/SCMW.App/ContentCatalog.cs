@@ -84,17 +84,28 @@ public sealed class ContentCatalog
         return slash >= 0 ? assetId[(slash + 1)..] : assetId;
     }
 
-    /// <summary>One screen row per real item, with non-items, base elements and loot/spawn left out.</summary>
+    /// <summary>One screen row per real item: only the item file (its name ends in <c>_ES</c>), shown
+    /// without the trailing "ES". The item's class file (the same name without <c>_ES</c>) is not an
+    /// editable item and is not listed; it still serves as the shape donor when a field is added.</summary>
     public IReadOnlyList<ItemSummary> MapItems(IReadOnlyList<AssetSummary> assets) =>
         assets
-            .Where(a => !IsNonItem(a.Id) && !IsBaseElement(a.Id) && !IsSpawnerPreset(a.Id))
+            .Where(a => IsEditableItem(a.Id) && !IsNonItem(a.Id) && !IsBaseElement(a.Id) && !IsSpawnerPreset(a.Id))
             .Select(a => new ItemSummary(
-                name: a.Name,
+                name: FriendlyItemName(a.Id),
                 category: string.IsNullOrWhiteSpace(a.Category) ? "Uncategorized" : a.Category,
                 description: a.TechnicalPath,
-                editable: IsEditableItem(a.Id),
+                editable: true,
                 assetId: a.Id))
             .ToList();
+
+    /// <summary>An item file's shown name: the file name without its <c>_ES</c>, underscores as spaces
+    /// (Tomato_Seed_Bag_ES -> "Tomato Seed Bag").</summary>
+    internal static string FriendlyItemName(string assetId)
+    {
+        var name = AssetName(assetId);
+        if (name.EndsWith("_ES", StringComparison.OrdinalIgnoreCase)) name = name[..^3];
+        return name.Replace('_', ' ').Trim();
+    }
 
     /// <summary>
     /// One screen row per base-building element (the well and its relatives). Their values live on the

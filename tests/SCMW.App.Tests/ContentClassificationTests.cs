@@ -30,7 +30,7 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
-    public void A_plain_item_is_not_flagged_editable()
+    public void A_plain_item_is_not_listed()
     {
         var catalog = new ContentCatalog(NoSource);
 
@@ -39,7 +39,7 @@ public class ContentClassificationTests
             Asset("SCUM/Content/ConZ_Files/Items/Equipment/Batteries"),
         });
 
-        Assert.False(Assert.Single(items).Editable);
+        Assert.Empty(items);   // the class file is not an editable item
     }
 
     [AvaloniaFact]
@@ -124,20 +124,15 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
-    public async Task Only_es_items_hides_plain_items_and_nothing_else_helps()
+    public async Task Only_es_items_are_listed()
     {
         var source = new TwoItemSource();
         var vm = new ItemsViewModel(source: source, catalog: new ContentCatalog(source));
         await vm.LoadFromSourceAsync();
 
-        // Default: only _ES (editable) items.
-        Assert.True(vm.OnlyEditable);
+        // Only the item file (_ES) is listed; the class file is never shown.
         Assert.Contains(vm.VisibleItems, i => i.AssetId!.EndsWith("Batteries_ES"));
         Assert.DoesNotContain(vm.VisibleItems, i => i.AssetId!.EndsWith("/Batteries"));
-
-        // Unticking shows the plain ones too.
-        vm.OnlyEditable = false;
-        Assert.Contains(vm.VisibleItems, i => i.AssetId!.EndsWith("/Batteries"));
     }
 
     /// <summary>One _ES item and one plain item; no game, no disk.</summary>

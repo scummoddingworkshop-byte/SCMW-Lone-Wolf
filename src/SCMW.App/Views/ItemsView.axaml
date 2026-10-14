@@ -34,11 +34,6 @@
                 Command="{Binding ToggleCategoriesCommand}"/>
       </Grid>
 
-      <CheckBox Grid.Row="2" Name="OnlyEditableBox" Margin="0,12,0,0"
-                Content="Show only items this mod can change"
-                IsVisible="{Binding ShowOnlyEditableToggle}"
-                IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
-
       <ListBox Grid.Row="3" Name="ItemList" Classes="items" Margin="0,8,0,0"
                ItemsSource="{Binding VisibleItems}"
                SelectedItem="{Binding SelectedItem, Mode=TwoWay}"

@@ -146,18 +146,6 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_only_editable_tick_hides_rows_the_writer_cannot_change()
-    {
-        var vm = Browsing();
-
-        Assert.True(vm.OnlyEditable);
-        Assert.DoesNotContain(vm.VisibleAssets, a => !a.Editable);
-
-        vm.OnlyEditable = false;
-        Assert.Contains(vm.VisibleAssets, a => a.Name == "Tomato (unripe)");
-    }
-
-    [AvaloniaFact]
     public void A_category_chip_narrows_the_browse_list()
     {
         var vm = Browsing();

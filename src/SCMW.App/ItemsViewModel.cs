@@ -42,9 +42,6 @@ public partial class ItemsViewModel : ObservableObject
     /// <summary>Watermark for the search box.</summary>
     public string SearchWatermark => IsBase ? "Search base parts…" : IsRecipes ? "Search recipes…" : "Search items…";
 
-    /// <summary>The "only _ES items" toggle applies to items only.</summary>
-    public bool ShowOnlyEditableToggle => !IsBase && !IsRecipes;
-
     /// <summary>Plain line when nothing matches the current filter.</summary>
     public string NoMatchesText => IsBase ? "No base parts match that" : IsRecipes ? "No recipes match that" : "No items match that";
 
@@ -370,7 +367,6 @@ public partial class ItemsViewModel : ObservableObject
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private string _selectedCategory = "All";
-    [ObservableProperty] private bool _onlyEditable = true;
     [ObservableProperty] private ItemSummary? _selectedItem;
 
     public bool HasItems => _all.Count > 0;
@@ -763,12 +759,10 @@ public partial class ItemsViewModel : ObservableObject
         Refresh();
     }
 
-    partial void OnOnlyEditableChanged(bool value) => Refresh();
-
     private void Refresh()
     {
         VisibleItems.Clear();
-        foreach (var item in AssetFilter.Apply(_all, Search, SelectedCategory, OnlyEditable))
+        foreach (var item in AssetFilter.Apply(_all, Search, SelectedCategory))
         {
             VisibleItems.Add(item);
         }

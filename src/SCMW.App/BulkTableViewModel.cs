@@ -133,9 +133,6 @@ public partial class BulkTableViewModel : ObservableObject
     /// <summary>The game's own category tag in use, or "All".</summary>
     [ObservableProperty] private string _selectedCategory = "All";
 
-    /// <summary>When ticked, only files the writer can change are listed.</summary>
-    [ObservableProperty] private bool _onlyEditable = true;
-
     /// <summary>True when the kind has any files to show.</summary>
     public bool HasRows => Rows.Count > 0;
 
@@ -156,7 +153,7 @@ public partial class BulkTableViewModel : ObservableObject
     private void RefreshRows()
     {
         Rows.Clear();
-        foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory, OnlyEditable))
+        foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory))
         {
             var row = new BulkRow(asset);
             row.PropertyChanged += OnRowChanged;
@@ -173,8 +170,6 @@ public partial class BulkTableViewModel : ObservableObject
     }
 
     partial void OnSearchChanged(string value) => RefreshRows();
-
-    partial void OnOnlyEditableChanged(bool value) => RefreshRows();
 
     partial void OnSelectedCategoryChanged(string value)
     {

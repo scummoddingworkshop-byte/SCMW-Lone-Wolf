@@ -151,9 +151,6 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>The game's own category tag in use, or "All".</summary>
     [ObservableProperty] private string _selectedCategory = "All";
 
-    /// <summary>When ticked, only files the writer can change are listed.</summary>
-    [ObservableProperty] private bool _onlyEditable = true;
-
     /// <summary>The file picked in the browse list, or null.</summary>
     [ObservableProperty] private ItemSummary? _selectedAsset;
 
@@ -187,7 +184,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private void RefreshAssets()
     {
         VisibleAssets.Clear();
-        foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory, OnlyEditable))
+        foreach (var asset in AssetFilter.Apply(_allAssets, Search, SelectedCategory))
         {
             VisibleAssets.Add(asset);
         }
@@ -198,8 +195,6 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     partial void OnSearchChanged(string value) => RefreshAssets();
-
-    partial void OnOnlyEditableChanged(bool value) => RefreshAssets();
 
     partial void OnSelectedCategoryChanged(string value)
     {
