@@ -79,11 +79,16 @@ public sealed class PakIconSource : IItemIconSource
     // own-CDO hit never pays for enumerating the mounted file list.
     private readonly Lazy<HashSet<string>> _mountedPaths;
 
+    // "What a recipe places" -> the icon it shows, built lazily the first time a base element
+    // (which has no icon of its own) asks. Only recipes carry an icon for a base element.
+    private readonly Lazy<Dictionary<string, string>> _recipeIcons;
+
     public PakIconSource(IPakMount mount)
     {
         _mount = mount ?? throw new ArgumentNullException(nameof(mount));
         _mountedPaths = new Lazy<HashSet<string>>(
             () => new HashSet<string>(mount.FilePaths, StringComparer.OrdinalIgnoreCase));
+        _recipeIcons = new Lazy<Dictionary<string, string>>(BuildRecipeIcons);
     }
 
     public IconSourceResult Resolve(string assetId)
@@ -91,31 +96,129 @@ public sealed class PakIconSource : IItemIconSource
         if (string.IsNullOrWhiteSpace(assetId))
             return IconSourceResult.NotLoaded;
 
-        // Could not load the item itself: not an item, or a transient failure.
-        // Retryable — never recorded as "no icon".
-        if (!TryLoadCdo(assetId, out var cdo) || cdo is null)
-            return IconSourceResult.NotLoaded;
-
-        if (TryReadIconReference(cdo, out var ownPath))
-            return IconSourceResult.Resolved(ownPath!);
-
-        // Task 1: most icon-less items carry the property only on their _ES sibling.
-        // A sibling that exists but cannot be read is a transient failure, not proof
-        // of "no icon", so it must stay retryable (see ResolveSiblingOutcome).
-        var siblingExists = SiblingExists(assetId);
-        var siblingLoaded = false;
-        var siblingHasIcon = false;
-        string? siblingPath = null;
-
-        if (siblingExists &&
-            TryLoadCdo(assetId + EsSuffix, out var sibling) && sibling is not null)
+        // Most items are blueprints: read the class default object.
+        if (TryLoadCdo(assetId, out var cdo) && cdo is not null)
         {
-            siblingLoaded = true;
-            siblingHasIcon = TryReadIconReference(sibling, out siblingPath);
+            if (TryReadIconReference(cdo, out var ownPath))
+                return IconSourceResult.Resolved(ownPath!);
+
+            // Task 1: most icon-less items carry the property only on their _ES sibling.
+            // A sibling that exists but cannot be read is a transient failure, not proof
+            // of "no icon", so it must stay retryable (see ResolveSiblingOutcome).
+            var siblingExists = SiblingExists(assetId);
+            var siblingLoaded = false;
+            var siblingHasIcon = false;
+            string? siblingPath = null;
+
+            if (siblingExists &&
+                TryLoadCdo(assetId + EsSuffix, out var sibling) && sibling is not null)
+            {
+                siblingLoaded = true;
+                siblingHasIcon = TryReadIconReference(sibling, out siblingPath);
+            }
+
+            var outcome = ResolveSiblingOutcome(siblingExists, siblingLoaded, siblingHasIcon, siblingPath);
+            if (outcome.Outcome == IconSourceOutcome.Resolved)
+                return outcome;
+
+            // A base element has no icon of its own: the recipe that places it (its "Product")
+            // carries the icon the build menu shows, so borrow that.
+            if (TryRecipeIcon(assetId, out var recipeIcon))
+                return IconSourceResult.Resolved(recipeIcon!);
+
+            return outcome;
         }
 
-        return ResolveSiblingOutcome(siblingExists, siblingLoaded, siblingHasIcon, siblingPath);
+        // Not a blueprint (a data asset, e.g. a recipe): read the asset object itself.
+        if (TryLoadAssetObject(assetId, out var asset) && asset is not null)
+        {
+            return TryReadIconReference(asset, out var assetIcon)
+                ? IconSourceResult.Resolved(assetIcon!)
+                : IconSourceResult.NoIcon;
+        }
+
+        // Could not load it at all: not an item, or a transient failure. Retryable — never
+        // recorded as "no icon".
+        return IconSourceResult.NotLoaded;
     }
+
+    /// <summary>
+    /// Loads the asset object itself (<c>Package.ObjectName</c>) — how a data asset such as a recipe
+    /// is addressed; it has no class default object. Mirrors <see cref="TryLoadCdo"/>.
+    /// </summary>
+    private bool TryLoadAssetObject(string assetId, out UObject? obj)
+    {
+        obj = null;
+        var path = StripUasset(assetId);
+        var name = path[(path.LastIndexOf('/') + 1)..];
+        if (name.Length == 0)
+            return false;
+
+        if (!_mount.TryLoadPackageObject($"{path}.{name}", out var loaded) || loaded is null)
+            return false;
+
+        obj = loaded;
+        return true;
+    }
+
+    /// <summary>The icon a recipe shows for the asset it places, or false when none places it.</summary>
+    private bool TryRecipeIcon(string assetId, out string? icon)
+        => _recipeIcons.Value.TryGetValue(StripUasset(assetId), out icon);
+
+    /// <summary>
+    /// Builds the "what a recipe places" map once: each recipe's <c>Product</c> package path (the base
+    /// element it builds) to the icon the build menu shows for it. Only recipes carry an icon for a
+    /// base element, so a base element borrows its placing recipe's icon.
+    /// </summary>
+    private Dictionary<string, string> BuildRecipeIcons()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in _mount.FilePaths)
+        {
+            if (!path.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!path.Contains("/Recipes/", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var file = path[(path.LastIndexOf('/') + 1)..];
+            if (!file.StartsWith("CR_", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var id = path[..^7];
+            if (!TryLoadAssetObject(id, out var recipe) || recipe is null) continue;
+
+            string? product = null, icon = null;
+            foreach (var prop in recipe.Properties)
+            {
+                var name = string.IsNullOrEmpty(prop.Name.Text) ? prop.Name.ToString() : prop.Name.Text;
+                if (name == "Product") product = prop.Tag?.GenericValue?.ToString();
+                else if (name == "Icon") icon = prop.Tag?.GenericValue?.ToString();
+            }
+
+            var key = NormalizeProductPath(product);
+            if (key is not null && !string.IsNullOrWhiteSpace(icon) && !map.ContainsKey(key))
+                map[key] = icon;
+        }
+        return map;
+    }
+
+    /// <summary>
+    /// A recipe's <c>Product</c> value ("/Game/.../BP_Base_X.BP_Base_X_C") as the base element's
+    /// package path ("SCUM/Content/.../BP_Base_X"). Null when there is no path.
+    /// </summary>
+    internal static string? NormalizeProductPath(string? productValue)
+    {
+        if (string.IsNullOrWhiteSpace(productValue))
+            return null;
+
+        var path = productValue;
+        var dot = path.IndexOf('.');
+        if (dot >= 0) path = path[..dot];
+
+        return path.StartsWith("/Game/", StringComparison.OrdinalIgnoreCase)
+            ? "SCUM/Content/" + path["/Game/".Length..]
+            : path;
+    }
+
+    private static string StripUasset(string assetId) =>
+        assetId.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase) ? assetId[..^7] : assetId;
 
     /// <summary>
     /// The final outcome once the item's own CDO loaded but carried no icon. A

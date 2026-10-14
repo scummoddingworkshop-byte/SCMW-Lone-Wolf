@@ -364,6 +364,45 @@ public class RealBuildIntegrationTests
         finally { Directory.Delete(work, true); }
     }
 
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public async Task Icons_resolve_for_items_recipes_and_base_elements()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        var work = Path.Combine(Path.GetTempPath(), "scmw-icons-real-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(work);
+        try
+        {
+            var source = new PakContentSource(new PakMount(), new AssetIndex(),
+                Path.Combine(work, "a.db"), new FileIconCache(Path.Combine(work, "icons")));
+            source.Configure(paks, key, null);
+            await source.ScanAsync();
+
+            // An item (icon on its _ES file), a recipe (icon on the asset object) and a base element
+            // (no icon of its own — borrowed from the recipe that places it). Found by file name so
+            // the test does not depend on a folder layout.
+            using var mount = new PakMount();
+            Assert.True(mount.TryMount(paks, key, out var error), error);
+
+            string ByFile(string fileName) =>
+                mount.FilePaths.First(p => p.EndsWith("/" + fileName + ".uasset", StringComparison.OrdinalIgnoreCase))[..^7];
+
+            var item = ByFile("Radio_ES");
+            var recipe = ByFile("CR_Watchtower_Base_Upgr1");
+            var baseEl = ByFile("BP_Base_WatchtowerBottom_Upgr1");
+
+            await source.ExtractIconsAsync(new[] { item, recipe, baseEl });
+
+            Assert.NotNull(source.Icons.GetIconPath(item));
+            Assert.NotNull(source.Icons.GetIconPath(recipe));
+            Assert.NotNull(source.Icons.GetIconPath(baseEl));
+        }
+        finally { Directory.Delete(work, true); }
+    }
+
     private static string ExtractOne(IReadOnlyDictionary<string, byte[]> files, string folder)
     {
         Directory.CreateDirectory(folder);

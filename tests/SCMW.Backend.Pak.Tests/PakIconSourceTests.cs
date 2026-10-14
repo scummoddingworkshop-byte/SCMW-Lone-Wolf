@@ -83,6 +83,19 @@ public class PakIconSourceTests
         Assert.Equal(IconSourceOutcome.NotLoaded, outcome.Outcome);
     }
 
+    [Fact]
+    public void A_recipes_product_path_normalises_to_the_base_elements_package_path()
+    {
+        Assert.Equal(
+            "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/BP_Base_Well",
+            PakIconSource.NormalizeProductPath(
+                "/Game/ConZ_Files/BaseBuilding/BaseElements/BP_Base_Well.BP_Base_Well_C"));
+    }
+
+    [Fact]
+    public void A_blank_product_path_normalises_to_null()
+        => Assert.Null(PakIconSource.NormalizeProductPath(""));
+
     private sealed class FakeMount : IPakMount
     {
         public List<string> Paths { get; } = new();
