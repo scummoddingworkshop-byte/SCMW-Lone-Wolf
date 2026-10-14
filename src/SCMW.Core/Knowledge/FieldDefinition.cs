@@ -13,6 +13,8 @@ public enum Risk { Unknown, Low, Medium, High }
 
 /// <summary>One field of one kind of asset, explained. <paramref name="Name"/> is the technical
 /// property name; <paramref name="Label"/> is what the owner reads.</summary>
+/// <param name="Addable">True when we may ADD this field to a file that lacks it (a deliberate,
+/// per-field decision — not every writable field is safe to add).</param>
 public sealed record FieldDefinition(
     string Name,
     string Label,
@@ -20,4 +22,5 @@ public sealed record FieldDefinition(
     string Unit,
     Risk Risk,
     bool Writable,
-    string Meaning);
+    string Meaning,
+    bool Addable = false);

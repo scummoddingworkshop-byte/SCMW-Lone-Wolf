@@ -87,6 +87,7 @@
     "unit": "real minutes",
     "risk": "Low",
     "writable": true,
+    "addable": true,
     "meaning": "How long an item left on the ground lasts before it vanishes. It counts down only while you are away from it. 0 means never."
   },
   {

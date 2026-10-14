@@ -329,9 +329,10 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     // --- Fields you could add (Task 5.2) ----------------------------------------------------------
-    // A field the file lacks is offered only when the library describes it AND some file of the kind
-    // already has it: that file is the donor whose exact shape we copy at build time. No donor, no
-    // offer — never a blank "invent a field" box.
+    // A field the file lacks is offered only when the library describes it, FLAGS it addable, AND some
+    // file of the kind already has it: that file is the donor whose exact shape we copy at build time.
+    // No flag, no donor, no offer — never a blank "invent a field" box. Only the auto-destruct timer
+    // is flagged for now; the seam is here to widen later.
 
     /// <summary>How many of a kind's files we read looking for a donor before giving a field up.</summary>
     private const int DonorScanLimit = 40;
@@ -350,8 +351,8 @@ public partial class WorkspaceViewModel : ObservableObject
     public string AddableNote =>
         "These aren't in this file, but the game has them on other items — we can copy the shape across.";
 
-    /// <summary>Work out the addable fields for a file: described and writable, not already present,
-    /// not already added, and with a donor file somewhere in the kind. Never throws.</summary>
+    /// <summary>Work out the addable fields for a file: described and flagged addable, not already
+    /// present, not already added, and with a donor file somewhere in the kind. Never throws.</summary>
     private async System.Threading.Tasks.Task<IReadOnlyList<AddableField>> BuildAddableAsync(
         string kind, string? assetPath, IReadOnlyList<AssetField> present)
     {
@@ -367,7 +368,7 @@ public partial class WorkspaceViewModel : ObservableObject
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var wanted = _library.ForKind(kind)
-            .Where(d => d.Writable && !presentNames.Contains(d.Name) && !addedNames.Contains(d.Name))
+            .Where(d => d.Addable && !presentNames.Contains(d.Name) && !addedNames.Contains(d.Name))
             .ToList();
         if (wanted.Count == 0) return Array.Empty<AddableField>();
 

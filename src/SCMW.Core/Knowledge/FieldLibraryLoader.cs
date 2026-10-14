@@ -86,7 +86,8 @@ public static class FieldLibraryLoader
                 Unit: entry.Unit?.Trim() ?? string.Empty,
                 Risk: ParseRisk(entry.Risk),
                 Writable: entry.Writable ?? false,
-                Meaning: entry.Meaning?.Trim() ?? string.Empty));
+                Meaning: entry.Meaning?.Trim() ?? string.Empty,
+                Addable: entry.Addable ?? false));
         }
     }
 
@@ -105,5 +106,6 @@ public static class FieldLibraryLoader
         string? Unit,
         string? Risk,
         bool? Writable,
-        string? Meaning);
+        string? Meaning,
+        bool? Addable);
 }

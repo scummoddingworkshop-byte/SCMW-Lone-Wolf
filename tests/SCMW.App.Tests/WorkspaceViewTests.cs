@@ -412,7 +412,7 @@ public class WorkspaceViewTests
     // --- Fields you could add (Task 5.2) --------------------------------------------------------
 
     [AvaloniaFact]
-    public async Task The_add_list_offers_a_field_the_file_lacks_that_a_donor_has()
+    public async Task The_add_list_offers_only_the_flagged_addable_field()
     {
         var source = new AddFieldSource();
         var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
@@ -420,9 +420,15 @@ public class WorkspaceViewTests
         await vm.OpenKindAsync("Items");
         await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-        Assert.Contains(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");  // a donor has it
-        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "Weight");       // already in the file
-        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "ShelfLife");    // no donor anywhere
+        // The auto-destruct timer is the only addable field, and a donor (Stone) has it.
+        var add = Assert.Single(vm.AddableFields);
+        Assert.Equal("_autoDestructTime", add.TechnicalName);
+
+        // Not offered: a field already in the file, a field with no donor anywhere, and a field that
+        // has a donor but the library does not flag addable.
+        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "Weight");
+        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "ShelfLife");
+        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "MaxWaterWeightRatio");
     }
 
     [AvaloniaFact]
@@ -654,7 +660,8 @@ public class WorkspaceViewTests
             Task.FromResult<IReadOnlyList<AssetField>>(id == Tomato
                 ? new[] { Field("Weight", "20000") }                                     // no timer
                 : id == Stone
-                    ? new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5") }  // the donor
+                    ? new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5"),
+                              Field("MaxWaterWeightRatio", "1") }   // donors (the last is not addable)
                     : Array.Empty<AssetField>());
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));

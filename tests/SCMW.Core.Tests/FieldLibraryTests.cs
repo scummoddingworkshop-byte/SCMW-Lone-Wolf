@@ -37,6 +37,33 @@ public class FieldLibraryTests
     }
 
     [Fact]
+    public void An_addable_field_is_flagged_and_others_default_to_not_addable()
+    {
+        const string json = """
+        [
+          { "kind": "Items", "name": "_autoDestructTime", "label": "Auto-destruct time",
+            "type": "Number", "risk": "Low", "writable": true, "addable": true, "meaning": "x" },
+          { "kind": "Items", "name": "Weight", "label": "Weight",
+            "type": "Number", "risk": "Low", "writable": true, "meaning": "y" }
+        ]
+        """;
+        var lib = FieldLibraryLoader.Parse(json);
+
+        Assert.True(lib.Lookup("Items", "_autoDestructTime")!.Addable);
+        Assert.False(lib.Lookup("Items", "Weight")!.Addable);
+    }
+
+    [Fact] // only the fields we have decided are safe to add carry the flag
+    public void The_shipped_library_marks_only_the_auto_destruct_timer_addable()
+    {
+        var lib = FieldLibraryLoader.LoadDefault();
+
+        Assert.True(lib.Lookup("Items", "_autoDestructTime")!.Addable);
+        Assert.False(lib.Lookup("Items", "Weight")!.Addable);
+        Assert.False(lib.Lookup("Items", "ShelfLife")!.Addable);
+    }
+
+    [Fact]
     public void Lookup_returns_null_for_an_unknown_field()
     {
         var lib = FieldLibraryLoader.Parse(TwoFields);
