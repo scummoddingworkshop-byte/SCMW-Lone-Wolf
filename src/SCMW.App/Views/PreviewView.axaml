@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             x:Class="SCMW.App.Views.PreviewView"
+             x:DataType="vm:PreviewViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16" Margin="24,8,24,24">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="Preview" Classes="h1"/>
+        <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" Classes="dim"/>
+      </StackPanel>
+
+      <!-- No project chosen yet: say so instead of showing a fall-back's changes. -->
+      <Border Name="NeedsProjectWarning" Classes="card" IsVisible="{Binding NeedsProject}">
+        <TextBlock Text="{Binding ProjectWarning}" TextWrapping="Wrap"
+                   Foreground="{StaticResource WarningBrush}"/>
+      </Border>
+
+      <!-- Nothing to show yet. -->
+      <Border Name="NoChanges" Classes="card" IsVisible="{Binding !HasChanges}">
+        <TextBlock Text="{Binding NoChangesNote}" Classes="dim" TextWrapping="Wrap"/>
+      </Border>
+
+      <!-- Exactly what will change: one card per file, each field before → after. -->
+      <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:BuildChange">
+            <Border Classes="card" Margin="0,0,0,10">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding ItemName}" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                <ItemsControl ItemsSource="{Binding Values}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BuildValueChange">
+                      <Grid ColumnDefinitions="Auto,12,*" Margin="0,2,0,0">
+                        <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Summary}"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

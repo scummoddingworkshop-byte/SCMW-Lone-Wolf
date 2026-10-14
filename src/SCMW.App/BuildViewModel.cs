@@ -142,21 +142,8 @@ public partial class BuildViewModel : ObservableObject
         }
         else
         {
-            // One row per item, with all of its changed values listed. Each value shows the latest
-            // recorded new value against the value the field had before any record (the first
-            // record's old value). This is the same source of truth as Items' "was …", so the two
-            // screens cannot drift.
-            _lines = _changes.For(current.FolderPath)
-                .GroupBy(r => r.AssetId)
-                .Select(g => new BuildChange(
-                    g.Key,
-                    g.GroupBy(r => r.FieldTechnicalName)
-                        .Select(f => new BuildValueChange(
-                            SCMW.Core.Content.FieldNames.Friendly(f.Key),
-                            f.First().OldValue ?? "",
-                            f.Last().NewValue))
-                        .ToList()))
-                .ToList();
+            // One home for the diff: Build and Preview read the same rows, so they cannot drift.
+            _lines = ChangeDiff.Build(_changes.For(current.FolderPath));
         }
 
         OnPropertyChanged(nameof(Changes));

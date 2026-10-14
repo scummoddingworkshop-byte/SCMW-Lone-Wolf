@@ -31,7 +31,7 @@ public static class NavBands
     {
         ScreenKey.Workspace,
         ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
-        ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
+        ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
         ScreenKey.Settings, ScreenKey.Help,
     };
 
@@ -46,6 +46,7 @@ public static class NavBands
         ScreenKey.Items => NavBand.Make,
         ScreenKey.BaseBuilding => NavBand.Make,
         ScreenKey.Recipes => NavBand.Make,
+        ScreenKey.Preview => NavBand.Ship,
         ScreenKey.Build => NavBand.Ship,
         ScreenKey.Mods => NavBand.Ship,
         ScreenKey.Backups => NavBand.Ship,

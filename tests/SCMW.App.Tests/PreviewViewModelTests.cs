@@ -1,0 +1,49 @@
+using Avalonia.Headless.XUnit;
+
+namespace SCMW.App.Tests;
+
+public class PreviewViewModelTests
+{
+    [AvaloniaFact] // Task 4.3: the diff lists only changed files, with before → after
+    public void The_preview_lists_only_changed_files_with_before_and_after()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", id, assetPath: "/a/Duct_Tape");
+            changes.RecordMultiply("Batteries", "Weight", "400", "2", id, assetPath: "/a/Batteries");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            Assert.Equal(2, vm.Changes.Count);   // only the two changed files, nothing untouched
+
+            var duct = vm.Changes.Single(c => c.ItemName == "Duct Tape");
+            Assert.Contains(duct.Values, v => v.Summary == "10 → 25");
+
+            var batteries = vm.Changes.Single(c => c.ItemName == "Batteries");
+            Assert.Contains(batteries.Values, v => v.Summary == "400 → 800");   // the ×2 is worked out
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // with nothing chosen, the preview says so instead of showing a fall-back's changes
+    public void The_preview_says_so_when_no_project_is_chosen()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            projects.SetCurrent("");
+            var changes = TestProjects.ChangeStore(projects);
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            Assert.True(vm.NeedsProject);
+            Assert.Empty(vm.Changes);
+            Assert.False(string.IsNullOrWhiteSpace(vm.ProjectWarning));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+}

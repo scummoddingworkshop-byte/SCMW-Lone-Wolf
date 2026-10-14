@@ -10,6 +10,7 @@ public enum ScreenKey
     Items,
     BaseBuilding,
     Recipes,
+    Preview,
     Build,
     Mods,
     Backups,

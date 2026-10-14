@@ -15,6 +15,7 @@ public class ShellViewModelTests
                 ScreenKey.Workspace,
                 ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding,
                 ScreenKey.Recipes,
+                ScreenKey.Preview,
                 ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,
             },
             vm.Sidebar.Select(i => i.Key));

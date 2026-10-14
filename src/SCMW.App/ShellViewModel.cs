@@ -40,6 +40,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
     private readonly BuildView _buildView;
+    private readonly PreviewViewModel _preview;
+    private readonly PreviewView _previewView;
     private readonly ModsViewModel _mods;
     private readonly ModsView _modsView;
     private readonly BackupsViewModel _backups;
@@ -104,6 +106,8 @@ public partial class ShellViewModel : ObservableObject
                                     _projectStore, _buildService, _launcher, source: ContentSource,
                                     elevation: WindowsElevation.Default);
         _buildView = new BuildView { DataContext = _build };
+        _preview = new PreviewViewModel(_itemChanges, _projectStore);
+        _previewView = new PreviewView { DataContext = _preview };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };
         _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore,
@@ -123,6 +127,7 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.Items, "Items"),
             Nav(ScreenKey.BaseBuilding, "Base building"),
             Nav(ScreenKey.Recipes, "Recipes"),
+            Nav(ScreenKey.Preview, "Preview"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods"),
             Nav(ScreenKey.Backups, "Backups"),
@@ -397,6 +402,9 @@ public partial class ShellViewModel : ObservableObject
         // Home's first-run card depends on whether SCUM is set up, which may have just changed.
         if (Current == ScreenKey.Home) _home.RefreshWelcome();
 
+        // The preview re-reads the chosen project's changes every time it is opened.
+        if (Current == ScreenKey.Preview) _preview.Refresh();
+
         ActiveView = Current switch
         {
             ScreenKey.Workspace => _workspaceView,
@@ -405,6 +413,7 @@ public partial class ShellViewModel : ObservableObject
             ScreenKey.Items => _itemsView,
             ScreenKey.BaseBuilding => _baseElementsView,
             ScreenKey.Recipes => _recipesView,
+            ScreenKey.Preview => _previewView,
             ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,
             ScreenKey.Backups => _backupsView,
