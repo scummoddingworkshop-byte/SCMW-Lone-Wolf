@@ -29,6 +29,26 @@ public class PreviewViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // Task 5.2: an added field reads "(not set) → value" in the preview
+    public void The_preview_shows_an_added_field_as_not_set_before()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+
+            changes.RecordAddField("/a/Tomato_ES", "_autoDestructTime", "0", "/a/Stone_ES", id,
+                                   assetPath: "/a/Tomato_ES");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            var tomato = Assert.Single(vm.Changes);
+            Assert.Contains(tomato.Values, v => v.Summary == "(not set) → 0");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // with nothing chosen, the preview says so instead of showing a fall-back's changes
     public void The_preview_says_so_when_no_project_is_chosen()
     {

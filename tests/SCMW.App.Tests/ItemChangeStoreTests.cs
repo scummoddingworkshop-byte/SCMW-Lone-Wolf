@@ -27,6 +27,29 @@ public class ItemChangeStoreTests
     }
 
     [AvaloniaFact]
+    public void Recording_an_added_field_keeps_its_donor_and_value()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var store = new ItemChangeStore(new ProjectChangeStore(), projects);
+            var project = projects.Current!;
+
+            store.RecordAddField("/a/Tomato_ES", "_autoDestructTime", "0", "/a/Stone_ES",
+                                 project.Id, assetPath: "/a/Tomato_ES");
+
+            var record = Assert.Single(store.For(project.FolderPath));
+            Assert.Equal(ChangeOperation.AddField, record.Operation);
+            Assert.Equal("_autoDestructTime", record.FieldTechnicalName);
+            Assert.Equal("0", record.NewValue);
+            Assert.Null(record.OldValue);                       // there was no field to read before
+            Assert.Equal("/a/Stone_ES", record.DonorPath);       // the shape to copy comes from here
+            Assert.Equal("/a/Tomato_ES", record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public void For_is_empty_when_the_project_has_no_records()
     {
         var (projects, root) = TestProjects.With("My first mod");

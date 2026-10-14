@@ -421,6 +421,97 @@ public class WorkspaceViewTests
         Assert.False(caption.ShowValueButton);                // and there is no editor
     }
 
+    // --- Fields you could add (Task 5.2) --------------------------------------------------------
+
+    [AvaloniaFact]
+    public async Task The_add_list_offers_a_field_the_file_lacks_that_a_donor_has()
+    {
+        var source = new AddFieldSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
+
+        await vm.OpenKindAsync("Items");
+        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+        Assert.Contains(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");  // a donor has it
+        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "Weight");       // already in the file
+        Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "ShelfLife");    // no donor anywhere
+    }
+
+    [AvaloniaFact]
+    public async Task Adding_a_field_records_it_against_the_files_path_with_the_donor()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            add.Draft = "0";
+            vm.AddCommand.Execute(add);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(ChangeOperation.AddField, record.Operation);
+            Assert.Equal("_autoDestructTime", record.FieldTechnicalName);
+            Assert.Equal("0", record.NewValue);
+            Assert.Equal(AddFieldSource.Tomato, record.AssetPath);
+            Assert.Equal(AddFieldSource.Stone, record.DonorPath);
+            Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_field_already_added_is_not_offered_again()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            changes.RecordAddField(AddFieldSource.Tomato, "_autoDestructTime", "0", AddFieldSource.Stone,
+                                   projects.Current!.Id, assetPath: AddFieldSource.Tomato);
+
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            Assert.DoesNotContain(vm.AddableFields, a => a.TechnicalName == "_autoDestructTime");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void The_add_section_shows_a_field_you_could_add()
+    {
+        var vm = new WorkspaceViewModel();
+        var addable = new AddableField("Auto-destruct time", "real minutes",
+            "How long an item left on the ground lasts before it vanishes.",
+            "_autoDestructTime", "/a/Stone_ES", FieldType.Number);
+
+        vm.Show("Items", "Tomato", new[] { Field("Weight", "20000") }, "/a/Tomato_ES",
+                new[] { addable });
+
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 600 };
+        window.Show();
+        window.UpdateLayout();
+
+        var section = view.FindControl<Border>("AddableSection");
+        Assert.NotNull(section);
+        Assert.True(section!.IsVisible);
+        var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
+        Assert.Contains(texts, t => t.Contains("Fields you could add", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("Auto-destruct time", texts);
+    }
+
     /// <summary>A fake game index: one _ES item and one recipe; reads a Weight field. No game, no disk.</summary>
     private sealed class BrowseSource : IContentSource
     {
@@ -498,6 +589,40 @@ public class WorkspaceViewTests
             Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>());
         public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
             Task.FromResult(_fields.TryGetValue(id, out var f) ? f : Array.Empty<AssetField>());
+        public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
+        public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    /// <summary>A fake index for the add-a-field test: a tomato (no timer) and a stone (has the timer).</summary>
+    private sealed class AddFieldSource : IContentSource
+    {
+        public const string Tomato = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
+        public const string Stone = "SCUM/Content/ConZ_Files/Items/Food/Stone_ES";
+
+        private static readonly IReadOnlyList<AssetSummary> Rows = new[]
+        {
+            new AssetSummary(Tomato, "Tomato", "Food", StatusKind.Editable, 1, Tomato + ".uasset", null),
+            new AssetSummary(Stone, "Stone", "Food", StatusKind.Editable, 1, Stone + ".uasset", null),
+        };
+
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ScanInfo? LastScan => null;
+        public IIconCache Icons => throw new NotSupportedException();
+        public IReadOnlyList<string> Categories => new[] { "Food" };
+        public void Configure(string p, string? k, string? b) { }
+        public Task<ContentSourceStatus> ScanAsync(IProgress<int>? p = null, CancellationToken ct = default) =>
+            Task.FromResult(Status);
+        public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetSummary>>(s >= Rows.Count ? Array.Empty<AssetSummary>() : Rows.Skip(s).Take(t).ToList());
+        public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AssetField>>(id == Tomato
+                ? new[] { Field("Weight", "20000") }                                     // no timer
+                : id == Stone
+                    ? new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5") }  // the donor
+                    : Array.Empty<AssetField>());
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
         public Task<IconExtractionProgress> ExtractIconsAsync(IEnumerable<string> ids, IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>

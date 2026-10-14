@@ -81,19 +81,54 @@
                  IsVisible="{Binding !HasFields}"/>
 
       <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
-        <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:WorkspaceField">
-              <controls:FieldRow Margin="0,0,0,14"
-                  BeginEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
-                  CommitEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitEditCommand}"
-                  CancelEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelEditCommand}"
-                  BeginMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginMultiplyCommand}"
-                  CommitMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitMultiplyCommand}"
-                  CancelMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelMultiplyCommand}"/>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <StackPanel>
+          <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WorkspaceField">
+                <controls:FieldRow Margin="0,0,0,14"
+                    BeginEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                    CommitEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitEditCommand}"
+                    CancelEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelEditCommand}"
+                    BeginMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginMultiplyCommand}"
+                    CommitMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitMultiplyCommand}"
+                    CancelMultiplyCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelMultiplyCommand}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Fields this file lacks that we can add by copying a donor item's shape (Task 5.2). -->
+          <Border Name="AddableSection" Classes="card" Margin="0,12,0,0"
+                  IsVisible="{Binding HasAddableFields}">
+            <StackPanel>
+              <TextBlock Classes="section" Text="Fields you could add"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap" Margin="0,2,0,10"
+                         Text="{Binding AddableNote}"/>
+              <ItemsControl Name="AddableList" ItemsSource="{Binding AddableFields}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AddableField">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
+                      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextDimBrush}"/>
+                        <TextBlock Text="{Binding Unit}" Classes="dim" VerticalAlignment="Center"
+                                   IsVisible="{Binding HasUnit}"/>
+                      </StackPanel>
+                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <TextBox Name="AddDraft" Classes="field" MinWidth="120" MinHeight="30"
+                                 Watermark="new value…" Text="{Binding Draft, Mode=TwoWay}"/>
+                        <Button Name="AddButton" Classes="valuefield" Content="Add"
+                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCommand}"
+                                CommandParameter="{Binding}"/>
+                      </StackPanel>
+                      <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="dim"
+                                 TextWrapping="Wrap" Margin="0,2,0,0" Text="{Binding Meaning}"
+                                 IsVisible="{Binding HasMeaning}"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
       </ScrollViewer>
     </Grid>
   </Grid>

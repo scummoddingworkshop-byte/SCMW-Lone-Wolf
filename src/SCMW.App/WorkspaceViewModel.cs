@@ -216,8 +216,11 @@ public partial class WorkspaceViewModel : ObservableObject
     private void SelectCategory(string? category) => SelectedCategory = category ?? "All";
 
     /// <summary>Open <paramref name="kind"/>'s file named <paramref name="title"/> and show the
-    /// fields it actually has, each explained by the library where the library knows it.</summary>
-    public void Show(string kind, string title, IReadOnlyList<AssetField> fields, string? assetPath = null)
+    /// fields it actually has, each explained by the library where the library knows it.
+    /// <paramref name="addable"/> lists the described fields the file lacks that we could add by
+    /// borrowing a donor item's shape (Task 5.2); it is empty for a caller that has not looked.</summary>
+    public void Show(string kind, string title, IReadOnlyList<AssetField> fields, string? assetPath = null,
+                     IReadOnlyList<AddableField>? addable = null)
     {
         Title = title;
         Fields.Clear();
@@ -244,6 +247,13 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         HasFields = Fields.Count > 0;
+
+        AddableFields.Clear();
+        if (addable is not null)
+        {
+            foreach (var field in addable) AddableFields.Add(field);
+        }
+        OnPropertyChanged(nameof(HasAddableFields));
     }
 
     /// <summary>Open a file: remember it, then read and show ITS own fields from the game — the
@@ -286,7 +296,117 @@ public partial class WorkspaceViewModel : ObservableObject
             }
         }
 
-        RunOnUi(() => Show(_kind, asset.Name, fields, asset.AssetId));
+        // Work out which described fields this file lacks and we could add (a donor item has them).
+        var addable = await BuildAddableAsync(_kind, asset.AssetId, fields).ConfigureAwait(false);
+
+        RunOnUi(() => Show(_kind, asset.Name, fields, asset.AssetId, addable));
+    }
+
+    // --- Fields you could add (Task 5.2) ----------------------------------------------------------
+    // A field the file lacks is offered only when the library describes it AND some file of the kind
+    // already has it: that file is the donor whose exact shape we copy at build time. No donor, no
+    // offer — never a blank "invent a field" box.
+
+    /// <summary>How many of a kind's files we read looking for a donor before giving a field up.</summary>
+    private const int DonorScanLimit = 40;
+
+    /// <summary>Remembers, per kind+field, the donor file found ("" for "none") so we scan once.</summary>
+    private readonly Dictionary<string, string> _donorCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The described fields the open file lacks that we can add by copying a donor's shape.</summary>
+    public ObservableCollection<AddableField> AddableFields { get; } = new();
+
+    /// <summary>True when at least one field could be added to the open file.</summary>
+    public bool HasAddableFields => AddableFields.Count > 0;
+
+    /// <summary>Plain line under the add section's heading.</summary>
+    public string AddableNote =>
+        "These aren't in this file, but the game has them on other items — we can copy the shape across.";
+
+    /// <summary>Work out the addable fields for a file: described and writable, not already present,
+    /// not already added, and with a donor file somewhere in the kind. Never throws.</summary>
+    private async System.Threading.Tasks.Task<IReadOnlyList<AddableField>> BuildAddableAsync(
+        string kind, string? assetPath, IReadOnlyList<AssetField> present)
+    {
+        if (_source is null || string.IsNullOrEmpty(kind) || string.IsNullOrEmpty(assetPath))
+            return Array.Empty<AddableField>();
+
+        var presentNames = present.Select(f => f.TechnicalName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var addedNames = Records()
+            .Where(r => r.Operation == ChangeOperation.AddField
+                        && string.Equals(r.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.FieldTechnicalName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var wanted = _library.ForKind(kind)
+            .Where(d => d.Writable && !presentNames.Contains(d.Name) && !addedNames.Contains(d.Name))
+            .ToList();
+        if (wanted.Count == 0) return Array.Empty<AddableField>();
+
+        var addable = new List<AddableField>();
+        foreach (var definition in wanted)
+        {
+            var donor = await FindDonorAsync(kind, definition.Name).ConfigureAwait(false);
+            if (donor is null) continue;   // nowhere to borrow the shape from — do not offer it
+
+            addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
+                                         definition.Name, donor, definition.Type));
+        }
+        return addable;
+    }
+
+    /// <summary>The first file of the kind that has the field, or null. Cached per kind+field.</summary>
+    private async System.Threading.Tasks.Task<string?> FindDonorAsync(string kind, string fieldName)
+    {
+        var key = kind + "\u001f" + fieldName;
+        if (_donorCache.TryGetValue(key, out var cached))
+            return cached.Length == 0 ? null : cached;
+
+        string? donor = null;
+        var scanned = 0;
+        foreach (var asset in _allAssets)
+        {
+            var path = asset.AssetId;
+            if (string.IsNullOrEmpty(path)) continue;
+            if (scanned++ >= DonorScanLimit) break;
+
+            IReadOnlyList<AssetField> fields;
+            try
+            {
+                fields = await _source!.FieldsAsync(path).ConfigureAwait(false);
+            }
+            catch
+            {
+                continue;   // an unreadable file is simply skipped
+            }
+
+            if (fields.Any(f => string.Equals(f.TechnicalName, fieldName, StringComparison.OrdinalIgnoreCase)))
+            {
+                donor = path;
+                break;
+            }
+        }
+
+        _donorCache[key] = donor ?? string.Empty;
+        return donor;
+    }
+
+    /// <summary>Add a field the file lacks: record it, borrowing the donor's shape at build time.
+    /// Refused (nothing recorded) when no project is chosen — the banner explains.</summary>
+    [RelayCommand]
+    private void Add(AddableField? field)
+    {
+        if (field is null || !field.IsDraftValid) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        _changes.RecordAddField(path!, field.TechnicalName, field.Draft.Trim(), field.DonorPath,
+                                _projects!.Chosen!.Id, assetPath: path);
+
+        AddableFields.Remove(field);
+        OnPropertyChanged(nameof(HasAddableFields));
     }
 
     /// <summary>Run an action on the UI thread (the field rows are bound to the view).</summary>
@@ -552,7 +672,7 @@ public partial class WorkspaceField : ObservableObject
     };
 
     /// <summary>True for a switch value as shown ("Yes"/"No") or as the game writes it (true/false, 1/0).</summary>
-    private static bool IsYesNo(string? draft)
+    internal static bool IsYesNo(string? draft)
     {
         var text = (draft ?? string.Empty).Trim();
         return bool.TryParse(text, out _)
@@ -609,4 +729,58 @@ public partial class WorkspaceField : ObservableObject
     public bool IsHigh => Risk == Risk.High;
 
     public bool IsUnknown => Risk == Risk.Unknown;
+}
+
+/// <summary>
+/// One entry in the Workspace's "Fields you could add" list: a described field the open file does
+/// not have, together with the donor file whose exact shape is copied when it is added (Task 5.2).
+/// </summary>
+public partial class AddableField : ObservableObject
+{
+    public AddableField(string label, string unit, string meaning, string technicalName,
+                        string donorPath, FieldType type)
+    {
+        Label = label;
+        Unit = unit;
+        Meaning = meaning;
+        TechnicalName = technicalName;
+        DonorPath = donorPath;
+        Type = type;
+    }
+
+    /// <summary>What the owner reads.</summary>
+    public string Label { get; }
+
+    /// <summary>The unit shown beside the label (empty for a plain count).</summary>
+    public string Unit { get; }
+
+    public bool HasUnit => !string.IsNullOrWhiteSpace(Unit);
+
+    /// <summary>A one-line plain meaning.</summary>
+    public string Meaning { get; }
+
+    public bool HasMeaning => !string.IsNullOrWhiteSpace(Meaning);
+
+    /// <summary>The game's own field name (used to address the change, never the display name).</summary>
+    public string TechnicalName { get; }
+
+    /// <summary>The game file that already has the field — where the shape is borrowed from.</summary>
+    public string DonorPath { get; }
+
+    /// <summary>The kind of value, from the library.</summary>
+    public FieldType Type { get; }
+
+    /// <summary>What the owner types as the new field's value.</summary>
+    [ObservableProperty] private string _draft = "";
+
+    /// <summary>Whether the draft is a plausible value for the field's kind.</summary>
+    public bool IsDraftValid => Type switch
+    {
+        FieldType.Number => double.TryParse(Draft, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out _),
+        FieldType.Boolean => WorkspaceField.IsYesNo(Draft),
+        _ => !string.IsNullOrWhiteSpace(Draft),
+    };
+
+    partial void OnDraftChanged(string value) => OnPropertyChanged(nameof(IsDraftValid));
 }

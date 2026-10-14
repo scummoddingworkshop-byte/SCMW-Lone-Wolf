@@ -34,7 +34,7 @@ public static class ChangeDiff
     {
         var first = field.First();
         var last = field.Last();
-        var before = first.OldValue ?? "";
+        var before = first.Operation == ChangeOperation.AddField ? "(not set)" : (first.OldValue ?? "");
 
         var after = last.Operation switch
         {

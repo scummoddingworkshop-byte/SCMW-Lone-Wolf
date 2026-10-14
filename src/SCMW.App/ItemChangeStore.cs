@@ -75,6 +75,26 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
+    /// Append an "add a field" change to the project's <c>changes.json</c>. The record keeps the new
+    /// field's value and the donor file whose exact shape is copied at build time. Returns false when
+    /// it could not be saved (so the screen can say so).
+    /// </summary>
+    public bool RecordAddField(string assetId, string field, string newValue, string donorPath, string projectId,
+                               string? assetPath = null)
+    {
+        var folder = FolderFor(projectId);
+        if (folder is null) return false;
+
+        var saved = _store.TryAdd(folder, new EngineChangeRecord(
+            Guid.NewGuid(), projectId, assetId, field, null, newValue,
+            DateTime.UtcNow, StatusKind.Editable, Operation: ChangeOperation.AddField,
+            AssetPath: assetPath, DonorPath: donorPath));
+
+        Changed?.Invoke();
+        return saved;
+    }
+
+    /// <summary>
     /// Append a list change (add or remove an entry) to the project's <c>changes.json</c>. Kept as
     /// its own record so the order of several list changes survives (a value edit does not).
     /// <para>
