@@ -26,6 +26,29 @@ public partial class BackupRow : ObservableObject
     [ObservableProperty] private bool _isConfirmingDelete;
 }
 
+/// <summary>One kept copy of the player's saved game, as shown on screen.</summary>
+public partial class SaveRow : ObservableObject
+{
+    public SaveRow(SaveSnapshot snapshot) => Snapshot = snapshot;
+
+    public SaveSnapshot Snapshot { get; }
+
+    public string Id => Snapshot.Id;
+
+    /// <summary>Plain "2026-10-13 17:37", or empty when the name carried no stamp.</summary>
+    public string When => Snapshot.WhenUtc == DateTime.MinValue
+        ? ""
+        : Snapshot.WhenUtc.ToString("yyyy-MM-dd HH:mm");
+
+    /// <summary>A short size, e.g. "9.4 MB".</summary>
+    public string Size => Snapshot.SizeBytes >= 1024 * 1024
+        ? $"{Snapshot.SizeBytes / 1024.0 / 1024.0:0.#} MB"
+        : $"{Math.Max(1, Snapshot.SizeBytes / 1024)} KB";
+
+    /// <summary>True while this row's inline delete confirmation is showing.</summary>
+    [ObservableProperty] private bool _isConfirmingDelete;
+}
+
 /// <summary>
 /// Backups' brain: the removed mods and deleted projects SCMW — Lone Wolf keeps in the workspace, with
 /// one-click restore and delete. It knows nothing about pixels.
@@ -33,18 +56,22 @@ public partial class BackupRow : ObservableObject
 public partial class BackupsViewModel : ObservableObject
 {
     private IBackupsService? _service;
+    private ISaveBackupsService? _saves;
     private readonly ProjectStore? _projects;
     private readonly IFolderOpener _folders;
 
     public BackupsViewModel(IBackupsService? service = null, ProjectStore? projects = null,
-                            IFolderOpener? folderOpener = null)
+                            IFolderOpener? folderOpener = null, ISaveBackupsService? saves = null)
     {
         _service = service;
         _projects = projects;
         _folders = folderOpener ?? new SystemFolderOpener();
+        _saves = saves;
 
         Backups = new ObservableCollection<BackupRow>();
+        Saves = new ObservableCollection<SaveRow>();
         Refresh();
+        RefreshSaves();
     }
 
     /// <summary>The backups currently shown, newest first.</summary>
@@ -59,11 +86,13 @@ public partial class BackupsViewModel : ObservableObject
     public string Summary => $"{Backups.Count} {(Backups.Count == 1 ? "backup" : "backups")} kept";
 
     /// <summary>Swaps in a service built from the current settings (e.g. after first-time setup).</summary>
-    public void UseService(IBackupsService? service)
+    public void UseService(IBackupsService? service, ISaveBackupsService? saves = null)
     {
         _service = service;
+        _saves = saves;
         Message = "";
         Refresh();
+        RefreshSaves();
     }
 
     /// <summary>Re-reads the backups from disk. Called at construction and after any change.</summary>
@@ -77,6 +106,87 @@ public partial class BackupsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasBackups));
         OnPropertyChanged(nameof(ShowEmptyState));
         OnPropertyChanged(nameof(Summary));
+    }
+
+    // --- The saved game (SCUM.db): back up now, then restore or delete a kept copy ------------------
+
+    /// <summary>Kept copies of the player's saved game, newest first.</summary>
+    public ObservableCollection<SaveRow> Saves { get; }
+
+    /// <summary>True when the app knows where SCUM keeps its saves.</summary>
+    public bool HasSaveService => _saves is not null;
+
+    /// <summary>True when SCUM's save file was found (the "Back up save now" button can run).</summary>
+    public bool CanBackUpSave => _saves?.IsAvailable == true;
+
+    public bool HasSaves => Saves.Count > 0;
+
+    /// <summary>True when we can back up but no copies are kept yet.</summary>
+    public bool ShowNoSaves => HasSaveService && Saves.Count == 0;
+
+    /// <summary>A short plain line under the heading.</summary>
+    public string SaveNote => !HasSaveService ? ""
+        : CanBackUpSave ? "Close SCUM before backing up or restoring."
+        : "SCUM's saved game wasn't found yet — play the game once, then try again.";
+
+    /// <summary>Re-reads the kept save copies from disk.</summary>
+    public void RefreshSaves()
+    {
+        Saves.Clear();
+        if (_saves is not null)
+        {
+            foreach (var snapshot in _saves.List()) Saves.Add(new SaveRow(snapshot));
+        }
+
+        OnPropertyChanged(nameof(HasSaveService));
+        OnPropertyChanged(nameof(CanBackUpSave));
+        OnPropertyChanged(nameof(HasSaves));
+        OnPropertyChanged(nameof(ShowNoSaves));
+        OnPropertyChanged(nameof(SaveNote));
+    }
+
+    [RelayCommand]
+    private void BackUpSave()
+    {
+        if (_saves is null) return;
+
+        Message = "";
+        var error = _saves.BackUp();
+        Message = error ?? "Saved game backed up.";
+        RefreshSaves();
+    }
+
+    [RelayCommand]
+    private void RestoreSave(SaveRow? row)
+    {
+        if (row is null || _saves is null) return;
+
+        Message = "";
+        var error = _saves.Restore(row.Id);
+        Message = error ?? "Saved game restored — start SCUM to play from it.";
+        RefreshSaves();
+    }
+
+    [RelayCommand]
+    private void RequestDeleteSave(SaveRow? row)
+    {
+        if (row is not null) row.IsConfirmingDelete = true;
+    }
+
+    [RelayCommand]
+    private void CancelDeleteSave(SaveRow? row)
+    {
+        if (row is not null) row.IsConfirmingDelete = false;
+    }
+
+    [RelayCommand]
+    private void ConfirmDeleteSave(SaveRow? row)
+    {
+        if (row is null || _saves is null) return;
+
+        var error = _saves.Delete(row.Id);
+        Message = error ?? "Save copy deleted.";
+        RefreshSaves();
     }
 
     [RelayCommand]

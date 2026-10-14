@@ -106,7 +106,8 @@ public partial class ShellViewModel : ObservableObject
         _buildView = new BuildView { DataContext = _build };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };
-        _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore);
+        _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore,
+                                         saves: new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root));
         _backupsView = new BackupsView { DataContext = _backups };
         _settings = new SettingsViewModel(store, scumSources, ContentSource, workspace, nav: _nav);
         _settings.CacheCleared += RebuildItemsAfterClear;   // re-read SCUM now, then say so
@@ -239,7 +240,8 @@ public partial class ShellViewModel : ObservableObject
         if (!_modsInjected) _modsService = new ModsService(settings.GamePath, _workspace.Root);
 
         // The Backups screen is built from the game path too — refresh it for first-time setup.
-        _backups.UseService(new BackupsService(settings.GamePath, _workspace.Root));
+        _backups.UseService(new BackupsService(settings.GamePath, _workspace.Root),
+                            new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, _workspace.Root));
 
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";

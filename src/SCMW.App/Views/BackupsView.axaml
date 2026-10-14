@@ -21,6 +21,53 @@
       <TextBlock Name="MessageText" Text="{Binding Message}" Classes="dim" TextWrapping="Wrap"
                  IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
+      <!-- The player's saved game (SCUM.db): the one soft spot a pak cannot undo. -->
+      <Border Name="SaveCard" Classes="card" IsVisible="{Binding HasSaveService}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Your saved game" Classes="section"/>
+          <TextBlock Name="SaveNote" Text="{Binding SaveNote}" Classes="dim" TextWrapping="Wrap"/>
+
+          <Button Name="BackUpSaveButton" Classes="primary" HorizontalAlignment="Left"
+                  Content="Back up save now"
+                  IsEnabled="{Binding CanBackUpSave}"
+                  Command="{Binding BackUpSaveCommand}"/>
+
+          <ItemsControl Name="SaveList" ItemsSource="{Binding Saves}" IsVisible="{Binding HasSaves}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SaveRow">
+                <Border Classes="listrow" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Text="{Binding When}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                      <TextBlock Text="{Binding Size}" Classes="dim"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <Button Classes="primary" Content="Restore"
+                              Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).RestoreSaveCommand}"
+                              CommandParameter="{Binding}"/>
+                      <Button Classes="secondary" Content="Delete"
+                              IsVisible="{Binding !IsConfirmingDelete}"
+                              Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).RequestDeleteSaveCommand}"
+                              CommandParameter="{Binding}"/>
+                      <Button Classes="secondary" Content="Cancel"
+                              IsVisible="{Binding IsConfirmingDelete}"
+                              Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).CancelDeleteSaveCommand}"
+                              CommandParameter="{Binding}"/>
+                      <Button Classes="primary" Content="Delete for good"
+                              IsVisible="{Binding IsConfirmingDelete}"
+                              Command="{Binding $parent[UserControl].((vm:BackupsViewModel)DataContext).ConfirmDeleteSaveCommand}"
+                              CommandParameter="{Binding}"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="No save copies kept yet." Classes="dim" IsVisible="{Binding ShowNoSaves}"/>
+        </StackPanel>
+      </Border>
+
       <ItemsControl Name="BackupList" ItemsSource="{Binding Backups}" IsVisible="{Binding HasBackups}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:BackupRow">
