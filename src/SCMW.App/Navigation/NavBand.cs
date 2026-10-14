@@ -30,6 +30,7 @@ public static class NavBands
     private static readonly ScreenKey[] RailOrder =
     {
         ScreenKey.Workspace,
+        ScreenKey.BulkEdit,
         ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
         ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
         ScreenKey.Settings, ScreenKey.Help,
@@ -39,6 +40,7 @@ public static class NavBands
     public static NavBand For(ScreenKey key) => key switch
     {
         ScreenKey.Workspace => NavBand.Make,
+        ScreenKey.BulkEdit => NavBand.Make,
         ScreenKey.Projects => NavBand.Make,
         // The kinds (Items, Base building, Recipes) and Home are make-work: they fold into the
         // Workspace and its chooser, so they live in Make until they are retired.

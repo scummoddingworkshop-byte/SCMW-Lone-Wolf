@@ -198,6 +198,9 @@ public partial class BulkTableViewModel : ObservableObject
     /// <summary>True when at least one file is ticked.</summary>
     public bool HasSelection => SelectedCount > 0;
 
+    /// <summary>Plain "3 of 12 ticked" line for the screen.</summary>
+    public string SelectionText => $"{SelectedCount} of {Rows.Count} ticked";
+
     /// <summary>Tick every file the filters show (so "all Food" is one tick).</summary>
     [RelayCommand]
     private void SelectAll()
@@ -343,6 +346,7 @@ public partial class BulkTableViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(SelectedCount));
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectionText));
         OnPropertyChanged(nameof(CanApply));
     }
 

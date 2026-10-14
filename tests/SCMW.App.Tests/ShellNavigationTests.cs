@@ -17,6 +17,7 @@ public class ShellNavigationTests
 
     [Theory]
     [InlineData(ScreenKey.Workspace, NavBand.Make)]
+    [InlineData(ScreenKey.BulkEdit, NavBand.Make)]
     [InlineData(ScreenKey.Projects, NavBand.Make)]
     [InlineData(ScreenKey.Build, NavBand.Ship)]
     [InlineData(ScreenKey.Mods, NavBand.Ship)]
@@ -66,6 +67,7 @@ public class ShellNavigationTests
             new[]
             {
                 ScreenKey.Workspace,
+                ScreenKey.BulkEdit,
                 ScreenKey.Home, ScreenKey.Projects, ScreenKey.Items, ScreenKey.BaseBuilding, ScreenKey.Recipes,
             },
             vm.Bands[0].Items.Select(i => i.Key));
@@ -177,5 +179,16 @@ public class ShellNavigationTests
         nav.GoTo(ScreenKey.Workspace);
 
         Assert.IsType<WorkspaceView>(vm.ActiveView);
+    }
+
+    [AvaloniaFact]
+    public void The_change_many_area_shows_the_bulk_table_view()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        nav.GoTo(ScreenKey.BulkEdit);
+
+        Assert.IsType<BulkTableView>(vm.ActiveView);
     }
 }

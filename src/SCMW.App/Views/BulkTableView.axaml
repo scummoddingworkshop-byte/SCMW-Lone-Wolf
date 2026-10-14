@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:knowledge="clr-namespace:SCMW.Core.Knowledge;assembly=SCMW.Core"
+             x:Class="SCMW.App.Views.BulkTableView"
+             x:DataType="vm:BulkTableViewModel">
+  <!-- The bulk table: pick a kind, narrow the list (e.g. the "Food" chip), tick many files —
+       or "Tick all shown" — then set one value once. Each ticked file gets its own change. -->
+  <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="24,8,24,24">
+
+    <!-- "One project = one mod": with nothing chosen, the bulk set is refused and explained here. -->
+    <Border Grid.Row="0" Grid.ColumnSpan="3" Name="NeedsProjectWarning" Classes="card"
+            IsVisible="{Binding NeedsProject}" Margin="0,0,0,12">
+      <TextBlock Text="{Binding ProjectWarning}" TextWrapping="Wrap"
+                 Foreground="{StaticResource WarningBrush}"/>
+    </Border>
+
+    <!-- Left: find + browse, then the tick-list -->
+    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
+               ItemsSource="{Binding Kinds}"
+               SelectedItem="{Binding SelectedKind, Mode=TwoWay}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <TextBox Grid.Row="1" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
+               Text="{Binding Search, Mode=TwoWay}"/>
+
+      <ListBox Grid.Row="2" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
+               ItemsSource="{Binding Categories}"
+               SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel/>
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <CheckBox Grid.Row="3" Name="OnlyEditableBox" Margin="0,12,0,0"
+                Content="Show only what this mod can change"
+                IsChecked="{Binding OnlyEditable, Mode=TwoWay}"/>
+
+      <ScrollViewer Grid.Row="4" Margin="0,8,0,0">
+        <ItemsControl Name="AssetChecks" ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:BulkRow">
+              <CheckBox Margin="0,4,0,0" Content="{Binding Name}"
+                        IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- Right: set one value on the ticked files -->
+    <Border Grid.Row="1" Grid.Column="2" Classes="card" VerticalAlignment="Top">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Set one value on the ticked files" Classes="h1"/>
+        <TextBlock Name="SelectionText" Classes="dim" Text="{Binding SelectionText}"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Name="SelectAllButton" Content="Tick all shown" Command="{Binding SelectAllCommand}"/>
+          <Button Name="ClearButton" Content="Untick all" Command="{Binding ClearSelectionCommand}"/>
+        </StackPanel>
+
+        <TextBlock Text="Which value?" Classes="dim"/>
+        <ComboBox Name="FieldPicker" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField, Mode=TwoWay}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="knowledge:FieldDefinition">
+              <TextBlock Text="{Binding Label}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <TextBlock Text="New value" Classes="dim"/>
+        <TextBox Name="ValueBox" Classes="field" Text="{Binding Value, Mode=TwoWay}"/>
+
+        <Button Name="ApplyButton" Classes="primary" Content="Set on ticked files"
+                HorizontalAlignment="Stretch" Command="{Binding ApplyCommand}"
+                IsEnabled="{Binding CanApply}"/>
+
+        <TextBlock Name="ResultText" Text="{Binding ResultText}" TextWrapping="Wrap"
+                   IsVisible="{Binding HasResult}"
+                   Foreground="{StaticResource SuccessBrush}"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

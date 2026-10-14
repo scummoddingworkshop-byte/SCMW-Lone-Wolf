@@ -28,6 +28,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly HomeView _homeView;
     private readonly WorkspaceViewModel _workspaceVm;
     private readonly WorkspaceView _workspaceView;
+    private readonly BulkTableViewModel _bulk;
+    private readonly BulkTableView _bulkView;
     private readonly ProjectsViewModel _projects;
     private readonly ProjectsView _projectsView;
     private readonly ItemsViewModel _items;
@@ -85,6 +87,10 @@ public partial class ShellViewModel : ObservableObject
                                               new ContentCatalog(ContentSource, ContentSource.Icons),
                                               changes: _itemChanges, projects: _projectStore);
         _workspaceView = new WorkspaceView { DataContext = _workspaceVm };
+        _bulk = new BulkTableViewModel(FieldLibraryLoader.LoadDefault(), ContentSource,
+                                       new ContentCatalog(ContentSource, ContentSource.Icons),
+                                       changes: _itemChanges, projects: _projectStore);
+        _bulkView = new BulkTableView { DataContext = _bulk };
         _home = new HomeViewModel(_nav, store: _projectStore,
                                   gameReady: () => IsScumConfigured(store),
                                   workspace: _workspaceVm);
@@ -124,6 +130,7 @@ public partial class ShellViewModel : ObservableObject
         Sidebar = new[]
         {
             Nav(ScreenKey.Workspace, "Workspace"),
+            Nav(ScreenKey.BulkEdit, "Change many"),
             Nav(ScreenKey.Home, "Home"),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Items, "Items"),
@@ -164,6 +171,7 @@ public partial class ShellViewModel : ObservableObject
         _ = _baseElements.LoadFromSourceAsync();
         _ = _recipes.LoadFromSourceAsync();
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
+        _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
     }
 
     /// <summary>The rail entries, Home…Settings in order.</summary>
@@ -260,6 +268,7 @@ public partial class ShellViewModel : ObservableObject
         _ = _baseElements.LoadFromSourceAsync();
         _ = _recipes.LoadFromSourceAsync();
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
+        _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
     }
 
     /// <summary>Re-reads SCUM after "Read Game Data", then tells Settings plainly that it is done.</summary>
@@ -271,6 +280,7 @@ public partial class ShellViewModel : ObservableObject
             await _baseElements.LoadFromSourceAsync();
             await _recipes.LoadFromSourceAsync();
             await _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
+            await _bulk.OpenKindAsync(_bulk.SelectedKind);
             _settings.RefreshFinished(_items.IsUsingRealItems
                 ? "Done — SCMW — Lone Wolf re-read your items from SCUM."
                 : string.IsNullOrWhiteSpace(_items.SourceNote)
@@ -407,9 +417,13 @@ public partial class ShellViewModel : ObservableObject
         // The preview re-reads the chosen project's changes every time it is opened.
         if (Current == ScreenKey.Preview) _preview.Refresh();
 
+        // The bulk table re-reads the current kind's files every time it is opened.
+        if (Current == ScreenKey.BulkEdit) _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
+
         ActiveView = Current switch
         {
             ScreenKey.Workspace => _workspaceView,
+            ScreenKey.BulkEdit => _bulkView,
             ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
             ScreenKey.Items => _itemsView,
