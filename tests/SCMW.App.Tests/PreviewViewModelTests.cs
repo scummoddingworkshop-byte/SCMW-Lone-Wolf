@@ -49,6 +49,25 @@ public class PreviewViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // polish: each change shows the item's friendly name and its full path
+    public void The_preview_names_each_item_and_shows_its_path()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", id, assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            var line = Assert.Single(vm.Changes);
+            Assert.Equal("/a/Duct_Tape_ES", line.Path);
+            Assert.Equal("Duct Tape", line.FriendlyName);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // with nothing chosen, the preview says so instead of showing a fall-back's changes
     public void The_preview_says_so_when_no_project_is_chosen()
     {

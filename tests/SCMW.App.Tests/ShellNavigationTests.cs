@@ -12,10 +12,11 @@ namespace SCMW.App.Tests;
 public class ShellNavigationTests
 {
     [Fact]
-    public void Bands_run_Make_Ship_App_in_order()
-        => Assert.Equal(new[] { NavBand.Make, NavBand.Ship, NavBand.App }, NavBands.All);
+    public void Bands_run_Home_Make_Ship_App_in_order()
+        => Assert.Equal(new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App }, NavBands.All);
 
     [Theory]
+    [InlineData(ScreenKey.Home, NavBand.Home)]
     [InlineData(ScreenKey.Workspace, NavBand.Make)]
     [InlineData(ScreenKey.BulkEdit, NavBand.Make)]
     [InlineData(ScreenKey.Projects, NavBand.Make)]
@@ -58,23 +59,20 @@ public class ShellNavigationTests
     }
 
     [AvaloniaFact]
-    public void The_rail_groups_its_rows_into_the_three_bands()
+    public void The_rail_groups_its_rows_into_bands()
     {
         var vm = new ShellViewModel(new NavigationHost());
 
-        Assert.Equal(new[] { NavBand.Make, NavBand.Ship, NavBand.App }, vm.Bands.Select(b => b.Band));
+        Assert.Equal(new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App },
+                     vm.Bands.Select(b => b.Band));
+        Assert.Equal(new[] { ScreenKey.Home }, vm.Bands[0].Items.Select(i => i.Key));
         Assert.Equal(
-            new[]
-            {
-                ScreenKey.Workspace,
-                ScreenKey.BulkEdit,
-                ScreenKey.Home, ScreenKey.Projects,
-            },
-            vm.Bands[0].Items.Select(i => i.Key));
+            new[] { ScreenKey.Workspace, ScreenKey.BulkEdit, ScreenKey.Projects },
+            vm.Bands[1].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
-                     vm.Bands[1].Items.Select(i => i.Key));
-        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      vm.Bands[2].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
+                     vm.Bands[3].Items.Select(i => i.Key));
     }
 
     [AvaloniaFact]

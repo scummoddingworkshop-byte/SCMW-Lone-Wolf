@@ -21,13 +21,13 @@ public class RailTests
     }
 
     [AvaloniaFact]
-    public void The_rail_lists_the_workspace_first_under_make()
+    public void The_rail_lists_home_first_and_the_workspace_first_under_make()
     {
         var vm = new ShellViewModel(new NavigationHost());
 
         var first = vm.Sidebar.First();
-        Assert.Equal(ScreenKey.Workspace, first.Key);
-        Assert.Equal("Workspace", first.Label);
+        Assert.Equal(ScreenKey.Home, first.Key);
+        Assert.Equal("Home", first.Label);
         Assert.NotNull(first.Icon);
 
         var make = vm.Bands.Single(b => b.Band == NavBand.Make);

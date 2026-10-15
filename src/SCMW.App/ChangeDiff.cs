@@ -22,7 +22,8 @@ public static class ChangeDiff
                 g.First().AssetId,
                 g.GroupBy(r => r.FieldTechnicalName)
                     .Select(FieldRow)
-                    .ToList()))
+                    .ToList(),
+                g.Key))
             .ToList();
 
     /// <summary>

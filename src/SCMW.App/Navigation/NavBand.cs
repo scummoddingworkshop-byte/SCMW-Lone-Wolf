@@ -4,9 +4,11 @@ using System.Linq;
 
 namespace SCMW.App;
 
-/// <summary>The three labelled bands of the shell rail, top to bottom (design §5).</summary>
+/// <summary>The rail's bands, top to bottom (design §5). <see cref="Home"/> is a single row above
+/// the labelled bands.</summary>
 public enum NavBand
 {
+    Home,
     Make,
     Ship,
     App,
@@ -23,14 +25,13 @@ public static class NavBands
 {
     /// <summary>The bands in rail order.</summary>
     public static IReadOnlyList<NavBand> All { get; } =
-        new[] { NavBand.Make, NavBand.Ship, NavBand.App };
+        new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App };
 
-    /// <summary>The rail rows in the order the design lists them. Workspace leads Make.</summary>
+    /// <summary>The rail rows in the order the design lists them. Home sits above the bands.</summary>
     private static readonly ScreenKey[] RailOrder =
     {
-        ScreenKey.Workspace,
-        ScreenKey.BulkEdit,
-        ScreenKey.Home, ScreenKey.Projects,
+        ScreenKey.Home,
+        ScreenKey.Workspace, ScreenKey.BulkEdit, ScreenKey.Projects,
         ScreenKey.Preview, ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
         ScreenKey.Settings, ScreenKey.Help,
     };
@@ -38,10 +39,10 @@ public static class NavBands
     /// <summary>The band an area sits in. Every area has one — adding a screen forces a choice here.</summary>
     public static NavBand For(ScreenKey key) => key switch
     {
+        ScreenKey.Home => NavBand.Home,
         ScreenKey.Workspace => NavBand.Make,
         ScreenKey.BulkEdit => NavBand.Make,
         ScreenKey.Projects => NavBand.Make,
-        ScreenKey.Home => NavBand.Make,
         ScreenKey.Preview => NavBand.Ship,
         ScreenKey.Build => NavBand.Ship,
         ScreenKey.Mods => NavBand.Ship,

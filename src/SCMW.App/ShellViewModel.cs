@@ -97,7 +97,7 @@ public partial class ShellViewModel : ObservableObject
                                     _projectStore, _buildService, _launcher, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves);
         _buildView = new BuildView { DataContext = _build };
-        _preview = new PreviewViewModel(_itemChanges, _projectStore);
+        _preview = new PreviewViewModel(_itemChanges, _projectStore, ContentSource);
         _previewView = new PreviewView { DataContext = _preview };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };
@@ -112,9 +112,9 @@ public partial class ShellViewModel : ObservableObject
 
         Sidebar = new[]
         {
-            Nav(ScreenKey.Workspace, "Workspace"),
-            Nav(ScreenKey.BulkEdit, "Change many"),
             Nav(ScreenKey.Home, "Home"),
+            Nav(ScreenKey.Workspace, "Workspace"),
+            Nav(ScreenKey.BulkEdit, "Modify in bulk"),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Preview, "Preview"),
             Nav(ScreenKey.Build, "Build"),

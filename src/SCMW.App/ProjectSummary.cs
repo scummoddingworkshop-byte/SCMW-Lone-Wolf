@@ -75,7 +75,8 @@ public partial class ProjectSummary : ObservableObject
     private static string Plural(int count, string word) =>
         count == 1 ? $"1 {word}" : $"{count} {word}s";
 
-    private static IImage? LoadPicture(string? iconPath)
+    /// <summary>Loads a project picture from a file, tolerating a missing/unreadable one (null).</summary>
+    internal static IImage? LoadPicture(string? iconPath)
     {
         if (string.IsNullOrWhiteSpace(iconPath) || !File.Exists(iconPath)) return null;
 

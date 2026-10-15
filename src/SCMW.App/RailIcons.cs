@@ -21,10 +21,10 @@ public static class RailIcons
     private static string Name(ScreenKey key) => key switch
     {
         ScreenKey.Workspace => "home",              // placeholder icon (no Workspace artwork yet)
-        ScreenKey.BulkEdit => "items",              // placeholder icon (a list) for now
+        ScreenKey.BulkEdit => "bulk",               // a ticked list ("Modify in bulk")
         ScreenKey.Home => "home",
         ScreenKey.Projects => "projects",
-        ScreenKey.Preview => "build",               // placeholder icon (a copy of build) for now
+        ScreenKey.Preview => "preview",             // an eye — "what will change"
         ScreenKey.Build => "build",
         ScreenKey.Mods => "mods",
         ScreenKey.Backups => "backups",

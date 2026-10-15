@@ -42,8 +42,10 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:NavBandSection">
               <StackPanel>
-                <TextBlock Classes="bandHeader" Text="{Binding Title}" Margin="12,10,0,2"/>
-                <ListBox Classes="rail" ItemsSource="{Binding Items}"
+                <Border Classes="bandDivider" Margin="0,16,0,10" IsVisible="{Binding HasTitle}">
+                  <TextBlock Classes="bandHeader" Text="{Binding Title}" Margin="12,8,0,8"/>
+                </Border>
+                <ListBox Classes="rail" Classes.home="{Binding IsHome}" ItemsSource="{Binding Items}"
                          SelectedItem="{Binding Selected, Mode=TwoWay}">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:NavItem">
@@ -86,6 +88,16 @@
   </Grid>
 
   <Window.Styles>
+    <!-- A band heading sits between two hairlines, so the labelled areas read as separate groups. -->
+    <Style Selector="Border.bandDivider">
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="0,1,0,1"/>
+    </Style>
+    <!-- Home sits above the bands and gets extra breathing room. -->
+    <Style Selector="ListBox.rail.home ListBoxItem">
+      <Setter Property="Padding" Value="12,14"/>
+      <Setter Property="Margin" Value="0,2,0,12"/>
+    </Style>
     <Style Selector="ListBox.rail ListBoxItem">
       <Setter Property="Padding" Value="12,6"/>
       <Setter Property="Margin" Value="0,1"/>

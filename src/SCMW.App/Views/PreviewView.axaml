@@ -6,10 +6,17 @@
   <ScrollViewer>
     <StackPanel Spacing="16" Margin="24,8,24,24">
 
-      <StackPanel Spacing="4">
-        <TextBlock Text="Preview" Classes="h1"/>
-        <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" Classes="dim"/>
-      </StackPanel>
+      <TextBlock Text="Preview" Classes="h1"/>
+
+      <!-- The chosen project's picture, full width, cropped into a banner (max 200 tall). -->
+      <Border Name="ProjectBanner" Height="200" CornerRadius="10" ClipToBounds="True"
+              IsVisible="{Binding HasProjectPicture}">
+        <Image Name="ProjectPicture" Source="{Binding ProjectPicture}" Stretch="UniformToFill"/>
+      </Border>
+
+      <!-- Which mod this preview is about, in a prominent line. -->
+      <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" FontSize="20" FontWeight="SemiBold"
+                 Foreground="{StaticResource TextPrimaryBrush}"/>
 
       <!-- No project chosen yet: say so instead of showing a fall-back's changes. -->
       <Border Name="NeedsProjectWarning" Classes="card" IsVisible="{Binding NeedsProject}">
@@ -22,14 +29,32 @@
         <TextBlock Text="{Binding NoChangesNote}" Classes="dim" TextWrapping="Wrap"/>
       </Border>
 
-      <!-- Exactly what will change: one card per file, each field before → after. -->
+      <!-- Exactly what will change: one card per item, each value before → after. -->
       <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:BuildChange">
             <Border Classes="card" Margin="0,0,0,10">
-              <StackPanel Spacing="6">
-                <TextBlock Text="{Binding ItemName}" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
+              <StackPanel Spacing="8">
+
+                <!-- The item: its picture, its friendly name, and its full game path in brackets. -->
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
+                    <Panel>
+                      <TextBlock Text="SCMW" FontSize="8"
+                                 Foreground="{StaticResource TextDimBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      <Image Source="{Binding Picture}" Stretch="UniformToFill"
+                             IsVisible="{Binding HasPicture}"/>
+                    </Panel>
+                  </Border>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FriendlyName}" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{Binding Path, StringFormat='({0})'}" Classes="dim"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+                </StackPanel>
+
                 <ItemsControl ItemsSource="{Binding Values}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:BuildValueChange">
@@ -40,6 +65,7 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
               </StackPanel>
             </Border>
           </DataTemplate>

@@ -6,7 +6,7 @@
              x:DataType="vm:WorkspaceViewModel">
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
-  <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="24,8,24,24">
+  <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="28,8,28,24">
 
     <!-- "One project = one mod": with nothing chosen, editing is refused and explained here. -->
     <Border Grid.Row="0" Grid.ColumnSpan="3" Name="NeedsProjectWarning" Classes="card"
@@ -50,7 +50,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <ListBox Grid.Row="3" Name="AssetList" Classes="items" Margin="0,8,0,0"
+      <ListBox Grid.Row="3" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                IsVisible="{Binding HasAssetMatches}">
@@ -76,7 +76,7 @@
                  Text="This file has no values to show."
                  IsVisible="{Binding !HasFields}"/>
 
-      <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
+      <ScrollViewer Grid.Row="2" Margin="0,12,0,0" Padding="0,0,12,0">
         <StackPanel>
           <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemTemplate>
