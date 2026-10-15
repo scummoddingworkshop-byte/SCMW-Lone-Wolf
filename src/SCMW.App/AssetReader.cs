@@ -13,11 +13,15 @@ public static class AssetReader
 {
     /// <summary>
     /// Every asset in the index, paged to exhaustion — never just the first page, or a capped page
-    /// would silently hide files. Does not scan; the caller decides readiness.
+    /// would silently hide files. Scans first: a fresh index is a fast no-op, while a missing or
+    /// stale one is (re)built here — the one place a first run and a SCUM update are picked up, so
+    /// the browse list can never be silently stale or empty.
     /// </summary>
     public static async Task<IReadOnlyList<AssetSummary>> ReadAllAsync(
         IContentSource source, CancellationToken ct = default)
     {
+        await source.ScanAsync(null, ct).ConfigureAwait(false);
+
         var assets = new List<AssetSummary>();
         var skip = 0;
         while (true)

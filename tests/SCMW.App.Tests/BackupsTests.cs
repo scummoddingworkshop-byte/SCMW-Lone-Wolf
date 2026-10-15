@@ -119,6 +119,30 @@ public class BackupsServiceTests : IDisposable
         Assert.True(New().Delete(entry).Ok);
         Assert.False(File.Exists(file));
     }
+
+    [AvaloniaFact]
+    public void A_backup_of_a_replaced_mod_restores_under_its_real_name()
+    {
+        // The installer keeps a same-name twin it displaces as "<name> (stamp).replaced", where
+        // <name> already ends in ".pak" or ".pak.disabled". Restoring must drop the ".replaced"
+        // marker and put the file back under the name the game will actually load.
+        Directory.CreateDirectory(ModsBackups);
+        File.WriteAllText(Path.Combine(ModsBackups, "SCMW_Tape_v1.0.0_P.pak (20261008-101112).replaced"), "on");
+        File.WriteAllText(Path.Combine(ModsBackups, "Rope.pak.disabled (20261008-101113).replaced"), "off");
+
+        var entries = New().List();
+
+        Assert.Equal("SCMW_Tape_v1.0.0_P.pak",
+            entries.Single(e => e.Path.Contains("SCMW_Tape")).DisplayName);
+        Assert.Equal("Rope.pak.disabled",
+            entries.Single(e => e.Path.Contains("Rope")).DisplayName);
+
+        Assert.True(New().Restore(entries.Single(e => e.Path.Contains("SCMW_Tape"))).Ok);
+        Assert.True(File.Exists(Path.Combine(Mods, "SCMW_Tape_v1.0.0_P.pak")));
+
+        Assert.True(New().Restore(entries.Single(e => e.Path.Contains("Rope"))).Ok);
+        Assert.True(File.Exists(Path.Combine(Mods, "Rope.pak.disabled")));
+    }
 }
 
 public class BackupsViewModelTests

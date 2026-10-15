@@ -77,9 +77,8 @@ public sealed class BackupsService : IBackupsService
             foreach (var file in Directory.GetFiles(_modsBackups))
             {
                 var name = Path.GetFileName(file);
-                var stem = Path.GetFileNameWithoutExtension(name);   // the stamp sits before ".pak"
-                var original = StripStamp(stem) + Path.GetExtension(name);
-                entries.Add(new BackupEntry(BackupKind.Mod, original, StampOf(stem), file));
+                var stem = Path.GetFileNameWithoutExtension(name);   // the stamp sits before ".pak"/".replaced"
+                entries.Add(new BackupEntry(BackupKind.Mod, OriginalNameOf(name), StampOf(stem), file));
             }
         }
 
@@ -122,7 +121,7 @@ public sealed class BackupsService : IBackupsService
             return new ModsResult(false, "Set your SCUM folder in Settings first.");
 
         var name = Path.GetFileName(entry.Path);
-        var original = StripStamp(Path.GetFileNameWithoutExtension(name)) + Path.GetExtension(name);
+        var original = OriginalNameOf(name);
         var target = Path.Combine(_modsFolder, original);
 
         if (File.Exists(target) || File.Exists(target + ".disabled"))
@@ -164,6 +163,21 @@ public sealed class BackupsService : IBackupsService
     {
         var match = Stamp.Match(name);
         return match.Success ? name[..match.Index] : name;
+    }
+
+    /// <summary>
+    /// A backup file's real name, without the added " (stamp)". A replaced twin is kept as
+    /// "&lt;name&gt; (stamp).replaced", where &lt;name&gt; already ends in ".pak" or ".pak.disabled" — so its
+    /// real name is the stem alone. A plain replaced target ends in ".pak", so its real name is the
+    /// stem plus that extension. This is what makes a restored file loadable again.
+    /// </summary>
+    private static string OriginalNameOf(string name)
+    {
+        var stem = Path.GetFileNameWithoutExtension(name);
+        var ext = Path.GetExtension(name);
+        return ext.Equals(".replaced", StringComparison.OrdinalIgnoreCase)
+            ? StripStamp(stem)
+            : StripStamp(stem) + ext;
     }
 
     private static DateTime StampOf(string name)

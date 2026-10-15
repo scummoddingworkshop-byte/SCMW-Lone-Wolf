@@ -17,12 +17,34 @@ public class ShellLaunchTests
     public async Task Launch_modded_starts_the_modded_game()
     {
         var launcher = new FakeLauncher();
-        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher);
+        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher, saves: new FakeSaves());
 
         await vm.LaunchModdedCommand.ExecuteAsync(null);
 
         Assert.Equal(1, launcher.Modded);
         Assert.Equal(0, launcher.Unmodded);
+    }
+
+    [AvaloniaFact]
+    public async Task A_modded_launch_backs_up_the_save_first()
+    {
+        var saves = new FakeSaves();
+        var vm = new ShellViewModel(new NavigationHost(), launcher: new FakeLauncher(), saves: saves);
+
+        await vm.LaunchModdedCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, saves.Backups);
+    }
+
+    [AvaloniaFact]
+    public async Task A_vanilla_launch_does_not_back_up_the_save()
+    {
+        var saves = new FakeSaves();
+        var vm = new ShellViewModel(new NavigationHost(), launcher: new FakeLauncher(), saves: saves);
+
+        await vm.LaunchUnmoddedCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, saves.Backups);
     }
 
     [AvaloniaFact]
@@ -53,7 +75,7 @@ public class ShellLaunchTests
     public async Task A_failed_launch_shows_the_plain_reason()
     {
         var launcher = new FakeLauncher { Next = new LaunchResult(false, "SCUM could not be started.") };
-        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher);
+        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher, saves: new FakeSaves());
 
         await vm.LaunchModdedCommand.ExecuteAsync(null);
 
@@ -79,7 +101,7 @@ public class ShellLaunchTests
     {
         var launcher = new FakeLauncher();
         var mods = new FakeMods();
-        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher, modsService: mods);
+        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher, modsService: mods, saves: new FakeSaves());
 
         await vm.LaunchUnmoddedCommand.ExecuteAsync(null);
         await vm.LaunchModdedCommand.ExecuteAsync(null);
@@ -98,5 +120,16 @@ public class ShellLaunchTests
 
         Assert.Equal(0, launcher.Modded + launcher.Unmodded);   // never started
         Assert.Contains("Close the game", vm.LaunchNote);
+    }
+
+    private sealed class FakeSaves : ISaveBackupsService
+    {
+        public int Backups;
+        public bool IsAvailable => true;
+        public string SaveFolder => "";
+        public IReadOnlyList<SaveSnapshot> List() => Array.Empty<SaveSnapshot>();
+        public string? BackUp() { Backups++; return null; }
+        public string? Restore(string id) => null;
+        public string? Delete(string id) => null;
     }
 }

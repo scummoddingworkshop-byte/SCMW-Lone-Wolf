@@ -54,7 +54,8 @@ public partial class ShellViewModel : ObservableObject
     public ShellViewModel(INavigation? nav = null, ISettingsStore? settingsStore = null,
                           IScumSources? scumSources = null, ProjectStore? projects = null,
                           SCMW.Core.Content.IContentSource? contentSource = null,
-                          IGameLauncher? launcher = null, IModsService? modsService = null)
+                          IGameLauncher? launcher = null, IModsService? modsService = null,
+                          ISaveBackupsService? saves = null)
     {
         _nav = nav ?? NavigationHost.Shared;
         _projectStore = projects ?? ProjectStore.Default();
@@ -90,7 +91,7 @@ public partial class ShellViewModel : ObservableObject
         _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges);
         _projectsView = new ProjectsView { DataContext = _projects };
         _modList = new ModList();
-        _saves = new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
+        _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves);
@@ -320,6 +321,10 @@ public partial class ShellViewModel : ObservableObject
     {
         LaunchNote = "";
 
+        // A modded launch loads the mods, and a pak can leave a mark in a save (design §11), so keep
+        // a copy of the saved game first. Best-effort: a failure is said plainly, but never blocks.
+        var saveNote = modded ? _saves.BackUp() ?? "" : "";
+
         if (_modsService is { } mods)
         {
             var switched = await Task.Run(() => mods.SetAllEnabled(modded));
@@ -334,7 +339,7 @@ public partial class ShellViewModel : ObservableObject
             ? await _launcher.LaunchModdedAsync()
             : await _launcher.LaunchUnmoddedAsync();
         LaunchNote = result.Ok
-            ? (modded ? "" : "Mods switched off — SCUM started as vanilla.")
+            ? (modded ? saveNote : "Mods switched off — SCUM started as vanilla.")
             : (result.Error ?? "SCUM could not be started.");
     }
 
