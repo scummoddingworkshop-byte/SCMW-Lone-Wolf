@@ -107,7 +107,9 @@
                       IsVisible="{Binding HasProjects}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <UniformGrid Columns="4" ColumnSpacing="12"/>
+              <!-- Three in a row normally; the cells are equal, so every card is the same height. -->
+              <UniformGrid ColumnSpacing="12" RowSpacing="12"
+                           Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}}"/>
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>

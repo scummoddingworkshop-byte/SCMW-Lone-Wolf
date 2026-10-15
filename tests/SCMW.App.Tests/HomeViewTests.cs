@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
@@ -133,5 +134,40 @@ public class HomeViewTests
         var heights = tiles.Select(t => Math.Round(t.Bounds.Height)).Distinct().ToList();
         Assert.True(widths.Count == 1, $"tile widths differ: {string.Join(", ", widths)}");
         Assert.True(heights.Count == 1, $"tile heights differ: {string.Join(", ", heights)}");
+    }
+
+    [AvaloniaFact]
+    public void Home_project_open_buttons_line_up_across_the_cards()
+    {
+        var view = ShownView();
+
+        var opens = view.GetVisualDescendants().OfType<ProjectTile>()
+            .Select(t => t.FindControl<Button>("OpenButton")!)
+            .ToList();
+
+        Assert.Equal(4, opens.Count);
+
+        // The first row's cards: every Open button sits on the same line, whatever the name or
+        // description above it. (The fourth project is on the next row, so it sits lower.)
+        var tops = opens.Take(3)
+            .Select(b => Math.Round(b.TranslatePoint(new Point(0, 0), view)!.Value.Y))
+            .Distinct()
+            .ToList();
+
+        Assert.True(tops.Count == 1, $"the Open buttons sit at different heights: {string.Join(", ", tops)}");
+
+        var fourth = Math.Round(opens[3].TranslatePoint(new Point(0, 0), view)!.Value.Y);
+        Assert.True(fourth > tops[0], "the fourth card should start on the next row");
+    }
+
+    [Fact]
+    public void Three_project_cards_a_row_normally_and_more_only_when_really_wide()
+    {
+        var convert = new ColumnCountConverter();
+
+        Assert.Equal(3, convert.Convert(900d, typeof(int), null, CultureInfo.InvariantCulture));
+        Assert.Equal(3, convert.Convert(380d * 3, typeof(int), null, CultureInfo.InvariantCulture));
+        Assert.Equal(4, convert.Convert(380d * 4, typeof(int), null, CultureInfo.InvariantCulture));
+        Assert.Equal(6, convert.Convert(380d * 40, typeof(int), null, CultureInfo.InvariantCulture));
     }
 }

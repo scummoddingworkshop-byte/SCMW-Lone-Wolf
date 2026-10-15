@@ -18,7 +18,6 @@
     <AvaloniaResource Include="Assets\sidebar.png" />
     <AvaloniaResource Include="Assets\launch\*.png" />
     <AvaloniaResource Include="Assets\rail\*.png" />
-    <AvaloniaResource Include="Assets\quick\*.png" />
   </ItemGroup>
 
   <ItemGroup>

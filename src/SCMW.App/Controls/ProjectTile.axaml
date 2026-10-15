@@ -2,50 +2,59 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SCMW.App.Controls.ProjectTile">
   <Border Classes="projecttile">
-    <StackPanel Spacing="10">
-      <!-- Picture slot: a wide banner, shaped like the SCUM panorama strips (about 4.6:1). -->
-      <Border Name="PictureSlot" Classes="thumb" HorizontalAlignment="Stretch"
-              Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.218}">
-        <Panel>
-          <TextBlock Name="DefaultMark" Text="SCMW" FontSize="18" FontWeight="SemiBold"
-                     Foreground="{StaticResource TextDimBrush}"
-                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          <Image Name="Picture" Stretch="UniformToFill" IsVisible="False"/>
-        </Panel>
-      </Border>
-
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <TextBlock Name="NameText" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
-                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-        <Border Name="CurrentChip" Classes="chip" IsVisible="False" VerticalAlignment="Center">
-          <TextBlock Text="Current" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+    <Grid RowDefinitions="*,Auto">
+      <!-- Everything above the buttons. This row takes the slack, so the buttons sit on the same
+           line on every card, whatever the name or description is. -->
+      <StackPanel Grid.Row="0" Spacing="10">
+        <!-- Picture slot: a wide banner, shaped like the SCUM panorama strips (about 4.6:1). -->
+        <Border Name="PictureSlot" Classes="thumb" HorizontalAlignment="Stretch"
+                Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.218}">
+          <Panel>
+            <TextBlock Name="DefaultMark" Text="SCMW" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextDimBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Image Name="Picture" Stretch="UniformToFill" IsVisible="False"/>
+          </Panel>
         </Border>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Name="NameText" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                     Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+          <Border Name="CurrentChip" Classes="chip" IsVisible="False" VerticalAlignment="Center">
+            <TextBlock Text="Current" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+          </Border>
+        </StackPanel>
+
+        <TextBlock Name="WhenText" Classes="dim"/>
+        <TextBlock Name="ChangesText" Classes="dim"/>
+
+        <!-- A description is free text, so it is held to two lines: the cards stay the same shape. -->
+        <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"
+                   MaxLines="2" TextTrimming="CharacterEllipsis"/>
       </StackPanel>
 
-      <TextBlock Name="WhenText" Classes="dim"/>
-      <TextBlock Name="ChangesText" Classes="dim"/>
-      <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"/>
+      <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">
+        <!-- Actions: separate buttons side by side, never one inside another. -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Name="OpenButton" Classes="secondary" Content="Open"/>
+          <Button Name="MenuButton" Content="⋯" ToolTip.Tip="More actions">
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Name="EditItem" Header="Edit"/>
+                <MenuItem Name="DuplicateItem" Header="Duplicate"/>
+                <MenuItem Name="DeleteItem" Header="Delete"/>
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+        </StackPanel>
 
-      <!-- Actions: separate buttons side by side, never one inside another. -->
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Name="OpenButton" Classes="secondary" Content="Open"/>
-        <Button Name="MenuButton" Content="⋯" ToolTip.Tip="More actions">
-          <Button.Flyout>
-            <MenuFlyout>
-              <MenuItem Name="EditItem" Header="Edit"/>
-              <MenuItem Name="DuplicateItem" Header="Duplicate"/>
-              <MenuItem Name="DeleteItem" Header="Delete"/>
-            </MenuFlyout>
-          </Button.Flyout>
-        </Button>
+        <!-- Inline delete confirmation. -->
+        <StackPanel Name="ConfirmBar" Orientation="Horizontal" Spacing="8" IsVisible="False">
+          <TextBlock Text="Delete this project?" Classes="dim" VerticalAlignment="Center"/>
+          <Button Name="ConfirmDeleteButton" Classes="primary" Content="Delete"/>
+          <Button Name="CancelDeleteButton" Classes="secondary" Content="Cancel"/>
+        </StackPanel>
       </StackPanel>
-
-      <!-- Inline delete confirmation. -->
-      <StackPanel Name="ConfirmBar" Orientation="Horizontal" Spacing="8" IsVisible="False">
-        <TextBlock Text="Delete this project?" Classes="dim" VerticalAlignment="Center"/>
-        <Button Name="ConfirmDeleteButton" Classes="primary" Content="Delete"/>
-        <Button Name="CancelDeleteButton" Classes="secondary" Content="Cancel"/>
-      </StackPanel>
-    </StackPanel>
+    </Grid>
   </Border>
 </UserControl>

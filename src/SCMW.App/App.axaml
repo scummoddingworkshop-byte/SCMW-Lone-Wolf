@@ -13,6 +13,9 @@
             <!-- Keeps the Home hero's shape: its height follows its width. -->
             <app:ScaleConverter x:Key="ScaleConverter"/>
 
+            <!-- Three project cards in a row, more only once the window is really wide. -->
+            <app:ColumnCountConverter x:Key="ColumnCountConverter"/>
+
             <!-- Make Fluent's default (blue) switches use the app's warm accent instead. -->
             <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#E07B39"/>
             <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#F0924F"/>
