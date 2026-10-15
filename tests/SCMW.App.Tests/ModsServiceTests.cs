@@ -88,6 +88,26 @@ public class ModsServiceTests : IDisposable
     }
 
     [Fact]
+    public void The_read_me_introduces_the_app_and_links_to_it()
+    {
+        var svc = NewService();
+        Put("SCMW_My-mod_v1.0.0_P.pak");
+        RecordOurs("p1", "SCMW_My-mod_v1.0.0_P.pak");
+        var zipPath = Path.Combine(_root, "pack.zip");
+
+        Assert.True(svc.PackOurMods(zipPath).Ok);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
+        var note = ReadNote(zip);
+
+        Assert.Contains($"About {AppInfo.Name}", note);
+        Assert.Contains(AppInfo.About, note);
+        Assert.Contains(AppInfo.NexusUrl, note);
+        Assert.Contains(AppInfo.RepositoryUrl, note);
+        Assert.Contains(AppInfo.Version, note);
+    }
+
+    [Fact]
     public void Packing_a_switched_off_mod_keeps_it_switched_off()
     {
         var svc = NewService();

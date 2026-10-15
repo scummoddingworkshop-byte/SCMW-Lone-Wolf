@@ -305,11 +305,22 @@ public sealed class ModsService : IModsService
         if (leftOut.Count == 0)
         {
             note.WriteLine("Nothing was left out: every mod here was made with SCMW — Lone Wolf.");
-            return;
+        }
+        else
+        {
+            note.WriteLine("Left out — not made with SCMW — Lone Wolf, so not ours to pass on:");
+            foreach (var line in leftOut) note.WriteLine($"  {line}");
         }
 
-        note.WriteLine("Left out — not made with SCMW — Lone Wolf, so not ours to pass on:");
-        foreach (var line in leftOut) note.WriteLine($"  {line}");
+        note.WriteLine();
+        note.WriteLine($"About {AppInfo.Name}");
+        note.WriteLine(new string('-', $"About {AppInfo.Name}".Length));
+        note.WriteLine(AppInfo.About);
+        note.WriteLine();
+        note.WriteLine($"  Nexus page:  {AppInfo.NexusUrl}");
+        note.WriteLine($"  Source code: {AppInfo.RepositoryUrl}");
+        note.WriteLine();
+        note.WriteLine($"Packed with {AppInfo.Name} {AppInfo.Version}.");
     }
 
     private void ForgetImported(string fileName)
