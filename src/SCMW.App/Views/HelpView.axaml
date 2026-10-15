@@ -22,7 +22,7 @@
       <Expander Header="What can I make?" HorizontalAlignment="Stretch">
         <StackPanel Spacing="8">
           <TextBlock Classes="step" Text="A mod is a .pak file that carries content, not code — so it's safe to use, with no risk to your account."/>
-          <TextBlock Classes="step" Text="What a mod can do today:  change values on items, base-building parts and recipes (weight, stack size, health, timers); add a value an object doesn't have — like the auto-destruct timer that keeps a placed object from vanishing; tweak a recipe's ingredients; and adjust loot and spawn settings."/>
+          <TextBlock Classes="step" Text="What a mod can do today:  change values on items, base-building parts and recipes — weight, stack size, health, timers, and a recipe's XP reward or how much it makes. You can also add a value an object doesn't have, like the auto-destruct timer that keeps a placed object from vanishing."/>
           <TextBlock Classes="step" Text="What a mod can't do:  change how the game behaves while you play — a doctor reacting to your health, animals learning, weather soaking your clothes. Those need scripting, which is a separate, parked route (a future 'Wolf Pack'), not something a pak can carry."/>
           <TextBlock Classes="step" Text="Where Lone Wolf sits on the ladder:  it starts at Level 1 (change a value), reaches Level 2 (change a recipe) and the first rung of Level 3 (add a field). New recipes, categories and whole objects (Levels 3–5) are on the way."/>
           <TextBlock Classes="step" Text="Official tools are coming:  SCUM's own mod support (a full SDK and Workshop upload) is in active development. Lone Wolf is a companion to it, not a rival — and it's built to keep working alongside it."/>
@@ -57,9 +57,9 @@
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="1.  Create a project.  In Projects, press New project and give it a name. That project becomes the one you're working in. It's just a container for your changes — nothing in the game is touched yet."/>
           <TextBlock Classes="step" Text="2.  Edit your items.  In the Workspace, find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
-          <TextBlock Classes="step" Text="3.  Build your mod.  In Build you'll see a list of what's in your mod. Press Build, and SCMW — Lone Wolf writes a finished .pak file into your workspace — and shows you where it landed."/>
-          <TextBlock Classes="step" Text="4.  Add it to SCUM.  Press Install into SCUM to copy it into the game's mods folder, then use Launch modded to start SCUM and try it. From then on the Mods screen lists it, and you can switch it on or off."/>
-          <TextBlock Classes="step" Text="Changed your mind later? Edit your items again, press Build again, then press Update the copy in SCUM — there's no need to remove it first. To take it back out, press Remove from SCUM."/>
+          <TextBlock Classes="step" Text="3.  Build your mod.  In Build you'll see a list of what's in your mod. Press Build, and SCMW — Lone Wolf writes a finished .pak file and copies it into SCUM's mods folder — switched off, so nothing changes until you say so. It shows you where it landed."/>
+          <TextBlock Classes="step" Text="4.  Switch it on and play.  Open Mods Management and switch your mod on. Then press Launch modded at the bottom of the left bar to start SCUM and try it."/>
+          <TextBlock Classes="step" Text="Changed your mind later? Edit your items again and press Build again — the new copy replaces the old one, so there's no need to remove it first. To take it back out of SCUM, switch it off or press Remove on its row in Mods Management."/>
         </StackPanel>
       </Expander>
 
@@ -71,18 +71,18 @@
         </StackPanel>
       </Expander>
 
-      <Expander Header="Build and install your mod" HorizontalAlignment="Stretch">
+      <Expander Header="Build your mod" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
-          <TextBlock Classes="step" Text="1.  Open Build and press Build. When it's ready, press Install into SCUM."/>
-          <TextBlock Classes="step" Text="2.  Changed something since? Build again, then press Update the copy in SCUM — there's no need to remove it first."/>
-          <TextBlock Classes="step" Text="Remove from SCUM takes your mod back out of the game."/>
+          <TextBlock Classes="step" Text="1.  Open Build and press Build. SCMW — Lone Wolf writes a finished .pak file and copies it into SCUM's mods folder, switched off."/>
+          <TextBlock Classes="step" Text="2.  Open Mods Management and switch your mod on. Then press Launch modded at the bottom of the left bar to start SCUM."/>
+          <TextBlock Classes="step" Text="3.  Changed something since? Build again — the new copy replaces the old one, so there's no need to remove it first."/>
         </StackPanel>
       </Expander>
 
       <Expander Header="Turn mods on or off, and play" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
-          <TextBlock Classes="step" Text="The Mods screen lists everything in SCUM's mods folder. Each row has a switch: on means SCUM will load it, off means it won't."/>
-          <TextBlock Classes="step" Text="The two launch buttons start SCUM for you — and they also set every mod switch first: 'Launch modded' switches them all on, 'Launch unmodded' switches them all off."/>
+          <TextBlock Classes="step" Text="The Mods Management screen lists everything in SCUM's mods folder. Each row has a switch: on means SCUM will load it, off means it won't."/>
+          <TextBlock Classes="step" Text="The two launch buttons at the bottom of the left bar start SCUM for you — and they also set every mod switch first: 'Launch modded' switches them all on, 'Launch unmodded' switches them all off."/>
         </StackPanel>
       </Expander>
 
@@ -98,8 +98,7 @@
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="Switching a mod off only renames its file — 'name.pak' becomes 'name.pak.disabled'. Nothing is deleted and nothing is changed inside it; SCUM simply skips it. Flip the switch to bring it back."/>
           <TextBlock Classes="step" Text="Removing a mod (the Remove button on its row) does not throw it away. SCMW — Lone Wolf copies it into your workspace's Backups\mods folder first, then deletes it from SCUM's mods folder. You can drag it back in from those backups any time."/>
-          <TextBlock Classes="step" Text="If the mod was one you built here, removing it also clears its 'installed' record, so Build stops claiming it is installed."/>
-          <TextBlock Classes="step" Text="Adding a mod: drag a .pak onto the Mods screen. Anything that isn't a .pak, or that is already there, is skipped and it tells you so."/>
+          <TextBlock Classes="step" Text="Adding a mod: drag a .pak onto the Mods Management screen. Anything that isn't a .pak, or that is already there, is skipped and it tells you so."/>
           <TextBlock Classes="step" Text="SCUM loads mods from …\SCUM\Content\Paks\~mods — you can open that folder from Settings → Game."/>
         </StackPanel>
       </Expander>
@@ -122,7 +121,7 @@
       <Expander Header="Uninstalling" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="SCMW — Lone Wolf is portable — no installer, no registry entries, no services. Uninstalling is mostly just deleting its folder."/>
-          <TextBlock Classes="step" Text="1.  Optional: take your mods out of the game first (Build → Remove from SCUM, or the Mods screen)."/>
+          <TextBlock Classes="step" Text="1.  Optional: take your mods out of the game first (the Mods Management screen)."/>
           <TextBlock Classes="step" Text="2.  Close the app."/>
           <TextBlock Classes="step" Text="3.  Delete the app folder."/>
           <TextBlock Classes="step" Text="Your projects and settings are left behind, so reinstalling picks up where you left off."/>
@@ -135,7 +134,7 @@
       <Expander Header="When something looks wrong" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="'Couldn't open the game folder' — set your SCUM folder in Settings."/>
-          <TextBlock Classes="step" Text="Installing says to close the game — close SCUM, then try again."/>
+          <TextBlock Classes="step" Text="A save backup says to close the game — close SCUM, then try again."/>
           <TextBlock Classes="step" Text="A write seems blocked (SCUM is often in Program Files) — run SCMW — Lone Wolf as administrator."/>
           <TextBlock Classes="step" Text="The key Test fails — the key may have changed after a SCUM update."/>
           <TextBlock Classes="step" Text="The item list looks out of date — Settings → Re-read Game Data."/>
