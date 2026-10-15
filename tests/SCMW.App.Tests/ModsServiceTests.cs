@@ -105,6 +105,11 @@ public class ModsServiceTests : IDisposable
         Assert.Contains(AppInfo.NexusUrl, note);
         Assert.Contains(AppInfo.RepositoryUrl, note);
         Assert.Contains(AppInfo.Version, note);
+
+        // It says a mod manager will do too, and that this app is one.
+        Assert.Contains("or use your favourite mod manager", note);
+        Assert.Contains("it is a mod manager as well as a mod", note);
+        Assert.Contains("Drag a .pak into it", note);
     }
 
     [Fact]

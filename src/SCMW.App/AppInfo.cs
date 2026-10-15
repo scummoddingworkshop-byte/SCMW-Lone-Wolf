@@ -21,9 +21,10 @@ public static class AppInfo
 
     /// <summary>One plain sentence on what the app is, for places that introduce it (a pack's read-me).</summary>
     public const string About =
-        "SCMW — Lone Wolf is a mod maker for SCUM. You change an item's values, add values a file " +
-        "does not have, and build the result into a .pak. Your game files are never edited in place, " +
-        "and every change can be undone.";
+        "SCMW — Lone Wolf is a mod maker and a mod manager for SCUM. Change an item's values, add " +
+        "values a file does not have, and build the result into a .pak — or drag in a .pak from " +
+        "anywhere to install it, then switch it on and off or remove it. Your game files are never " +
+        "edited in place, and every change can be undone.";
 
     public static string Version { get; } = ReadVersion();
 

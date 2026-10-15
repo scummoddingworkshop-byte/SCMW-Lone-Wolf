@@ -13,18 +13,27 @@
       </StackPanel>
 
       <TextBlock Name="MessageText" Text="{Binding Message}" Classes="dim" TextWrapping="Wrap"
+                 Classes.good="{Binding IsMessageGood}"
                  IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
       <Button Name="RestartAdminButton" Classes="primary" Content="Restart as administrator"
               HorizontalAlignment="Left"
               IsVisible="{Binding CanRestartAsAdmin}"
               Command="{Binding RestartAsAdminCommand}"/>
 
-      <Border Name="DropZone" Classes="dropzone" DragDrop.AllowDrop="True">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Grid.Column="0" Text="Drag a .pak here to add an external mod" Classes="dim"
-                     VerticalAlignment="Center"/>
-          <Button Grid.Column="1" Name="AddModButton" Classes="secondary" Content="Add a mod…"
-                  Command="{Binding AddModCommand}"/>
+      <Border Name="DropZone" Classes="dropzone" DragDrop.AllowDrop="True" MinHeight="160">
+        <Grid>
+          <!-- A dashed orange outline: the target should look like one. Drawn, because Border cannot dash. -->
+          <Rectangle RadiusX="10" RadiusY="10" Stroke="{StaticResource AccentBrush}"
+                     StrokeThickness="2" StrokeDashArray="5,3" IsHitTestVisible="False"/>
+
+          <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="↓" FontSize="30" Foreground="{StaticResource AccentBrush}"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Drag a .pak here to add an external mod" Classes="dim"
+                       HorizontalAlignment="Center"/>
+            <Button Name="AddModButton" Classes="secondary" Content="Add a mod…"
+                    HorizontalAlignment="Center" Command="{Binding AddModCommand}"/>
+          </StackPanel>
         </Grid>
       </Border>
 

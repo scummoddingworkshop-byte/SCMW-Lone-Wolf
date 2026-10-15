@@ -297,9 +297,19 @@ public sealed class ModsService : IModsService
         note.WriteLine("-------------");
         note.WriteLine("Copy these files into SCUM's mods folder:");
         note.WriteLine(@"  <SCUM folder>\SCUM\Content\Paks\~mods");
-        note.WriteLine("Then switch on the mods you want, in SCMW — Lone Wolf's Mods Management");
-        note.WriteLine("screen. A name ending in \".disabled\" is a mod that was switched off when");
-        note.WriteLine("this pack was made — switch it on there, or drop \".disabled\" from its name.");
+        note.WriteLine("— or use your favourite mod manager to install them.");
+        note.WriteLine();
+        note.WriteLine("Then switch on the mods you want. A name ending in \".disabled\" is a mod that");
+        note.WriteLine("was switched off when this pack was made — switch it on, or drop \".disabled\"");
+        note.WriteLine("from its name.");
+        note.WriteLine();
+        note.WriteLine("SCMW — Lone Wolf can do that for you: it is a mod manager as well as a mod");
+        note.WriteLine("maker. Drag a .pak into it to install one from anywhere, and switch mods on");
+        note.WriteLine("and off or remove them, all in one place. If you are not using a mod manager");
+        note.WriteLine("yet — or you would like to try something different — the latest version is");
+        note.WriteLine("on my Nexus page:");
+        note.WriteLine();
+        note.WriteLine($"  {AppInfo.NexusUrl}");
         note.WriteLine();
 
         if (leftOut.Count == 0)

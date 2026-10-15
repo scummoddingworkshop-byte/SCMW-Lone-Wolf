@@ -69,6 +69,12 @@ public partial class ModsViewModel : ObservableObject
     /// <summary>A plain line for the last thing that happened (a refusal, an import).</summary>
     [ObservableProperty] private string _message = "";
 
+    /// <summary>True when the line is good news, so it shows in the app's success green.</summary>
+    [ObservableProperty] private bool _isMessageGood;
+
+    // Every message starts out as "not good news"; a success marks itself good right after setting it.
+    partial void OnMessageChanged(string value) => IsMessageGood = false;
+
     /// <summary>True when the last refusal was a Windows permission block the player can fix by
     /// restarting with administrator rights.</summary>
     [ObservableProperty] private bool _canRestartAsAdmin;
@@ -157,11 +163,15 @@ public partial class ModsViewModel : ObservableObject
         try
         {
             var outcome = await System.Threading.Tasks.Task.Run(() => _service.PackOurMods(zipPath));
-            Message = outcome.Ok
-                ? $"{outcome.Packed} {(outcome.Packed == 1 ? "mod" : "mods")} packed into " +
-                  $"{System.IO.Path.GetFileName(zipPath)}" +
-                  (outcome.LeftOut.Count > 0 ? $" — {outcome.LeftOut.Count} left out, listed inside." : ".")
-                : (outcome.Error ?? "That pack could not be written.");
+            if (outcome.Ok)
+            {
+                Message = "ZIP has been created. All good!";
+                IsMessageGood = true;                     // set after: every message starts as not-good
+                CanRestartAsAdmin = false;
+                return;
+            }
+
+            Message = outcome.Error ?? "That pack could not be written.";
             CanRestartAsAdmin = false;
         }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)

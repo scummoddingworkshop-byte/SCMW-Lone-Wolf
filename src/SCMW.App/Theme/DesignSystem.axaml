@@ -319,11 +319,11 @@
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
   </Style>
 
-  <!-- The "drag a .pak here" strip on Mods. -->
+  <!-- The "drag a .pak here" target on Mods: a soft warm panel with a dashed orange outline (drawn by
+       a Rectangle in the view, since Border cannot dash), sized so it reads as a place to drop. -->
   <Style Selector="Border.dropzone">
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+    <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="10"/>
     <Setter Property="Padding" Value="16,12"/>
   </Style>

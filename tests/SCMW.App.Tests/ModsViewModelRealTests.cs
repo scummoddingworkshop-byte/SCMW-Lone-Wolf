@@ -57,6 +57,34 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
+    public async Task Packing_reports_success_in_the_apps_good_news_style()
+    {
+        var svc = new FakeMods();
+        var vm = new ModsViewModel(service: svc);
+
+        await vm.PackModsToAsync(@"C:\somewhere\pack.zip");
+
+        Assert.Equal(@"C:\somewhere\pack.zip", Assert.Single(svc.Packs));
+        Assert.Equal("ZIP has been created. All good!", vm.Message);
+        Assert.True(vm.IsMessageGood);
+    }
+
+    [AvaloniaFact]
+    public async Task A_failed_pack_is_not_good_news()
+    {
+        var svc = new FakeMods
+        {
+            PackResult = new PackOutcome(false, "There are no SCMW mods to pack yet.", 0, Array.Empty<string>()),
+        };
+        var vm = new ModsViewModel(service: svc);
+
+        await vm.PackModsToAsync(@"C:\somewhere\pack.zip");
+
+        Assert.Contains("no SCMW mods", vm.Message);
+        Assert.False(vm.IsMessageGood);
+    }
+
+    [AvaloniaFact]
     public void The_list_and_summary_come_from_the_service()
     {
         var svc = new FakeMods();
