@@ -249,7 +249,7 @@ internal sealed class IconNoIconManifest
     /// an icon it could not before (e.g. recipes, base elements), so the no-icon list is discarded and
     /// every asset is retried. Without this, a fix could never take effect for already-recorded items.
     /// </summary>
-    public const string ExtractVersion = "2";
+    public const string ExtractVersion = "3";
 
     private readonly string _path;
     private readonly HashSet<string> _ids;
