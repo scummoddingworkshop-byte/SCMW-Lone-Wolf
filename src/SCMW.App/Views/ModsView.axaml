@@ -13,7 +13,6 @@
       </StackPanel>
 
       <TextBlock Name="MessageText" Text="{Binding Message}" Classes="dim" TextWrapping="Wrap"
-                 Classes.good="{Binding IsMessageGood}"
                  IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
       <Button Name="RestartAdminButton" Classes="primary" Content="Restart as administrator"
               HorizontalAlignment="Left"
@@ -37,16 +36,6 @@
         </Grid>
       </Border>
 
-      <!-- Back up or share: the mods SCMW made, in one ZIP. -->
-      <Border Name="PackCard" Classes="card">
-        <StackPanel Spacing="10">
-          <TextBlock Text="Back up or share your mods" Classes="section"/>
-          <TextBlock Name="PackNote" Text="{Binding PackNote}" Classes="dim" TextWrapping="Wrap"/>
-          <Button Name="PackModsButton" Classes="secondary" Content="Pack all mods as a ZIP…"
-                  HorizontalAlignment="Left"/>
-        </StackPanel>
-      </Border>
-
       <ItemsControl Name="ModList" ItemsSource="{Binding Mods}" IsVisible="{Binding HasMods}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InstalledMod">
@@ -57,6 +46,20 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+
+      <!-- Back up or share: the mods SCMW made, in one ZIP. Sits under the list, where you can see
+           the result of pressing the button. -->
+      <Border Name="PackCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Back up or share your mods" Classes="section"/>
+          <TextBlock Name="PackNote" Text="{Binding PackNote}" Classes="dim" TextWrapping="Wrap"/>
+          <Button Name="PackModsButton" Classes="secondary" Content="Pack all mods as a ZIP…"
+                  HorizontalAlignment="Left"/>
+          <TextBlock Name="PackMessageText" Text="{Binding PackMessage}" Classes="dim" TextWrapping="Wrap"
+                     Classes.good="{Binding IsPackMessageGood}"
+                     IsVisible="{Binding PackMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        </StackPanel>
+      </Border>
 
       <Border Name="EmptyState" Classes="card" IsVisible="{Binding ShowEmptyState}">
         <StackPanel Spacing="10">

@@ -19,12 +19,12 @@ public static class AppInfo
     /// <summary>The public source code, for anyone who wants to look inside or help.</summary>
     public const string RepositoryUrl = "https://github.com/scummoddingworkshop-byte/SCMW-Lone-Wolf";
 
-    /// <summary>One plain sentence on what the app is, for places that introduce it (a pack's read-me).</summary>
+    /// <summary>The paragraph that introduces the app where it needs one (a pack's read-me).</summary>
     public const string About =
-        "SCMW — Lone Wolf is a mod maker and a mod manager for SCUM. Change an item's values, add " +
-        "values a file does not have, and build the result into a .pak — or drag in a .pak from " +
-        "anywhere to install it, then switch it on and off or remove it. Your game files are never " +
-        "edited in place, and every change can be undone.";
+        "SCMW — Lone Wolf is a mod manager as well as a mod maker. Drag a .pak into it to install one " +
+        "from anywhere, and switch mods on and off or remove them, all in one place. If you are not " +
+        "using a mod manager yet (or you would like to try something different) the latest version " +
+        "is on my Nexus page:";
 
     public static string Version { get; } = ReadVersion();
 

@@ -65,8 +65,8 @@ public class ModsViewModelRealTests
         await vm.PackModsToAsync(@"C:\somewhere\pack.zip");
 
         Assert.Equal(@"C:\somewhere\pack.zip", Assert.Single(svc.Packs));
-        Assert.Equal("ZIP has been created. All good!", vm.Message);
-        Assert.True(vm.IsMessageGood);
+        Assert.Equal("ZIP has been created. All good!", vm.PackMessage);
+        Assert.True(vm.IsPackMessageGood);
     }
 
     [AvaloniaFact]
@@ -80,8 +80,8 @@ public class ModsViewModelRealTests
 
         await vm.PackModsToAsync(@"C:\somewhere\pack.zip");
 
-        Assert.Contains("no SCMW mods", vm.Message);
-        Assert.False(vm.IsMessageGood);
+        Assert.Contains("no SCMW mods", vm.PackMessage);
+        Assert.False(vm.IsPackMessageGood);
     }
 
     [AvaloniaFact]

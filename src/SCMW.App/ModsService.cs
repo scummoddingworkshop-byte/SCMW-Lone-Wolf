@@ -289,46 +289,43 @@ public sealed class ModsService : IModsService
         note.WriteLine();
 
         note.WriteLine($"In this pack — {ours.Count} {(ours.Count == 1 ? "mod" : "mods")} made with SCMW — Lone Wolf:");
-        foreach (var mod in ours)
-            note.WriteLine($"  {mod.FileName}{(mod.IsOn ? "" : "   (switched off)")}");
-
         note.WriteLine();
-        note.WriteLine("How to use it");
-        note.WriteLine("-------------");
-        note.WriteLine("Copy these files into SCUM's mods folder:");
-        note.WriteLine(@"  <SCUM folder>\SCUM\Content\Paks\~mods");
-        note.WriteLine("— or use your favourite mod manager to install them.");
-        note.WriteLine();
-        note.WriteLine("Then switch on the mods you want. A name ending in \".disabled\" is a mod that");
-        note.WriteLine("was switched off when this pack was made — switch it on, or drop \".disabled\"");
-        note.WriteLine("from its name.");
-        note.WriteLine();
-        note.WriteLine("SCMW — Lone Wolf can do that for you: it is a mod manager as well as a mod");
-        note.WriteLine("maker. Drag a .pak into it to install one from anywhere, and switch mods on");
-        note.WriteLine("and off or remove them, all in one place. If you are not using a mod manager");
-        note.WriteLine("yet — or you would like to try something different — the latest version is");
-        note.WriteLine("on my Nexus page:");
-        note.WriteLine();
-        note.WriteLine($"  {AppInfo.NexusUrl}");
+        foreach (var mod in ours) note.WriteLine($"  - {mod.FileName}");
         note.WriteLine();
 
         if (leftOut.Count == 0)
         {
-            note.WriteLine("Nothing was left out: every mod here was made with SCMW — Lone Wolf.");
+            note.WriteLine("Left out — nothing: every mod here was made with SCMW — Lone Wolf.");
         }
         else
         {
             note.WriteLine("Left out — not made with SCMW — Lone Wolf, so not ours to pass on:");
-            foreach (var line in leftOut) note.WriteLine($"  {line}");
+            note.WriteLine();
+            foreach (var line in leftOut) note.WriteLine($"  - {line}");
         }
 
         note.WriteLine();
-        note.WriteLine($"About {AppInfo.Name}");
-        note.WriteLine(new string('-', $"About {AppInfo.Name}".Length));
+        note.WriteLine("How to use it");
+        note.WriteLine("-------------");
+        note.WriteLine();
+        note.WriteLine(@"Copy these files into SCUM's mods folder: <SCUM folder>\SCUM\Content\Paks\~mods or use your preferred mod manager to install them.");
+        note.WriteLine();
+        note.WriteLine("Note that a mod name ending in \".disabled\" is a mod that was switched off when " +
+                         "the ZIP was made. You might need to remove the \".disabled\" if your mod " +
+                         "manager doesn't support enabling the mod.");
+        note.WriteLine();
+        note.WriteLine($"I (Fraxxu, the {AppInfo.Name} creator) recommend downloading it and using it " +
+                         "for your SCUM modding needs.");
+        note.WriteLine();
+
+        var heading = $"What {AppInfo.Name} can do for you";
+        note.WriteLine(heading);
+        note.WriteLine(new string('-', heading.Length));
+        note.WriteLine();
         note.WriteLine(AppInfo.About);
         note.WriteLine();
-        note.WriteLine($"  Nexus page:  {AppInfo.NexusUrl}");
-        note.WriteLine($"  Source code: {AppInfo.RepositoryUrl}");
+        note.WriteLine($"  - Nexus page:  {AppInfo.NexusUrl}");
+        note.WriteLine($"  - Source code: {AppInfo.RepositoryUrl}");
         note.WriteLine();
         note.WriteLine($"Packed with {AppInfo.Name} {AppInfo.Version}.");
     }

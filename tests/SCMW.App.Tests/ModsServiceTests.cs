@@ -100,16 +100,20 @@ public class ModsServiceTests : IDisposable
         using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
         var note = ReadNote(zip);
 
-        Assert.Contains($"About {AppInfo.Name}", note);
+        Assert.Contains($"What {AppInfo.Name} can do for you", note);
         Assert.Contains(AppInfo.About, note);
         Assert.Contains(AppInfo.NexusUrl, note);
         Assert.Contains(AppInfo.RepositoryUrl, note);
         Assert.Contains(AppInfo.Version, note);
 
         // It says a mod manager will do too, and that this app is one.
-        Assert.Contains("or use your favourite mod manager", note);
-        Assert.Contains("it is a mod manager as well as a mod", note);
+        Assert.Contains("or use your preferred mod manager", note);
+        Assert.Contains("is a mod manager as well as a mod maker", note);
         Assert.Contains("Drag a .pak into it", note);
+
+        // The switched-off note, and the creator's recommendation.
+        Assert.Contains("a mod name ending in \".disabled\"", note);
+        Assert.Contains("recommend downloading it and using it", note);
     }
 
     [Fact]
@@ -125,7 +129,9 @@ public class ModsServiceTests : IDisposable
         Assert.True(outcome.Ok, outcome.Error);
         using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
         Assert.Contains("SCMW_My-mod_v1.0.0_P.pak.disabled", zip.Entries.Select(e => e.FullName));
-        Assert.Contains("(switched off)", ReadNote(zip));
+
+        // The name itself carries the state, and the note explains what ".disabled" means.
+        Assert.Contains("a mod name ending in \".disabled\"", ReadNote(zip));
     }
 
     [Fact]
