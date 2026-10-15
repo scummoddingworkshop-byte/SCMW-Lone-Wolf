@@ -10,7 +10,6 @@ public enum ScreenKey
     BulkEdit,
     Home,
     Projects,
-    Preview,
     Build,
     Mods,
     Backups,

@@ -15,23 +15,6 @@ public class BuildViewModelTests
     }
 
     [AvaloniaFact]
-    public void Renaming_waits_for_the_commit_not_every_keystroke()
-    {
-        var (projects, root) = TestProjects.With("My first mod");
-        try
-        {
-            var vm = new BuildViewModel(projects: projects);
-
-            vm.RenameDraft = "Tape mod";
-            Assert.Equal("My first mod", projects.Current!.Name);   // typing does not rename
-
-            vm.CommitRenameCommand.Execute(null);
-            Assert.Equal("Tape mod", projects.Current!.Name);       // committing does
-        }
-        finally { TestProjects.Cleanup(root); }
-    }
-
-    [AvaloniaFact]
     public void Lists_the_projects_saved_changes()
     {
         var (projects, root) = TestProjects.With("My first mod");
@@ -85,8 +68,10 @@ public class BuildViewModelTests
             changes.RecordEdit("AK-15", "Damage", "45", "60", projects.Current!.Id);
             var vm = new BuildViewModel(changes, projects: projects);
 
-            var duct = vm.Changes.Single(c => c.ItemName == "Duct Tape");
-            vm.RemoveItemCommand.Execute(duct);
+            Assert.Equal(2, vm.Changes.Count);
+
+            // Removal lives on the store now (the Build screen just shows the diff).
+            changes.RemoveItem(projects.Current!.FolderPath, "Duct Tape");
 
             Assert.Single(vm.Changes);                          // the whole item went, not just one value
             Assert.Equal("AK-15", vm.Changes[0].ItemName);
@@ -138,14 +123,12 @@ public class BuildViewModelTests
     }
 
     [AvaloniaFact]
-    public void Renaming_and_version_are_kept_in_memory()
+    public void The_version_is_kept_in_memory()
     {
         var vm = new BuildViewModel();
 
-        vm.ProjectName = "Tape mod";
         vm.ModVersion = "2.1";
 
-        Assert.Equal("Tape mod", vm.ProjectName);
         Assert.Equal("2.1", vm.ModVersion);
     }
 }

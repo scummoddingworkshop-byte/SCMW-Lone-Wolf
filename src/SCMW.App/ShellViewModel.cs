@@ -36,8 +36,6 @@ public partial class ShellViewModel : ObservableObject
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
     private readonly BuildView _buildView;
-    private readonly PreviewViewModel _preview;
-    private readonly PreviewView _previewView;
     private readonly ISaveBackupsService _saves;
     private readonly ModsViewModel _mods;
     private readonly ModsView _modsView;
@@ -97,8 +95,6 @@ public partial class ShellViewModel : ObservableObject
                                     _projectStore, _buildService, _launcher, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves);
         _buildView = new BuildView { DataContext = _build };
-        _preview = new PreviewViewModel(_itemChanges, _projectStore, ContentSource);
-        _previewView = new PreviewView { DataContext = _preview };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };
         _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore,
@@ -116,7 +112,6 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.Workspace, "Workspace"),
             Nav(ScreenKey.BulkEdit, "Modify in bulk"),
             Nav(ScreenKey.Projects, "Projects"),
-            Nav(ScreenKey.Preview, "Preview"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods"),
             Nav(ScreenKey.Backups, "Backups"),
@@ -382,8 +377,8 @@ public partial class ShellViewModel : ObservableObject
         // Home's first-run card depends on whether SCUM is set up, which may have just changed.
         if (Current == ScreenKey.Home) _home.RefreshWelcome();
 
-        // The preview re-reads the chosen project's changes every time it is opened.
-        if (Current == ScreenKey.Preview) _preview.Refresh();
+        // Build re-reads the chosen project's changes (its "What's in this mod" preview) when opened.
+        if (Current == ScreenKey.Build) _build.Preview.Refresh();
 
         // The bulk table re-reads the current kind's files every time it is opened.
         if (Current == ScreenKey.BulkEdit) _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
@@ -394,7 +389,6 @@ public partial class ShellViewModel : ObservableObject
             ScreenKey.BulkEdit => _bulkView,
             ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
-            ScreenKey.Preview => _previewView,
             ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,
             ScreenKey.Backups => _backupsView,

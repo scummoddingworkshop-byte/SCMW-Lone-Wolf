@@ -33,7 +33,6 @@ public partial class BuildViewModel : ObservableObject
     private readonly ISaveBackupsService? _saves;
     private DispatcherTimer? _timer;
     private int _stepIndex;
-    private IReadOnlyList<BuildChange> _lines = Array.Empty<BuildChange>();
     private string? _builtStamp;       // fingerprint of the last real build (version + changes)
     private string? _installedStamp;   // the stamp that was last installed into SCUM
 
@@ -54,6 +53,9 @@ public partial class BuildViewModel : ObservableObject
         _elevation = elevation;
         _saves = saves;
 
+        // The preview/diff shown on this screen — the same records Build writes, one home for the diff.
+        Preview = new PreviewViewModel(_changes, _projects, _source);
+
         if (_projects is not null)
         {
             _projects.Changed += OnProjectsChanged;
@@ -72,31 +74,12 @@ public partial class BuildViewModel : ObservableObject
 
     [ObservableProperty] private string _projectName = "My first mod";
 
-    /// <summary>What the Advanced "Rename" box edits; applied only when the player commits.</summary>
-    [ObservableProperty] private string _renameDraft = "";
-
     /// <summary>A plain note about the automatic save backup taken before installing (empty when fine).</summary>
     [ObservableProperty] private string _saveNote = "";
 
-    /// <summary>Keeps the shown name (and the rename draft) in step with the chosen project.</summary>
-    private void SyncProjectName()
-    {
+    /// <summary>Keeps the shown name in step with the chosen project. (Renaming lives on Projects.)</summary>
+    private void SyncProjectName() =>
         ProjectName = _projects!.Chosen?.Name ?? "No project open";
-        RenameDraft = _projects.Chosen?.Name ?? "";
-    }
-
-    /// <summary>Renames the chosen project once, when the player finishes editing — not per keystroke.</summary>
-    [RelayCommand]
-    private void CommitRename()
-    {
-        var current = _projects?.Chosen;
-        if (current is null) return;
-
-        var name = RenameDraft.Trim();
-        if (name.Length == 0 || name == current.Name) return;
-
-        _projects!.Rename(current.Id, name);   // raises Changed → SyncProjectName re-reads the name
-    }
 
     /// <summary>True when no project is chosen yet — Build builds a chosen mod, never a fall-back.</summary>
     public bool NeedsProject => _projects is not null && !_projects.HasChosenProject;
@@ -135,91 +118,18 @@ public partial class BuildViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Re-reads the current project's records from disk and maps them to the list Build shows.
-    /// One source of truth: the same records drive Items' values and this list.
+    /// Re-reads the current project's records through the preview (one home for the diff), and keeps
+    /// Build's own flags in step.
     /// </summary>
     private void RefreshChanges()
     {
-        var current = _projects?.Chosen;
-        if (current is null || _changes is null)
-        {
-            _lines = Array.Empty<BuildChange>();
-        }
-        else
-        {
-            // One home for the diff: Build and Preview read the same rows, so they cannot drift.
-            _lines = ChangeDiff.Build(_changes.For(current.FolderPath));
-        }
+        Preview.Refresh();
 
         OnPropertyChanged(nameof(Changes));
         OnPropertyChanged(nameof(HasChanges));
         OnPropertyChanged(nameof(ShowNudge));
         OnPropertyChanged(nameof(CanBuild));
         BuildCommand.NotifyCanExecuteChanged();
-
-        // Item pictures are a fast follow: the list is usable without them.
-        _ = RequestIconsAsync();
-    }
-
-    /// <summary>Removes every change for one item, so it reverts to the game's own values.</summary>
-    [RelayCommand]
-    private void RemoveItem(BuildChange? row)
-    {
-        var current = _projects?.Chosen;
-        if (row is null || current is null || _changes is null) return;
-
-        _changes.RemoveItem(current.FolderPath, row.ItemName);   // raises Changed → refresh
-    }
-
-    /// <summary>
-    /// Resolves each changed item's picture from the content source (search by name, extract, read
-    /// the cached path). Never throws: a miss leaves the fallback mark.
-    /// </summary>
-    public async Task RequestIconsAsync()
-    {
-        if (_source is null) return;
-
-        try
-        {
-            foreach (var row in _lines.ToList())
-            {
-                var hits = await _source.SearchAsync(row.ItemName, null, 0, 20).ConfigureAwait(false);
-                var hit = hits.FirstOrDefault(a => string.Equals(a.Name, row.ItemName, StringComparison.OrdinalIgnoreCase))
-                          ?? hits.FirstOrDefault();
-                if (hit is null) continue;
-
-                await _source.ExtractIconsAsync(new[] { hit.Id }).ConfigureAwait(false);
-                var path = _source.Icons.GetIconPath(hit.Id);
-                if (string.IsNullOrEmpty(path)) continue;
-
-                var picture = LoadPicture(path!);
-                if (picture is null) continue;
-
-                RunOnUi(() => row.Picture = picture);
-            }
-        }
-        catch
-        {
-            // Pictures are optional — a failure simply leaves the fallback mark.
-        }
-    }
-
-    /// <summary>Runs an action on the UI thread (the icon pass awaits off-thread).</summary>
-    private static void RunOnUi(Action action)
-    {
-        if (Dispatcher.UIThread.CheckAccess())
-        {
-            action();
-            return;
-        }
-
-        Dispatcher.UIThread.Post(action);
-    }
-
-    private static IImage? LoadPicture(string path)
-    {
-        try { return File.Exists(path) ? new Bitmap(path) : null; }
-        catch { return null; }
     }
 
     [ObservableProperty] private string _modVersion = "1.0.0";
@@ -337,10 +247,13 @@ public partial class BuildViewModel : ObservableObject
 
     public IReadOnlyList<ModBuildStep> Steps { get; }
 
-    /// <summary>What's in this mod: the current project's saved records, oldest first.</summary>
-    public IReadOnlyList<BuildChange> Changes => _lines;
+    /// <summary>The preview/diff shown on this screen: the chosen project's records, grouped by item.</summary>
+    public PreviewViewModel Preview { get; }
 
-    public bool HasChanges => _lines.Count > 0;
+    /// <summary>What's in this mod: the current project's saved records, oldest first.</summary>
+    public IReadOnlyList<BuildChange> Changes => Preview.Changes;
+
+    public bool HasChanges => Preview.HasChanges;
     public bool ShowNudge => !HasChanges;
     public bool CanBuild => _projects?.Chosen is not null && HasChanges && State != BuildState.Running;
     public bool IsRunning => State == BuildState.Running;

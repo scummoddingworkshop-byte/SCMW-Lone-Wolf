@@ -1,82 +1,41 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:views="clr-namespace:SCMW.App.Views"
              x:Class="SCMW.App.Views.BuildView"
              x:DataType="vm:BuildViewModel">
   <ScrollViewer>
     <StackPanel Spacing="20" Margin="24,8,24,24">
 
-      <TextBlock Name="ProjectNameText" Text="{Binding ProjectName}" Classes="h1"/>
-      <TextBlock Name="ProjectFallbackText" Classes="dim"
-                 Text="No project chosen — pick one in Projects; that's the mod you build."
-                 IsVisible="{Binding NeedsProject}"/>
       <TextBlock Name="SaveNoteText" Text="{Binding SaveNote}" Classes="dim" TextWrapping="Wrap"
                  Foreground="{StaticResource WarningBrush}"
                  IsVisible="{Binding SaveNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-      <!-- What's in this mod -->
-      <StackPanel Spacing="10">
-        <TextBlock Text="What's in this mod" Classes="section"/>
+      <!-- What's in this mod: the preview/diff (moved in from the old Preview screen). It scrolls on
+           its own, so a long mod can never push the Build button off screen. -->
+      <views:PreviewView Name="PreviewArea" DataContext="{Binding Preview}"/>
 
-        <!-- The list scrolls on its own (about 8-9 rows), so a long mod can't push Build off screen. -->
-        <ScrollViewer Name="ChangeListScroll" MaxHeight="480"
-                      VerticalScrollBarVisibility="Auto"
-                      IsVisible="{Binding HasChanges}">
-          <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:BuildChange">
-                <Border Classes="changerow" Margin="0,0,0,6">
-                  <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="12">
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                      <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
-                        <Panel>
-                          <TextBlock Text="SCMW" FontSize="8" Foreground="{StaticResource TextDimBrush}"
-                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                          <Image Source="{Binding Picture}" Stretch="UniformToFill"/>
-                        </Panel>
-                      </Border>
-                      <TextBlock Text="{Binding ItemName}" VerticalAlignment="Center"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </StackPanel>
+      <!-- Nothing to build yet. -->
+      <Border Name="Nudge" Classes="card" IsVisible="{Binding ShowNudge}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Nothing to build yet — change an item first" FontSize="16"
+                     FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+          <Button Classes="primary" Content="Go to the Workspace" HorizontalAlignment="Left"
+                  Command="{Binding GoToItemsCommand}"/>
+        </StackPanel>
+      </Border>
 
-                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:BuildValueChange">
-                          <Grid ColumnDefinitions="*,*" Margin="0,1">
-                            <TextBlock Grid.Column="0" Text="{Binding ValueName, StringFormat='{}{0}:'}"
-                                       Classes="dim" Width="160" HorizontalAlignment="Right"
-                                       TextAlignment="Left" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Summary}"
-                                       Foreground="{StaticResource AccentBrush}"/>
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <Button Grid.Column="2" Classes="secondary" Content="Remove" VerticalAlignment="Center"
-                            ToolTip.Tip="Remove this item's changes"
-                            Command="{Binding $parent[UserControl].((vm:BuildViewModel)DataContext).RemoveItemCommand}"
-                            CommandParameter="{Binding}"/>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-
-        <Border Name="Nudge" Classes="card" IsVisible="{Binding ShowNudge}">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Nothing to build yet — change an item first" FontSize="16"
-                       FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-            <Button Classes="primary" Content="Go to Items" HorizontalAlignment="Left"
-                    Command="{Binding GoToItemsCommand}"/>
-          </StackPanel>
-        </Border>
-      </StackPanel>
-
-      <Button Name="BuildButton" Classes="primary" Content="Build" HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center" Padding="16,12" FontSize="15"
-              Command="{Binding BuildCommand}"/>
+      <!-- Mod version and Build, side by side (about 30% of the width each). -->
+      <Grid ColumnDefinitions="3*,4*,3*" ColumnSpacing="12">
+        <StackPanel Grid.Column="0" Spacing="6">
+          <TextBlock Text="Mod version" Classes="dim"/>
+          <TextBox Name="VersionBox" Classes="field" Text="{Binding ModVersion, Mode=TwoWay}"/>
+        </StackPanel>
+        <Button Grid.Column="2" Name="BuildButton" Classes="primary" Content="Build"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                VerticalAlignment="Bottom" Padding="16,12" FontSize="15"
+                Command="{Binding BuildCommand}"/>
+      </Grid>
 
       <!-- Step bar -->
       <StackPanel Name="StepBar" Spacing="10" IsVisible="{Binding ShowStepBar}">
@@ -133,22 +92,6 @@
           </Expander>
         </StackPanel>
       </Border>
-
-      <!-- Advanced -->
-      <Expander Name="Advanced" Header="Advanced" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="10">
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-            <TextBlock Grid.Column="0" Text="Mod version" Classes="dim" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1" Name="VersionBox" Classes="field"
-                     Text="{Binding ModVersion, Mode=TwoWay}"/>
-          </Grid>
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-            <TextBlock Grid.Column="0" Text="Rename" Classes="dim" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="1" Name="RenameBox" Classes="field"
-                     Text="{Binding RenameDraft, Mode=TwoWay}"/>
-          </Grid>
-        </StackPanel>
-      </Expander>
 
     </StackPanel>
   </ScrollViewer>

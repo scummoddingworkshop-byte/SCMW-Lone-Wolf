@@ -20,12 +20,13 @@ public class BuildIconTests
             File.WriteAllBytes(png, Convert.FromBase64String(TinyPngBase64));
 
             var changes = TestProjects.ChangeStore(projects);
-            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id,
+                               assetPath: "SCUM/.../Duct_Tape_ES");
 
             var source = new IconSource("Duct Tape", "SCUM/.../Duct_Tape_ES", png);
             var vm = new BuildViewModel(changes, projects: projects, source: source);
 
-            await vm.RequestIconsAsync();
+            await vm.Preview.ExtractIconsAsync();
 
             Assert.NotNull(vm.Changes[0].Picture);
         }
@@ -44,7 +45,7 @@ public class BuildIconTests
             var source = new IconSource("Duct Tape", "SCUM/.../Duct_Tape_ES", @"C:\no\icon.png");
             var vm = new BuildViewModel(changes, projects: projects, source: source);
 
-            await vm.RequestIconsAsync();
+            await vm.Preview.ExtractIconsAsync();
 
             Assert.Null(vm.Changes[0].Picture);
         }

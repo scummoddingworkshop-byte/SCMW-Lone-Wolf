@@ -24,7 +24,6 @@ public static class RailIcons
         ScreenKey.BulkEdit => "bulk",               // a ticked list ("Modify in bulk")
         ScreenKey.Home => "home",
         ScreenKey.Projects => "projects",
-        ScreenKey.Preview => "preview",             // an eye — "what will change"
         ScreenKey.Build => "build",
         ScreenKey.Mods => "mods",
         ScreenKey.Backups => "backups",

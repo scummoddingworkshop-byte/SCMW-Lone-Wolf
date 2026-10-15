@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -73,6 +74,39 @@ public partial class PreviewViewModel : ObservableObject
         OnPropertyChanged(nameof(ProjectName));
         OnPropertyChanged(nameof(ProjectPicture));
         OnPropertyChanged(nameof(HasProjectPicture));
+
+        // Item pictures are a fast follow: the list is usable without them.
+        _ = ExtractIconsAsync();
+    }
+
+    /// <summary>Extract the changed items' icons into the cache, then point each row at its picture.</summary>
+    public async System.Threading.Tasks.Task ExtractIconsAsync()
+    {
+        if (_source is null) return;
+
+        try
+        {
+            var ids = _lines.Select(l => l.Path).Where(p => !string.IsNullOrEmpty(p)).ToList();
+            if (ids.Count > 0)
+                await _source.ExtractIconsAsync(ids).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Icons are optional — a failure simply leaves the fallback mark.
+        }
+
+        foreach (var line in _lines)
+        {
+            var picture = LoadIcon(line.Path);
+            RunOnUi(() => line.Picture = picture);
+        }
+    }
+
+    /// <summary>Runs an action on the UI thread (the icon pass awaits off-thread).</summary>
+    private static void RunOnUi(Action action)
+    {
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        else Avalonia.Threading.Dispatcher.UIThread.Post(action);
     }
 
     /// <summary>Give a row its friendly name, its path, and its picture (when the game has one).</summary>

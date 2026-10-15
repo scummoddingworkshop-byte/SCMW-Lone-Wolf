@@ -47,13 +47,15 @@ public class BuildViewTests : IDisposable
     [AvaloniaFact]
     public void Build_shows_the_project_and_the_nudge_when_empty()
     {
-        var (view, _) = ShownView();
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var vm = new BuildViewModel(TestProjects.ChangeStore(projects), projects: projects);
+        var (view, _) = ShownView(vm);
+
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
 
-        Assert.Contains("My first mod", texts);
-        Assert.Contains("WHAT'S IN THIS MOD", texts);
+        Assert.Contains("My first mod", texts);          // the preview names the project
         Assert.True(view.FindControl<Border>("Nudge")!.IsVisible);
-        Assert.True(view.FindControl<Expander>("Advanced")!.IsVisible);
         Assert.False(view.FindControl<Button>("BuildButton")!.IsEffectivelyEnabled);
     }
 
@@ -70,13 +72,13 @@ public class BuildViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void Section_headings_are_shown_in_capitals()
+    public void The_preview_area_is_titled_whats_in_this_mod()
     {
         var (view, _) = ShownView();
 
-        var heading = view.GetVisualDescendants().OfType<TextBlock>()
-            .First(t => t.Classes.Contains("section"));
-        Assert.Equal("WHAT'S IN THIS MOD", heading.Text);
+        var title = view.GetVisualDescendants().OfType<TextBlock>()
+            .First(t => t.Classes.Contains("h1"));
+        Assert.Equal("What's in this mod", title.Text);
     }
 
     [AvaloniaFact]
@@ -84,14 +86,17 @@ public class BuildViewTests : IDisposable
     {
         var (view, _) = ShownView(ManyChanges(20));
 
-        var scroll = view.FindControl<ScrollViewer>("ChangeListScroll");
+        var preview = view.FindControl<PreviewView>("PreviewArea");
+        Assert.NotNull(preview);
+
+        var scroll = preview!.FindControl<ScrollViewer>("PreviewScroll");
         Assert.NotNull(scroll);
         Assert.True(scroll!.MaxHeight < double.PositiveInfinity,
             "the changed-items list must be capped, or a long list pushes Build off the screen");
         Assert.True(scroll.MaxHeight <= 600);
 
         // The change list really lives inside that scroller...
-        var list = view.FindControl<ItemsControl>("ChangeList");
+        var list = preview.FindControl<ItemsControl>("ChangeList");
         Assert.NotNull(list);
         Assert.Contains(scroll, list!.GetVisualAncestors().OfType<ScrollViewer>());
 
