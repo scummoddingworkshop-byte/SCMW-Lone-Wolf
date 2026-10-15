@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -23,6 +24,9 @@ public partial class ModsView : UserControl
 
         if (this.FindControl<Button>("AddModButton") is { } add)
             add.Click += async (_, _) => await PickAndImportAsync();
+
+        if (this.FindControl<Button>("PackModsButton") is { } pack)
+            pack.Click += async (_, _) => await PickAndPackAsync();
     }
 
     private ModsViewModel? Vm => DataContext as ModsViewModel;
@@ -57,5 +61,25 @@ public partial class ModsView : UserControl
         var paths = files.Select(f => f.TryGetLocalPath())
             .Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
         if (paths.Count > 0 && Vm is { } vm) await vm.ImportDropped(paths);
+    }
+
+    /// <summary>Asks where the ZIP should go, then lets the view model pack the mods into it.</summary>
+    private async Task PickAndPackAsync()
+    {
+        if (TopLevel.GetTopLevel(this) is not { } top) return;
+
+        var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Pack all mods as a ZIP",
+            SuggestedFileName = $"SCMW mods {DateTime.Now:yyyy-MM-dd}.zip",
+            DefaultExtension = "zip",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("ZIP file") { Patterns = new[] { "*.zip" } },
+            },
+        });
+
+        if (file?.TryGetLocalPath() is { Length: > 0 } path && Vm is { } vm)
+            await vm.PackModsToAsync(path);
     }
 }

@@ -530,6 +530,7 @@ public class ScreenshotTests
         public ModsResult SetAllEnabled(bool enabled) => new(true, null);
         public ModsResult Remove(string file) => new(true, null);
         public ImportOutcome Import(IReadOnlyList<string> paths) => new(true, null, 0, 0);
+        public PackOutcome PackOurMods(string zipPath) => new(false, "no mods here", 0, Array.Empty<string>());
     }
 }
 

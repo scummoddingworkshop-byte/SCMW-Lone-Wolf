@@ -35,6 +35,11 @@ public class ModsViewModelRealTests
                 Entries.Add(new ModsEntry(Path.GetFileName(path), Path.GetFileNameWithoutExtension(path), true, true));
             return new ImportOutcome(true, null, sourcePaths.Count, 0);
         }
+
+        public readonly List<string> Packs = new();
+        public PackOutcome PackResult = new(true, null, 1, Array.Empty<string>());
+
+        public PackOutcome PackOurMods(string zipPath) { Packs.Add(zipPath); return PackResult; }
     }
 
     [AvaloniaFact]

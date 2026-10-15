@@ -71,6 +71,7 @@ public class ShellLaunchTests
         public ModsResult SetAllEnabled(bool enabled) { AllSwitches.Add(enabled); return SetAllResult; }
         public ModsResult Remove(string file) => new(true, null);
         public ImportOutcome Import(IReadOnlyList<string> paths) => new(true, null, 0, 0);
+        public PackOutcome PackOurMods(string zipPath) => new(false, "no mods here", 0, Array.Empty<string>());
     }
 
     [AvaloniaFact]

@@ -139,6 +139,37 @@ public partial class ModsViewModel : ObservableObject
         return ImportDroppedCoreAsync(paths);
     }
 
+    /// <summary>A plain line saying what a pack holds — and what it never will.</summary>
+    public string PackNote =>
+        "Packs the mods SCMW — Lone Wolf made into one ZIP you can keep as a backup or pass on. " +
+        "Switched-off mods come too — you just switch them on again afterwards. Mods you added from " +
+        "a file, or that another tool keeps, are never included; the ZIP says which they were and why.";
+
+    /// <summary>Packs the mods SCMW made into <paramref name="zipPath"/>, then reports plainly.</summary>
+    public async System.Threading.Tasks.Task PackModsToAsync(string zipPath)
+    {
+        if (_service is null)
+        {
+            Message = "Set your SCUM folder in Settings to manage mods.";
+            return;
+        }
+
+        try
+        {
+            var outcome = await System.Threading.Tasks.Task.Run(() => _service.PackOurMods(zipPath));
+            Message = outcome.Ok
+                ? $"{outcome.Packed} {(outcome.Packed == 1 ? "mod" : "mods")} packed into " +
+                  $"{System.IO.Path.GetFileName(zipPath)}" +
+                  (outcome.LeftOut.Count > 0 ? $" — {outcome.LeftOut.Count} left out, listed inside." : ".")
+                : (outcome.Error ?? "That pack could not be written.");
+            CanRestartAsAdmin = false;
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            Message = "That pack could not be written. Check the folder and try again.";
+        }
+    }
+
     private async System.Threading.Tasks.Task ImportDroppedCoreAsync(IReadOnlyList<string> paths)
     {
         try

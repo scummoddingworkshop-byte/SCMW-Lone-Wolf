@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using SCMW.Backend.Build;
@@ -23,6 +24,12 @@ public sealed record ImportOutcome(bool Ok, string? Error, int Imported, int Ski
 /// <summary>A mod we imported (no project), so removal is exact.</summary>
 internal sealed record ImportedMod(string FileName, string SourcePath, string InstalledPath, DateTime ImportedUtc);
 
+/// <summary>
+/// What packing the mods into a ZIP did: how many went in, and one plain line for each mod that was
+/// left out and why. <see cref="Ok"/> false carries a plain reason instead.
+/// </summary>
+public sealed record PackOutcome(bool Ok, string? Error, int Packed, IReadOnlyList<string> LeftOut);
+
 public interface IModsService
 {
     bool IsAvailable { get; }
@@ -31,6 +38,14 @@ public interface IModsService
     ModsResult SetAllEnabled(bool enabled);
     ModsResult Remove(string fileName);
     ImportOutcome Import(IReadOnlyList<string> sourcePaths);
+
+    /// <summary>
+    /// Packs every mod SCMW made — never one that came from elsewhere — into a ZIP at
+    /// <paramref name="zipPath"/>, with a plain-text note inside saying what went in and what was
+    /// left out, and why. A switched-off mod is included as it is, keeping ".disabled" on its name,
+    /// so the pack restores exactly the state it was taken from. Reads only; changes nothing.
+    /// </summary>
+    PackOutcome PackOurMods(string zipPath);
 }
 
 /// <summary>
@@ -41,6 +56,9 @@ public sealed class ModsService : IModsService
 {
     private const string OffSuffix = ".pak.disabled";
     private const string OnSuffix = ".pak";
+
+    /// <summary>The plain-text note that travels inside a pack, so anyone opening it knows the score.</summary>
+    internal const string NoteFileName = "README.txt";
 
     private readonly string _modsFolder;
     private readonly IReadOnlyList<string> _otherModsFolders;
@@ -214,6 +232,84 @@ public sealed class ModsService : IModsService
             var kind = WriteFailure.Classify(ex);
             return new ModsResult(false, WriteFailure.Message(kind, "remove that mod"), kind);
         }
+    }
+
+    /// <summary>
+    /// Packs the mods SCMW made into one ZIP, with a note inside saying what went in and what was
+    /// left out. A mod added from a file, or one another tool keeps, is never passed on — it is
+    /// listed in the note instead, with the reason.
+    /// </summary>
+    public PackOutcome PackOurMods(string zipPath)
+    {
+        var ours = new List<ModsEntry>();
+        var leftOut = new List<string>();
+
+        foreach (var entry in List())
+        {
+            if (entry.Managed && !entry.IsExternal) ours.Add(entry);
+            else leftOut.Add(WhyLeftOut(entry));
+        }
+
+        if (ours.Count == 0)
+            return new PackOutcome(false, "There are no SCMW mods to pack yet.", 0, leftOut);
+
+        try
+        {
+            var folder = Path.GetDirectoryName(zipPath);
+            if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+
+            using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+
+            // Flat: the files sit at the top of the ZIP, so they can be dropped straight into ~mods.
+            foreach (var mod in ours)
+                zip.CreateEntryFromFile(Path.Combine(_modsFolder, mod.FileName!), mod.FileName!);
+
+            WriteNote(zip, ours, leftOut);
+            return new PackOutcome(true, null, ours.Count, leftOut);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            var kind = WriteFailure.Classify(ex);
+            return new PackOutcome(false, WriteFailure.Message(kind, "write that ZIP file"), 0, leftOut);
+        }
+    }
+
+    /// <summary>One plain line for the note: what this mod is, and why it is not in the pack.</summary>
+    private static string WhyLeftOut(ModsEntry entry) => !entry.Managed
+        ? $"{entry.FileName} — kept by another tool ({entry.Location}), so SCMW does not pass it on"
+        : $"{entry.FileName} — added from a file, not made with SCMW — Lone Wolf";
+
+    /// <summary>The note that travels inside the pack: what is in it, how to use it, and what is not.</summary>
+    private static void WriteNote(ZipArchive zip, IReadOnlyList<ModsEntry> ours, IReadOnlyList<string> leftOut)
+    {
+        using var note = new StreamWriter(zip.CreateEntry(NoteFileName).Open());
+
+        note.WriteLine("SCMW — Lone Wolf mod pack");
+        note.WriteLine($"Packed {DateTime.Now:yyyy-MM-dd HH:mm}");
+        note.WriteLine();
+
+        note.WriteLine($"In this pack — {ours.Count} {(ours.Count == 1 ? "mod" : "mods")} made with SCMW — Lone Wolf:");
+        foreach (var mod in ours)
+            note.WriteLine($"  {mod.FileName}{(mod.IsOn ? "" : "   (switched off)")}");
+
+        note.WriteLine();
+        note.WriteLine("How to use it");
+        note.WriteLine("-------------");
+        note.WriteLine("Copy these files into SCUM's mods folder:");
+        note.WriteLine(@"  <SCUM folder>\SCUM\Content\Paks\~mods");
+        note.WriteLine("Then switch on the mods you want, in SCMW — Lone Wolf's Mods Management");
+        note.WriteLine("screen. A name ending in \".disabled\" is a mod that was switched off when");
+        note.WriteLine("this pack was made — switch it on there, or drop \".disabled\" from its name.");
+        note.WriteLine();
+
+        if (leftOut.Count == 0)
+        {
+            note.WriteLine("Nothing was left out: every mod here was made with SCMW — Lone Wolf.");
+            return;
+        }
+
+        note.WriteLine("Left out — not made with SCMW — Lone Wolf, so not ours to pass on:");
+        foreach (var line in leftOut) note.WriteLine($"  {line}");
     }
 
     private void ForgetImported(string fileName)

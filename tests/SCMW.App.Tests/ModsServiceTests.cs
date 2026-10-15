@@ -55,6 +55,84 @@ public class ModsServiceTests : IDisposable
         Assert.True(other.IsExternal);
     }
 
+    /// <summary>The plain-text note carried inside a pack.</summary>
+    private static string ReadNote(System.IO.Compression.ZipArchive zip)
+    {
+        var entry = zip.GetEntry(ModsService.NoteFileName)!;
+        using var reader = new StreamReader(entry.Open());
+        return reader.ReadToEnd();
+    }
+
+    [Fact]
+    public void Packing_puts_only_the_mods_SCMW_made_in_the_zip()
+    {
+        var svc = NewService();
+        Put("SCMW_My-mod_v1.0.0_P.pak");
+        Put("SomeExternal.pak");
+        RecordOurs("p1", "SCMW_My-mod_v1.0.0_P.pak");
+        var zipPath = Path.Combine(_root, "pack.zip");
+
+        var outcome = svc.PackOurMods(zipPath);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Equal(1, outcome.Packed);
+
+        using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
+        var names = zip.Entries.Select(e => e.FullName).ToList();
+        Assert.Contains("SCMW_My-mod_v1.0.0_P.pak", names);
+        Assert.DoesNotContain("SomeExternal.pak", names);
+        Assert.Contains(ModsService.NoteFileName, names);
+
+        // The note names what was left out, and why.
+        Assert.Contains("SomeExternal.pak — added from a file", ReadNote(zip));
+    }
+
+    [Fact]
+    public void Packing_a_switched_off_mod_keeps_it_switched_off()
+    {
+        var svc = NewService();
+        Put("SCMW_My-mod_v1.0.0_P.pak.disabled");
+        RecordOurs("p1", "SCMW_My-mod_v1.0.0_P.pak");
+        var zipPath = Path.Combine(_root, "pack.zip");
+
+        var outcome = svc.PackOurMods(zipPath);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
+        Assert.Contains("SCMW_My-mod_v1.0.0_P.pak.disabled", zip.Entries.Select(e => e.FullName));
+        Assert.Contains("(switched off)", ReadNote(zip));
+    }
+
+    [Fact]
+    public void Packing_leaves_out_a_mod_another_tool_keeps_and_says_why()
+    {
+        var svc = NewService();
+        Put("SCMW_My-mod_v1.0.0_P.pak");
+        RecordOurs("p1", "SCMW_My-mod_v1.0.0_P.pak");
+        var other = Path.Combine(GameRoot, "SCUM", "Content", "Paks", "LogicMods");
+        Directory.CreateDirectory(other);
+        File.WriteAllText(Path.Combine(other, "SomeLogicMod.pak"), "pak");
+
+        var outcome = svc.PackOurMods(Path.Combine(_root, "pack.zip"));
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Single(outcome.LeftOut);
+        Assert.Contains("another tool", outcome.LeftOut[0]);
+        Assert.Contains("LogicMods", outcome.LeftOut[0]);
+    }
+
+    [Fact]
+    public void Packing_with_nothing_of_ours_to_pack_says_so_plainly()
+    {
+        var svc = NewService();
+        Put("SomeExternal.pak");
+
+        var outcome = svc.PackOurMods(Path.Combine(_root, "pack.zip"));
+
+        Assert.False(outcome.Ok);
+        Assert.Contains("no SCMW mods", outcome.Error ?? "");
+    }
+
     [Fact]
     public void A_disabled_mod_we_built_keeps_its_SCMW_badge()
     {

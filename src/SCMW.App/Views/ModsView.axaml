@@ -28,6 +28,16 @@
         </Grid>
       </Border>
 
+      <!-- Back up or share: the mods SCMW made, in one ZIP. -->
+      <Border Name="PackCard" Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Back up or share your mods" Classes="section"/>
+          <TextBlock Name="PackNote" Text="{Binding PackNote}" Classes="dim" TextWrapping="Wrap"/>
+          <Button Name="PackModsButton" Classes="secondary" Content="Pack all mods as a ZIP…"
+                  HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+
       <ItemsControl Name="ModList" ItemsSource="{Binding Mods}" IsVisible="{Binding HasMods}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InstalledMod">
