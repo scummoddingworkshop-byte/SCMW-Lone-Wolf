@@ -57,17 +57,17 @@ public partial class HomeViewModel : ObservableObject
     public void RefreshWelcome() =>
         ShowWelcome = !_welcomeDismissed && !(_gameReady?.Invoke() ?? false);
 
-    [RelayCommand] private void NewProject() => _nav.GoTo(ScreenKey.Projects);
+    /// <summary>Every project — where a new one is started and an old one is opened.</summary>
+    [RelayCommand] private void OpenProjects() => _nav.GoTo(ScreenKey.Projects);
 
-    [RelayCommand] private void OpenProject() => _nav.GoTo(ScreenKey.Projects);
+    /// <summary>Package the chosen project into a .pak.</summary>
+    [RelayCommand] private void BuildMod() => _nav.GoTo(ScreenKey.Build);
 
-    [RelayCommand] private void BrowseItems()
-    {
-        if (_workspace is not null) _ = _workspace.OpenKindAsync("Items");
-        _nav.GoTo(ScreenKey.Workspace);
-    }
+    /// <summary>Install, switch on and off, remove, or pack the mods up to share.</summary>
+    [RelayCommand] private void ManageMods() => _nav.GoTo(ScreenKey.Mods);
 
-    [RelayCommand] private void BuildPlay() => _nav.GoTo(ScreenKey.Build);
+    /// <summary>The kept copies of the saved game, projects and mods.</summary>
+    [RelayCommand] private void OpenBackups() => _nav.GoTo(ScreenKey.Backups);
 
     [RelayCommand] private void ViewAllProjects() => _nav.GoTo(ScreenKey.Projects);
 

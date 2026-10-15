@@ -135,6 +135,11 @@ public partial class ProjectTile : UserControl
         currentChip.IsVisible = project?.IsCurrent == true;
         confirmBar!.IsVisible = project?.IsConfirmingDelete == true;
 
+        // No rename/duplicate/delete wired in (the Home screen): hide the ⋯ menu rather than offer
+        // a menu with nothing behind it.
+        menuButton.IsVisible = RenameCommand is not null || DuplicateCommand is not null
+                               || RequestDeleteCommand is not null;
+
         Wire("OpenButton", OpenCommand);
         Wire("ConfirmDeleteButton", ConfirmDeleteCommand);
         Wire("CancelDeleteButton", CancelDeleteCommand);

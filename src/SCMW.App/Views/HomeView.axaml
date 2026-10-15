@@ -9,9 +9,10 @@
     <StackPanel Spacing="20" Margin="24,8,24,24">
 
       <!-- Hero band: the artwork (its title is baked in) sits in the border's background, so it clips
-           to the rounded corners. Its height follows its width so the title always fits. -->
+           to the rounded corners. Its height follows its width, so the title always fits — kept to a
+           slim band, so the page's own content stays above the fold. -->
       <Border Name="Hero" Classes="hero"
-              Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.36}">
+              Height="{Binding $self.Bounds.Width, Converter={StaticResource ScaleConverter}, ConverterParameter=0.24}">
         <Border.Background>
           <ImageBrush Source="avares://SCMW-Lone-Wolf/Assets/hero.png" Stretch="UniformToFill"/>
         </Border.Background>
@@ -36,58 +37,60 @@
       <!-- The chooser, folded into Home: the friendly "what would you like to change?" front door. -->
       <views:ChooserView DataContext="{Binding Chooser}"/>
 
-      <!-- Quick actions. -->
+      <!-- Quick actions: four different places to go. Changing something is the chooser's job, above. -->
       <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
         <Button Grid.Column="0" Classes="quickaction" HorizontalAlignment="Stretch"
-                Command="{Binding NewProjectCommand}">
+                Command="{Binding OpenProjectsCommand}">
           <StackPanel Spacing="6">
             <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
                     Background="{StaticResource AccentSoftBrush}">
-              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/new.png" Width="26" Height="26"
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/projects.png" Width="26" Height="26"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBlock Text="Start a new project" FontWeight="SemiBold"
+            <TextBlock Text="Your projects" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Begin a fresh mod from scratch" Classes="dim" TextWrapping="Wrap"/>
+            <TextBlock Text="Start a new mod, or carry on with one" Classes="dim" TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
         <Button Grid.Column="1" Classes="quickaction" HorizontalAlignment="Stretch"
-                Command="{Binding OpenProjectCommand}">
+                Command="{Binding BuildModCommand}">
           <StackPanel Spacing="6">
             <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
                     Background="{StaticResource AccentSoftBrush}">
-              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/open.png" Width="26" Height="26"
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/build.png" Width="26" Height="26"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBlock Text="Open a project" FontWeight="SemiBold"
+            <TextBlock Text="Build your mod" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Continue working on an existing mod" Classes="dim" TextWrapping="Wrap"/>
+            <TextBlock Text="Package your changes into a .pak" Classes="dim" TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
         <Button Grid.Column="2" Classes="quickaction" HorizontalAlignment="Stretch"
-                Command="{Binding BrowseItemsCommand}">
+                Command="{Binding ManageModsCommand}">
           <StackPanel Spacing="6">
             <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
                     Background="{StaticResource AccentSoftBrush}">
-              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/items.png" Width="26" Height="26"
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/mods.png" Width="26" Height="26"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBlock Text="Browse items" FontWeight="SemiBold"
+            <TextBlock Text="Manage your mods" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Explore and search SCUM content" Classes="dim" TextWrapping="Wrap"/>
+            <TextBlock Text="Switch mods on and off, or pack them to share" Classes="dim"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
         <Button Grid.Column="3" Classes="quickaction" HorizontalAlignment="Stretch"
-                Command="{Binding BuildPlayCommand}">
+                Command="{Binding OpenBackupsCommand}">
           <StackPanel Spacing="6">
             <Border Width="44" Height="44" CornerRadius="8" HorizontalAlignment="Left"
                     Background="{StaticResource AccentSoftBrush}">
-              <Image Source="avares://SCMW-Lone-Wolf/Assets/quick/build.png" Width="26" Height="26"
+              <Image Source="avares://SCMW-Lone-Wolf/Assets/rail/backups.png" Width="26" Height="26"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBlock Text="Build &amp; play" FontWeight="SemiBold"
+            <TextBlock Text="Backups" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
-            <TextBlock Text="Package your mod and launch SCUM" Classes="dim" TextWrapping="Wrap"/>
+            <TextBlock Text="Your saved game, projects and mods, kept safe" Classes="dim"
+                       TextWrapping="Wrap"/>
           </StackPanel>
         </Button>
       </Grid>
@@ -109,9 +112,9 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ProjectSummary">
-              <controls:ProjectCard Project="{Binding}"
-                                    Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).OpenRecentProjectCommand}"
-                                    CommandParameter="{Binding}"/>
+              <!-- The same card the Projects screen uses, so a project looks the same in both places. -->
+              <controls:ProjectTile Project="{Binding}"
+                                    OpenCommand="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).OpenRecentProjectCommand}"/>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -121,8 +124,8 @@
             <TextBlock Text="No projects yet — start one" FontSize="16" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}"/>
             <TextBlock Text="Create a project and your changes will have somewhere to live." Classes="dim"/>
-            <Button Classes="primary" Content="Start a project" HorizontalAlignment="Left"
-                    Command="{Binding ViewAllProjectsCommand}"/>
+            <Button Classes="primary" Content="Go to Projects" HorizontalAlignment="Left"
+                    Command="{Binding OpenProjectsCommand}"/>
           </StackPanel>
         </Border>
       </StackPanel>

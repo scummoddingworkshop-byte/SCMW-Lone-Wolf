@@ -28,19 +28,23 @@ public class HomeViewTests
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
 
         Assert.NotNull(view.FindControl<Border>("Hero"));        // the banner artwork
-        Assert.Contains("Start a new project", texts);
-        Assert.Contains("Open a project", texts);
-        Assert.Contains("Browse items", texts);
-        Assert.Contains("Build & play", texts);
+        Assert.Contains("Your projects", texts);
+        Assert.Contains("Build your mod", texts);
+        Assert.Contains("Manage your mods", texts);
+        Assert.Contains("Backups", texts);
     }
 
     [AvaloniaFact]
-    public void The_hero_height_follows_its_width()
+    public void The_hero_is_a_slim_band_that_follows_its_width()
     {
         var view = ShownView();
 
         var hero = view.FindControl<Border>("Hero")!;
         Assert.True(hero.Bounds.Height > 100, "the hero should size itself from its width");
+
+        // About a quarter of its width: a slim band, so the page's own content stays above the fold.
+        var ratio = hero.Bounds.Height / hero.Bounds.Width;
+        Assert.InRange(ratio, 0.20, 0.28);
     }
 
     [AvaloniaFact]
@@ -117,23 +121,17 @@ public class HomeViewTests
     }
 
     [AvaloniaFact]
-    public void Home_project_cards_are_all_the_same_size()
+    public void Home_project_tiles_are_all_the_same_size()
     {
         var view = ShownView();
 
-        var cards = view.GetVisualDescendants().OfType<ProjectCard>().ToList();
+        // The same card the Projects screen uses, so a project looks the same in both places.
+        var tiles = view.GetVisualDescendants().OfType<ProjectTile>().ToList();
 
-        Assert.Equal(4, cards.Count);
-        var widths = cards.Select(c => Math.Round(c.Bounds.Width)).Distinct().ToList();
-        var heights = cards.Select(c => Math.Round(c.Bounds.Height)).Distinct().ToList();
-        Assert.True(widths.Count == 1, $"card widths differ: {string.Join(", ", widths)}");
-        Assert.True(heights.Count == 1, $"card heights differ: {string.Join(", ", heights)}");
-
-        // The visible tile is the button inside the card; it must fill the card.
-        var tiles = cards.Select(c => c.FindControl<Button>("Inner")!).ToList();
-        var tileHeights = tiles.Select(t => Math.Round(t.Bounds.Height)).Distinct().ToList();
-        var tileWidths = tiles.Select(t => Math.Round(t.Bounds.Width)).Distinct().ToList();
-        Assert.True(tileHeights.Count == 1, $"tile heights differ: {string.Join(", ", tileHeights)}");
-        Assert.True(tileWidths.Count == 1, $"tile widths differ: {string.Join(", ", tileWidths)}");
+        Assert.Equal(4, tiles.Count);
+        var widths = tiles.Select(t => Math.Round(t.Bounds.Width)).Distinct().ToList();
+        var heights = tiles.Select(t => Math.Round(t.Bounds.Height)).Distinct().ToList();
+        Assert.True(widths.Count == 1, $"tile widths differ: {string.Join(", ", widths)}");
+        Assert.True(heights.Count == 1, $"tile heights differ: {string.Join(", ", heights)}");
     }
 }

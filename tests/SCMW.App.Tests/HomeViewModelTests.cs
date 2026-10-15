@@ -10,17 +10,17 @@ public class HomeViewModelTests
         var nav = new NavigationHost();
         var vm = new HomeViewModel(nav);
 
-        vm.NewProjectCommand.Execute(null);
+        vm.OpenProjectsCommand.Execute(null);
         Assert.Equal(ScreenKey.Projects, nav.Current);
 
-        vm.OpenProjectCommand.Execute(null);
-        Assert.Equal(ScreenKey.Projects, nav.Current);
-
-        vm.BrowseItemsCommand.Execute(null);
-        Assert.Equal(ScreenKey.Workspace, nav.Current);
-
-        vm.BuildPlayCommand.Execute(null);
+        vm.BuildModCommand.Execute(null);
         Assert.Equal(ScreenKey.Build, nav.Current);
+
+        vm.ManageModsCommand.Execute(null);
+        Assert.Equal(ScreenKey.Mods, nav.Current);
+
+        vm.OpenBackupsCommand.Execute(null);
+        Assert.Equal(ScreenKey.Backups, nav.Current);
     }
 
     [AvaloniaFact]

@@ -15,7 +15,7 @@ public class ShellHomeTests
         window.Show();
 
         var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
-        Assert.Contains("Start a new project", texts);       // the Home quick actions
+        Assert.Contains("Your projects", texts);             // the Home quick actions
     }
 
     [AvaloniaFact]
@@ -26,10 +26,10 @@ public class ShellHomeTests
         var window = new MainWindow { DataContext = vm };
         window.Show();
 
-        vm.Home.BrowseItemsCommand.Execute(null);
+        vm.Home.ManageModsCommand.Execute(null);
 
-        Assert.Equal(ScreenKey.Workspace, nav.Current);
-        Assert.Equal(ScreenKey.Workspace, vm.SelectedEntry.Key);
+        Assert.Equal(ScreenKey.Mods, nav.Current);
+        Assert.Equal(ScreenKey.Mods, vm.SelectedEntry.Key);
     }
 
     [AvaloniaFact]
@@ -46,11 +46,11 @@ public class ShellHomeTests
     }
 
     /// <summary>
-    /// Proves the card's command actually resolves through the XAML binding (the
-    /// riskiest line on the Home screen) — the card is not decorative.
+    /// Proves the tile's command actually resolves through the XAML binding (the riskiest line on the
+    /// Home screen) — the tile is not decorative.
     /// </summary>
     [AvaloniaFact]
-    public void Clicking_a_project_card_opens_it()
+    public void Clicking_a_project_tile_opens_it()
     {
         var (store, root) = TestProjects.With("Duct Tape Expanded");
         try
@@ -62,13 +62,12 @@ public class ShellHomeTests
             window.Height = 1080;
             window.Show();
 
-            var card = window.GetVisualDescendants().OfType<ProjectCard>().First();
-            var inner = card.FindControl<Button>("Inner")!;
+            var tile = window.GetVisualDescendants().OfType<ProjectTile>().First();
+            var open = tile.FindControl<Button>("OpenButton")!;
 
-            Assert.NotNull(inner.Command);
-            Assert.NotNull(inner.CommandParameter);
+            Assert.NotNull(open.Command);
 
-            inner.Command!.Execute(inner.CommandParameter);
+            open.Command!.Execute(open.CommandParameter);
 
             Assert.Equal(ScreenKey.Workspace, nav.Current);
         }
@@ -91,10 +90,10 @@ public class ShellHomeTests
         Assert.Equal(4, tiles.Count);
         Assert.All(tiles, t => Assert.NotNull(t.Command));
 
-        // Tiles in order: new · open · browse items · build & play.
+        // Tiles in order: your projects · build your mod · manage your mods · backups.
         tiles[2].Command!.Execute(null);
 
-        Assert.Equal(ScreenKey.Workspace, nav.Current);
-        Assert.Equal(ScreenKey.Workspace, vm.SelectedEntry.Key);
+        Assert.Equal(ScreenKey.Mods, nav.Current);
+        Assert.Equal(ScreenKey.Mods, vm.SelectedEntry.Key);
     }
 }
