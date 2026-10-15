@@ -92,7 +92,7 @@ public partial class ShellViewModel : ObservableObject
         _modList = new ModList();
         _saves = new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
-                                    _projectStore, _buildService, _launcher, source: ContentSource,
+                                    _projectStore, _buildService, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves);
         _buildView = new BuildView { DataContext = _build };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
@@ -233,7 +233,7 @@ public partial class ShellViewModel : ObservableObject
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";
 
-        _build.UseGame(_buildService, _launcher);
+        _build.UseGame(_buildService);
         _mods.UseService(_modsService);
         _home.RefreshWelcome();                  // the "set up SCUM first" card can retire
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);

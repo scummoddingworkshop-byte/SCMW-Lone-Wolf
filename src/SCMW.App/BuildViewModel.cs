@@ -27,19 +27,16 @@ public partial class BuildViewModel : ObservableObject
     private readonly ModList? _mods;
     private readonly ProjectStore? _projects;
     private IBuildService? _service;
-    private IGameLauncher? _launcher;
     private readonly IContentSource? _source;
     private readonly IElevation? _elevation;
     private readonly ISaveBackupsService? _saves;
     private DispatcherTimer? _timer;
     private int _stepIndex;
-    private string? _builtStamp;       // fingerprint of the last real build (version + changes)
-    private string? _installedStamp;   // the stamp that was last installed into SCUM
 
     public BuildViewModel(ItemChangeStore? changes = null, INavigation? nav = null,
                           TimeSpan? stepInterval = null, ModList? mods = null,
                           ProjectStore? projects = null, IBuildService? service = null,
-                          IGameLauncher? launcher = null, IContentSource? source = null,
+                          IContentSource? source = null,
                           IElevation? elevation = null, ISaveBackupsService? saves = null)
     {
         _changes = changes;
@@ -48,7 +45,6 @@ public partial class BuildViewModel : ObservableObject
         _mods = mods;
         _projects = projects;
         _service = service;
-        _launcher = launcher;
         _source = source;
         _elevation = elevation;
         _saves = saves;
@@ -60,7 +56,6 @@ public partial class BuildViewModel : ObservableObject
         {
             _projects.Changed += OnProjectsChanged;
             SyncProjectName();
-            HasInstalled = _service?.IsInstalled(_projects.Current?.Id ?? "") ?? false;
         }
 
         if (_changes is not null) _changes.Changed += OnStoreChanged;
@@ -111,10 +106,6 @@ public partial class BuildViewModel : ObservableObject
 
         BuiltPakPath = null;
         BuiltVersion = null;
-        _builtStamp = null;
-        _installedStamp = null;
-        HasInstalled = _service?.IsInstalled(_projects?.Chosen?.Id ?? "") ?? false;
-        NotifyInstallState();
     }
 
     /// <summary>
@@ -141,7 +132,6 @@ public partial class BuildViewModel : ObservableObject
     [ObservableProperty] private string _failureDetails = "";
     [ObservableProperty] private string? _builtPakPath;
     [ObservableProperty] private string? _builtVersion;
-    [ObservableProperty] private bool _hasInstalled;
 
     /// <summary>True when the last failure was a Windows permission block the player can fix by
     /// restarting with administrator rights.</summary>
@@ -150,98 +140,49 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>True only when there is technical detail to show, so an empty expander never appears.</summary>
     public bool HasFailureDetails => !string.IsNullOrWhiteSpace(FailureDetails);
 
-    // Real-build state (only when a service is wired in; the bare screen keeps the old simulation).
-
-    /// <summary>True when a build exists that is not (yet) the copy sitting in SCUM.</summary>
-    public bool HasBuildToInstall =>
-        _service is not null && BuiltPakPath is not null && !InstalledMatchesBuild;
-
-    /// <summary>True when the copy in SCUM is exactly the build we last made.</summary>
-    public bool InstalledMatchesBuild =>
-        HasInstalled && _builtStamp is not null &&
-        string.Equals(_builtStamp, _installedStamp, StringComparison.Ordinal);
-
-    public bool CanInstall => HasBuildToInstall && State != BuildState.Running;
-    public bool CanRemove => _service is not null && HasInstalled;
-
-    /// <summary>Show the install button whenever there is a build SCUM does not have yet.</summary>
-    public bool ShowInstallButton => HasBuildToInstall;
-
-    /// <summary>"Install" the first time; "Update" once SCUM already has an older copy.</summary>
-    public string InstallButtonLabel => HasInstalled ? "Update the copy in SCUM" : "Install into SCUM";
-
     /// <summary>What the success panel says: the mod is in SCUM, switched off, waiting to be enabled.</summary>
     public string SuccessMessage =>
         "Your mod is built and ready to be enabled in the Mods Management screen.";
 
-    /// <summary>A plain line getting ahead of the obvious question: what do these buttons do?</summary>
-    public string InstallHint =>
-        !HasBuildToInstall ? ""
-        : HasInstalled ? "Updating replaces the old copy in SCUM — no need to remove it first."
-        : "Installing copies the mod into SCUM. Then launch SCUM to try it.";
-
-    public bool ShowInstallHint => InstallHint.Length > 0;
-
-    /// <summary>Re-tells the screen everything that depends on build/install state, in one place.</summary>
-    private void NotifyInstallState()
-    {
-        OnPropertyChanged(nameof(HasBuildToInstall));
-        OnPropertyChanged(nameof(InstalledMatchesBuild));
-        OnPropertyChanged(nameof(CanInstall));
-        OnPropertyChanged(nameof(CanRemove));
-        OnPropertyChanged(nameof(ShowInstallButton));
-        OnPropertyChanged(nameof(InstallButtonLabel));
-        OnPropertyChanged(nameof(SuccessMessage));
-        OnPropertyChanged(nameof(InstallHint));
-        OnPropertyChanged(nameof(ShowInstallHint));
-        InstallCommand.NotifyCanExecuteChanged();
-        RemoveCommand.NotifyCanExecuteChanged();
-    }
-
     /// <summary>A game swap asked for while a build was running, applied when it ends.</summary>
-    private (IBuildService? Service, IGameLauncher? Launcher)? _pendingUseGame;
+    private bool _hasPendingUseGame;
+    private IBuildService? _pendingService;
 
     /// <summary>
     /// Swaps in the real game engine once the player has configured SCUM — which may happen after
     /// this screen was built. Any practice build and stale state are cleared so the screen starts
     /// fresh against the real game.
     /// </summary>
-    public void UseGame(IBuildService? service, IGameLauncher? launcher)
+    public void UseGame(IBuildService? service)
     {
         // Never swap the engine out from under a build that is still running; do it when it ends.
         if (State == BuildState.Running)
         {
-            _pendingUseGame = (service, launcher);
+            _hasPendingUseGame = true;
+            _pendingService = service;
             return;
         }
 
-        ApplyGame(service, launcher);
+        ApplyGame(service);
     }
 
-    private void ApplyGame(IBuildService? service, IGameLauncher? launcher)
+    private void ApplyGame(IBuildService? service)
     {
         _service = service;
-        _launcher = launcher;
         BuiltPakPath = null;
-        _builtStamp = null;
-        _installedStamp = null;
-        HasInstalled = service?.IsInstalled(_projects?.Chosen?.Id ?? "") ?? false;
         CanRestartAsAdmin = false;
         State = BuildState.Idle;
-        NotifyInstallState();
-        OnPropertyChanged(nameof(CanLaunch));
-        OnPropertyChanged(nameof(ShowLaunchNote));
-        LaunchCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Applies a game swap that was deferred because a build was running.</summary>
     private void FlushPendingUseGame()
     {
-        if (_pendingUseGame is { } pending)
-        {
-            _pendingUseGame = null;
-            ApplyGame(pending.Service, pending.Launcher);
-        }
+        if (!_hasPendingUseGame) return;
+
+        _hasPendingUseGame = false;
+        var service = _pendingService;
+        _pendingService = null;
+        ApplyGame(service);
     }
 
     public IReadOnlyList<ModBuildStep> Steps { get; }
@@ -267,11 +208,8 @@ public partial class BuildViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSucceeded));
         OnPropertyChanged(nameof(IsFailed));
         OnPropertyChanged(nameof(ShowStepBar));
-        NotifyInstallState();
         BuildCommand.NotifyCanExecuteChanged();
     }
-
-    partial void OnHasInstalledChanged(bool value) => NotifyInstallState();
 
     partial void OnFailureDetailsChanged(string value) => OnPropertyChanged(nameof(HasFailureDetails));
 
@@ -343,15 +281,15 @@ public partial class BuildViewModel : ObservableObject
                 outcome.PakPath, enabled: false, CancellationToken.None);
             if (!placed.Ok)
             {
+                var needsAdmin = placed.Failure == WriteFailureKind.PermissionDenied;
                 ShowFailure("The mod was made, but it could not be put into SCUM.",
                     placed.Error ?? "The file could not be copied into SCUM's mods folder.",
-                    "Check your SCUM folder in Settings, then press Build again.", "");
+                    needsAdmin ? "" : "Check your SCUM folder in Settings, then press Build again.", "",
+                    needsAdmin);
                 return;
             }
 
             FinishSuccess();
-            HasInstalled = true;
-            _installedStamp = _builtStamp;
         }
         else
         {
@@ -422,56 +360,6 @@ public partial class BuildViewModel : ObservableObject
     private static string RecordsToken(IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
         => string.Join("|", records.Select(r => $"{r.AssetPath}\u001f{r.AssetId}\u001f{r.FieldTechnicalName}\u001f{r.Operation}\u001f{r.NewValue}"));
 
-    /// <summary>Copies the last built `.pak` into SCUM. Only available with a real service.</summary>
-    [RelayCommand(CanExecute = nameof(CanInstall))]
-    private async Task Install()
-    {
-        var project = _projects?.Chosen;
-        if (_service is null || project is null || BuiltPakPath is null) return;
-
-        BackUpSaveQuietly();   // keep the save before the mod can touch it (design §11)
-        var outcome = await _service.InstallAsync(project.Id, project.Name, BuiltVersion ?? ModVersion,
-            BuiltPakPath, enabled: true, CancellationToken.None);
-        if (outcome.Ok)
-        {
-            HasInstalled = true;
-            _installedStamp = _builtStamp;
-            CanRestartAsAdmin = false;
-            NotifyInstallState();
-        }
-        else
-        {
-            var needsAdmin = outcome.Failure == WriteFailureKind.PermissionDenied;
-            ShowFailure("The mod could not be installed.",
-                outcome.Error ?? "The mod could not be copied into SCUM.",
-                needsAdmin ? "" : "Close the game, then try again.", "", needsAdmin);
-        }
-    }
-
-    /// <summary>Removes exactly what we placed, putting SCUM back the way it was.</summary>
-    [RelayCommand(CanExecute = nameof(CanRemove))]
-    private async Task Remove()
-    {
-        var project = _projects?.Chosen;
-        if (_service is null || project is null) return;
-
-        var outcome = await _service.RemoveAsync(project.Id, CancellationToken.None);
-        if (outcome.Ok)
-        {
-            HasInstalled = false;
-            _installedStamp = null;
-            CanRestartAsAdmin = false;
-            NotifyInstallState();
-        }
-        else
-        {
-            var needsAdmin = outcome.Failure == WriteFailureKind.PermissionDenied;
-            ShowFailure("The mod could not be removed.",
-                outcome.Error ?? "The file could not be removed from SCUM.",
-                needsAdmin ? "" : "Close the game, then try again.", "", needsAdmin);
-        }
-    }
-
     /// <summary>Moves the build on by one step. Called by the timer (and directly by tests).</summary>
     public void Advance()
     {
@@ -509,19 +397,6 @@ public partial class BuildViewModel : ObservableObject
 
     /// <summary>Where a built mod is installed, switched off or removed — the Mods screen.</summary>
     [RelayCommand] private void GoToMods() => _nav.GoTo(ScreenKey.Mods);
-
-    [RelayCommand(CanExecute = nameof(CanLaunch))]
-    private async Task Launch()
-    {
-        BackUpSaveQuietly();   // keep the save before the modded game can touch it (design §11)
-        if (_launcher is not null) await _launcher.LaunchModdedAsync();
-    }
-
-    /// <summary>True when SCUM can be launched (its program was found).</summary>
-    public bool CanLaunch => _launcher?.IsAvailable ?? false;
-
-    /// <summary>True while the "set your SCUM folder" hint should show.</summary>
-    public bool ShowLaunchNote => !CanLaunch;
 
     private void UpdateSteps()
     {
@@ -564,18 +439,8 @@ public partial class BuildViewModel : ObservableObject
         StatusText = "";
         BackUpSaveQuietly();
         if (_service is null) _mods?.Place(ProjectName);
-        _builtStamp = CurrentStamp();
         State = BuildState.Succeeded;
-        NotifyInstallState();
         FlushPendingUseGame();
-    }
-
-    /// <summary>A fingerprint of what was just built: the version plus the current changes.</summary>
-    private string CurrentStamp()
-    {
-        var project = _projects?.Chosen;
-        if (project is null || _changes is null) return ModVersion;
-        return ModVersion + "|" + RecordsToken(_changes.For(project.FolderPath));
     }
 
     private void StartTimer(TimeSpan interval)

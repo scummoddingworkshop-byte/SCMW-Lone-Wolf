@@ -4,6 +4,11 @@ using SCMW.Core.Editing;
 
 namespace SCMW.App.Tests;
 
+/// <summary>
+/// Build with the real engine wired in: what it sends the service, where the result lands, and how
+/// it reports what it cannot do. Installing, switching off and removing all live on Mods Management,
+/// so Build only builds.
+/// </summary>
 public class BuildRealServiceTests : IDisposable
 {
     private readonly List<string> _roots = new();
@@ -13,8 +18,6 @@ public class BuildRealServiceTests : IDisposable
     {
         public BuildOutcome BuildResult = new(true, @"C:\ws\Builds\M\SCMW_M_v1.0.0_P.pak", null);
         public InstallOutcome InstallResult = new(true, @"C:\g\~mods\SCMW_M_v1.0.0_P.pak", null);
-        public RemoveOutcome RemoveResult = new(true, null);
-        public string? RemovedProjectId;
         public InstallResult_ Arg;
 
         public Task<BuildOutcome> BuildAsync(string name, string version, IReadOnlyList<BuildItem> items,
@@ -35,10 +38,9 @@ public class BuildRealServiceTests : IDisposable
         public bool? SentEnabled;
 
         public Task<RemoveOutcome> RemoveAsync(string id, CancellationToken ct)
-        { RemovedProjectId = id; return Task.FromResult(RemoveResult); }
+            => Task.FromResult(new RemoveOutcome(true, null));
 
-        public bool Installed;
-        public bool IsInstalled(string id) => Installed;
+        public bool IsInstalled(string id) => false;
 
         public readonly record struct InstallResult_(string Id, string Name, string Version, string Pak);
     }
@@ -56,13 +58,15 @@ public class BuildRealServiceTests : IDisposable
         public bool IsInstalled(string id) => false;
     }
 
-    private (BuildViewModel vm, ProjectStore projects, FakeService service) New()
+    private (BuildViewModel vm, ProjectStore projects, FakeService service) New(
+        InstallOutcome? installResult = null)
     {
         var (projects, root) = TestProjects.With("My first mod");
         _roots.Add(root);
         var changes = TestProjects.ChangeStore(projects);
         changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
         var service = new FakeService();
+        if (installResult is { } placed) service.InstallResult = placed;
         return (new BuildViewModel(changes, projects: projects, service: service), projects, service);
     }
 
@@ -87,7 +91,6 @@ public class BuildRealServiceTests : IDisposable
         Assert.Equal(projects.Current!.Id, service.Arg.Id);
         Assert.Equal(vm.BuiltPakPath, service.Arg.Pak);
         Assert.False(service.SentEnabled);            // it arrives switched off...
-        Assert.True(vm.HasInstalled);
         Assert.Equal("Your mod is built and ready to be enabled in the Mods Management screen.",
                      vm.SuccessMessage);              // ...and the screen says what to do about it
     }
@@ -105,31 +108,42 @@ public class BuildRealServiceTests : IDisposable
     }
 
     [AvaloniaFact]
-    public async Task Removing_clears_the_installed_state()
+    public async Task A_build_that_cannot_be_placed_in_scum_says_so_plainly()
     {
-        var (vm, _, _) = New();
+        var (vm, _, _) = New(new InstallOutcome(false, null, "SCUM's files were busy.", WriteFailureKind.GameRunning));
+
         await vm.BuildCommand.ExecuteAsync(null);
-        Assert.True(vm.HasInstalled);
 
-        await vm.RemoveCommand.ExecuteAsync(null);
-
-        Assert.False(vm.HasInstalled);
-        Assert.False(vm.CanRemove);
+        Assert.True(vm.IsFailed);
+        Assert.Contains("could not be put into SCUM", vm.FailureWhat);
+        Assert.False(vm.CanRestartAsAdmin);           // a busy file is not a permission block
     }
 
     [AvaloniaFact]
-    public async Task Remove_asks_the_service_to_remove_the_current_project()
+    public async Task A_permission_block_while_placing_offers_restart_as_administrator()
     {
-        var (vm, projects, service) = New();
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
+        var service = new FakeService
+        {
+            InstallResult = new InstallOutcome(false, null, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied),
+        };
+        var elevation = new FakeElevation();
+        var vm = new BuildViewModel(changes, projects: projects, service: service, elevation: elevation);
+
         await vm.BuildCommand.ExecuteAsync(null);
 
-        await vm.RemoveCommand.ExecuteAsync(null);
+        Assert.True(vm.IsFailed);
+        Assert.True(vm.CanRestartAsAdmin);
 
-        Assert.Equal(projects.Current!.Id, service.RemovedProjectId);
+        vm.RestartAsAdminCommand.Execute(null);
+        Assert.Equal(1, elevation.Restarts);
     }
 
     [AvaloniaFact]
-    public async Task A_failed_build_shows_plain_words_and_offers_no_install()
+    public async Task A_failed_build_shows_plain_words()
     {
         var (vm, _, service) = New();
         service.BuildResult = new BuildOutcome(false, null, "The packing tool is missing from the app.");
@@ -137,7 +151,6 @@ public class BuildRealServiceTests : IDisposable
         await vm.BuildCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsFailed);
-        Assert.False(vm.CanInstall);
         Assert.Contains("packing tool", vm.FailureWhat + vm.FailureMeaning);
     }
 
@@ -157,7 +170,22 @@ public class BuildRealServiceTests : IDisposable
         await build;
 
         Assert.False(vm.IsSucceeded);
-        Assert.Null(vm.BuiltPakPath);      // the stale pak is never offered to install
+        Assert.Null(vm.BuiltPakPath);      // the stale pak is never offered
+    }
+
+    [AvaloniaFact]
+    public async Task A_real_build_backs_up_the_save_first()   // design §11
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
+        var saves = new RecordingSaves();
+        var vm = new BuildViewModel(changes, projects: projects, service: new FakeService(), saves: saves);
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        Assert.True(saves.BackedUp);
     }
 
     [AvaloniaFact]
@@ -221,124 +249,26 @@ public class BuildRealServiceTests : IDisposable
 
     private sealed class FakeElevation : IElevation
     {
-        public bool IsElevated { get; set; }
+        public bool IsElevated => false;
         public int Restarts;
         public bool RestartAsAdmin() { Restarts++; return true; }
     }
 
-    private (BuildViewModel vm, FakeService service, FakeElevation elevation) NewWithInstall(
-        InstallOutcome installResult, bool elevated = false)
+    [AvaloniaFact]
+    public async Task UseGame_wires_the_real_engine_in()
     {
         var (projects, root) = TestProjects.With("My first mod");
         _roots.Add(root);
         var changes = TestProjects.ChangeStore(projects);
         changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
-        var service = new FakeService { InstallResult = installResult };
-        var elevation = new FakeElevation { IsElevated = elevated };
-        var vm = new BuildViewModel(changes, projects: projects, service: service, elevation: elevation);
-        return (vm, service, elevation);
-    }
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects);      // practice mode first
 
-    [AvaloniaFact]
-    public async Task A_permission_block_offers_restart_as_administrator()
-    {
-        var (vm, _, elevation) = NewWithInstall(
-            new InstallOutcome(false, null, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied));
-
+        vm.UseGame(service);
         await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
 
-        Assert.True(vm.IsFailed);
-        Assert.True(vm.CanRestartAsAdmin);
-
-        vm.RestartAsAdminCommand.Execute(null);
-        Assert.Equal(1, elevation.Restarts);
-    }
-
-    [AvaloniaFact]
-    public async Task A_busy_file_failure_does_not_offer_restart_as_administrator()
-    {
-        var (vm, _, _) = NewWithInstall(
-            new InstallOutcome(false, null, "SCUM's files were busy.", WriteFailureKind.GameRunning));
-
-        await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
-
-        Assert.True(vm.IsFailed);
-        Assert.False(vm.CanRestartAsAdmin);
-    }
-
-    [AvaloniaFact]
-    public async Task A_successful_install_clears_the_restart_button()
-    {
-        var (vm, service, _) = NewWithInstall(
-            new InstallOutcome(false, null, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied));
-
-        await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
-        Assert.True(vm.CanRestartAsAdmin);
-
-        service.InstallResult = new InstallOutcome(true, "path", null);
-        await vm.InstallCommand.ExecuteAsync(null);
-
-        Assert.False(vm.CanRestartAsAdmin);
-    }
-
-    [AvaloniaFact]
-    public async Task A_successful_remove_clears_the_restart_button()
-    {
-        var (vm, service, _) = NewWithInstall(new InstallOutcome(true, "path", null));
-        await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
-
-        service.RemoveResult = new RemoveOutcome(false, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied);
-        await vm.RemoveCommand.ExecuteAsync(null);        // refused → button offered
-        Assert.True(vm.CanRestartAsAdmin);
-
-        service.RemoveResult = new RemoveOutcome(true, null);
-        await vm.RemoveCommand.ExecuteAsync(null);        // now it works → button gone
-        Assert.False(vm.CanRestartAsAdmin);
-    }
-
-    [AvaloniaFact]
-    public async Task When_already_elevated_there_is_no_restart_button()
-    {
-        var (vm, _, _) = NewWithInstall(
-            new InstallOutcome(false, null, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied),
-            elevated: true);
-
-        await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
-
-        Assert.False(vm.CanRestartAsAdmin);   // restarting would not gain anything
-    }
-
-    [AvaloniaFact]
-    public async Task A_permission_block_while_removing_offers_restart_as_administrator()
-    {
-        var (vm, service, elevation) = NewWithInstall(new InstallOutcome(true, "path", null));
-        service.RemoveResult = new RemoveOutcome(false, "Windows blocked SCMW.", WriteFailureKind.PermissionDenied);
-
-        await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
-        await vm.RemoveCommand.ExecuteAsync(null);
-
-        Assert.True(vm.CanRestartAsAdmin);
-        vm.RestartAsAdminCommand.Execute(null);
-        Assert.Equal(1, elevation.Restarts);
-    }
-
-    [AvaloniaFact]
-    public void UseGame_wakes_the_screen_when_the_game_is_configured()
-    {
-        var vm = new BuildViewModel();                       // practice mode: no service, no launcher
-        Assert.False(vm.CanLaunch);
-        Assert.True(vm.ShowLaunchNote);
-
-        vm.UseGame(new FakeService(), new FakeLauncher());
-
-        Assert.True(vm.CanLaunch);
-        Assert.False(vm.ShowLaunchNote);
+        Assert.NotNull(service.SentItems);      // the real service did the work
+        Assert.True(vm.IsSucceeded);
     }
 
     [AvaloniaFact]
@@ -353,42 +283,9 @@ public class BuildRealServiceTests : IDisposable
         for (var i = 0; i < 5; i++) vm.Advance();                      // let the practice run finish
         Assert.True(vm.IsSucceeded);
 
-        vm.UseGame(new FakeService(), new FakeLauncher());
+        vm.UseGame(new FakeService());
 
         Assert.False(vm.IsSucceeded);                        // back to "ready to build", for real
-    }
-
-    private sealed class FakeLauncher : IGameLauncher
-    {
-        public bool IsAvailable { get; set; } = true;
-        public int Modded;
-        public Task<LaunchResult> LaunchModdedAsync() { Modded++; return Task.FromResult(new LaunchResult(true, null)); }
-        public Task<LaunchResult> LaunchUnmoddedAsync() => Task.FromResult(new LaunchResult(true, null));
-    }
-
-    [AvaloniaFact]
-    public async Task Builds_launch_button_starts_the_modded_game()
-    {
-        var launcher = new FakeLauncher();
-        var vm = new BuildViewModel(launcher: launcher);
-
-        Assert.True(vm.CanLaunch);
-        await vm.LaunchCommand.ExecuteAsync(null);
-
-        Assert.Equal(1, launcher.Modded);
-    }
-
-    [AvaloniaFact] // design §11: a save backup before launching the modded game too
-    public async Task Launching_backs_up_the_save_first()
-    {
-        var launcher = new FakeLauncher();
-        var saves = new RecordingSaves();
-        var vm = new BuildViewModel(launcher: launcher, saves: saves);
-
-        await vm.LaunchCommand.ExecuteAsync(null);
-
-        Assert.True(saves.BackedUp);
-        Assert.Equal(1, launcher.Modded);
     }
 
     /// <summary>A stand-in save service that only records whether a backup was taken.</summary>

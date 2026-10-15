@@ -14,9 +14,6 @@ public partial class BackupRow : ObservableObject
 
     public string DisplayName => Entry.DisplayName;
 
-    /// <summary>"Mod" or "Project".</summary>
-    public string KindText => Entry.Kind == BackupKind.Mod ? "Mod" : "Project";
-
     /// <summary>Plain "2026-10-08 10:11", or empty when the name carried no stamp.</summary>
     public string When => Entry.WhenUtc == DateTime.MinValue
         ? ""

@@ -468,14 +468,13 @@ public class ScreenshotTests
     }
 
     [AvaloniaFact]
-    public async Task Capture_build_installed()
+    public async Task Capture_build_succeeded()
     {
         var vm = Buildable(new AlwaysOkScreenshotService());
         var view = new BuildView { DataContext = vm };
         var window = new Window { Content = view, Width = 1200, Height = 900 };
         window.Show();
         await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
 
         var path = Screenshot.Capture(window, "build-installed");
         Assert.True(File.Exists(path), path);

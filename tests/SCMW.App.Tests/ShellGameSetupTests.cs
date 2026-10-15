@@ -68,7 +68,6 @@ public class ShellGameSetupTests
 
             // ...and the whole app comes alive, with no restart.
             Assert.True(vm.CanLaunch);                        // sidebar launch woke up
-            Assert.True(vm.Build.CanLaunch);                  // Build's launch woke up
             Assert.True(content.Reads > readsBefore);         // the Workspace re-read the game
             Assert.Single(vm.Mods.Mods);                      // Mods found the real folder
         }
