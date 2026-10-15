@@ -75,6 +75,20 @@ public class NotebookWriterTests
     }
 
     [Fact]
+    public void Family_page_shows_a_meaning_for_each_field()
+    {
+        var meanings = new Dictionary<string, Meaning> { ["Weight"] = new("How heavy it is.", "Assumed") };
+
+        var authored = NotebookWriter.FamilyPage(
+            "items", new[] { Row("Weight") }, 1, "25804202", "2026-10-15", meanings);
+        Assert.Contains("How heavy it is. (Assumed)", authored);
+
+        var unauthored = NotebookWriter.FamilyPage(
+            "items", new[] { Row("Zeta") }, 1, "25804202", "2026-10-15", meanings);
+        Assert.Contains("Assumed (not yet reviewed)", unauthored);
+    }
+
+    [Fact]
     public void Links_page_states_the_method_and_renders_a_row_per_edge()
     {
         var page = NotebookWriter.LinksPage(

@@ -12,7 +12,8 @@ internal sealed record FamilySummary(string Family, int Assets, int Fields);
 internal static class NotebookWriter
 {
     internal static string FamilyPage(
-        string family, IReadOnlyList<FieldRow> rows, int assetCount, string buildId, string readDate)
+        string family, IReadOnlyList<FieldRow> rows, int assetCount, string buildId, string readDate,
+        IReadOnlyDictionary<string, Meaning>? meanings = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# Fields — family `{family}`");
@@ -24,14 +25,21 @@ internal static class NotebookWriter
         sb.AppendLine("`assets` = how many of the family's assets carry the field. `nested` = the field sits " +
                       "inside a struct or list (its name is a dotted path).");
         sb.AppendLine();
-        sb.AppendLine("| field | type | assets | nested | example value |");
-        sb.AppendLine("|---|---|---:|---|---|");
+        sb.AppendLine("| field | type | assets | nested | example value | meaning |");
+        sb.AppendLine("|---|---|---:|---|---|---|");
         foreach (var row in rows)
         {
             var nested = row.Nested ? "yes" : "";
-            sb.AppendLine($"| `{row.Name}` | {Esc(row.Type)} | {row.Assets} | {nested} | {Esc(row.Example)} |");
+            sb.AppendLine($"| `{row.Name}` | {Esc(row.Type)} | {row.Assets} | {nested} | {Esc(row.Example)} | {MeaningCell(row.Name, meanings)} |");
         }
         return sb.ToString();
+    }
+
+    private static string MeaningCell(string field, IReadOnlyDictionary<string, Meaning>? meanings)
+    {
+        if (meanings is not null && meanings.TryGetValue(field, out var meaning) && meaning.Text.Length > 0)
+            return $"{Esc(meaning.Text)} ({Esc(meaning.Confidence)})";
+        return "Assumed (not yet reviewed)";
     }
 
     internal static string IndexPage(IReadOnlyList<FamilySummary> families, string buildId, string readDate)

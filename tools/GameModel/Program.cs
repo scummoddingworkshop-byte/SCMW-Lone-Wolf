@@ -96,6 +96,15 @@ internal static class Program
         var fieldsDir = Path.Combine(options.OutDir, "fields");
         Directory.CreateDirectory(fieldsDir);
 
+        // Our own meanings (meanings.md), if we have written any yet. Read-only here.
+        var meaningsPath = Path.Combine(options.OutDir, "meanings.md");
+        var meaningBook = File.Exists(meaningsPath)
+            ? MeaningBook.Parse(File.ReadAllText(meaningsPath))
+            : new Dictionary<(string Family, string Field), Meaning>();
+        Console.WriteLine(File.Exists(meaningsPath)
+            ? $"Meanings: {meaningBook.Count} read from meanings.md."
+            : "Meanings: none yet — every field will show 'Assumed (not yet reviewed)'.");
+
         var summaries = new List<FamilySummary>();
         var links = new LinkCollector();
         foreach (var family in FamilyRules.Families)
@@ -123,9 +132,12 @@ internal static class Program
             }
 
             var rows = FieldCollector.Collect(perAsset);
+            var forFamily = meaningBook
+                .Where(pair => pair.Key.Family == family)
+                .ToDictionary(pair => pair.Key.Field, pair => pair.Value);
             File.WriteAllText(
                 Path.Combine(fieldsDir, family + ".md"),
-                NotebookWriter.FamilyPage(family, rows, paths.Length, buildId, readDate));
+                NotebookWriter.FamilyPage(family, rows, paths.Length, buildId, readDate, forFamily));
 
             summaries.Add(new FamilySummary(family, paths.Length, rows.Count));
             Console.WriteLine($"  -> {rows.Count} distinct fields.");
