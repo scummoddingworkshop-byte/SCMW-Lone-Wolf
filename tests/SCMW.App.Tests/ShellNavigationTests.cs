@@ -156,7 +156,7 @@ public class ShellNavigationTests
                           .Select(t => t.Text ?? "").ToList();
 
         // A level must say what it is, not just its number.
-        Assert.Contains(texts, t => t.Contains("Change items values") && t.Contains("Mod level 1"));
+        Assert.Contains(texts, t => t.Contains("Change item values") && t.Contains("Mod level 1"));
         // "Coming up" starts on its own, after a blank line.
         Assert.Contains(texts, t => t.Contains("\n\nComing up"));
     }
