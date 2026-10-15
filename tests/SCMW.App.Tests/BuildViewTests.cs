@@ -218,7 +218,7 @@ public class BuildViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public async Task The_real_build_offers_install_and_remove()
+    public async Task The_real_build_sends_you_to_mods_management()
     {
         var (projects, root) = TestProjects.With("My first mod");
         try
@@ -230,11 +230,14 @@ public class BuildViewTests : IDisposable
             var window = new Window { Content = view, Width = 1280, Height = 900 };
             window.Show();
 
-            // After a real build succeeds, an Install button exists and is visible.
+            // After a real build succeeds, the only button offered is the way to Mods Management —
+            // installing, switching off and removing all live there.
             await vm.BuildCommand.ExecuteAsync(null);
 
             var buttons = window.GetVisualDescendants().OfType<Button>().ToList();
-            Assert.Contains(buttons, b => (b.Content as string) == "Install into SCUM" && b.IsVisible);
+            Assert.Contains(buttons, b => (b.Content as string) == "Mods Management" && b.IsVisible);
+            Assert.DoesNotContain(buttons, b => (b.Content as string) == "Install into SCUM");
+            Assert.DoesNotContain(buttons, b => (b.Content as string) == "Launch SCUM");
 
             var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
             Assert.Contains("Your mod is built and ready to install.", texts);

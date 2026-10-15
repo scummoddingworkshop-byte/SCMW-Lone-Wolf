@@ -8,7 +8,7 @@
     <StackPanel Spacing="20" Margin="24,8,24,24">
 
       <StackPanel Spacing="4">
-        <TextBlock Text="Mods" Classes="h1"/>
+        <TextBlock Text="Mods Management" Classes="h1"/>
         <TextBlock Name="SummaryText" Text="{Binding Summary}" Classes="dim"/>
       </StackPanel>
 

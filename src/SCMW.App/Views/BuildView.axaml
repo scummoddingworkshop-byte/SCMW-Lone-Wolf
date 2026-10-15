@@ -56,23 +56,16 @@
         <TextBlock Name="StatusText" Text="{Binding StatusText}" Classes="dim"/>
       </StackPanel>
 
-      <!-- Success: built, and (once you choose) installed -->
+      <!-- Success: built and ready. Installing, switching off or removing it all lives in Mods
+           Management, so there is one place for it. -->
       <Border Name="SuccessPanel" Classes="card" IsVisible="{Binding IsSucceeded}">
         <StackPanel Spacing="10">
-          <TextBlock Text="{Binding SuccessMessage}" FontSize="16"
-                     FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}"/>
+          <TextBlock Name="SuccessText" Text="{Binding SuccessMessage}" Classes="dim good"
+                     TextWrapping="Wrap"/>
           <TextBlock Name="BuiltPak" Text="{Binding BuiltPakPath}" Classes="dim" TextWrapping="Wrap"/>
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Name="InstallButton" Classes="primary" Content="{Binding InstallButtonLabel}"
-                    Command="{Binding InstallCommand}" IsVisible="{Binding ShowInstallButton}"/>
-            <Button Name="RemoveButton" Content="Remove from SCUM"
-                    Command="{Binding RemoveCommand}" IsVisible="{Binding HasInstalled}"/>
-            <Button Classes="primary" Content="Launch SCUM" Command="{Binding LaunchCommand}"/>
-          </StackPanel>
-          <TextBlock Name="InstallHintText" Text="{Binding InstallHint}" Classes="dim"
-                     TextWrapping="Wrap" IsVisible="{Binding ShowInstallHint}"/>
-          <TextBlock Text="Set your SCUM folder in Settings to launch." Classes="dim"
-                     IsVisible="{Binding ShowLaunchNote}"/>
+          <Button Name="GoToModsButton" Classes="primary" Content="Mods Management"
+                  HorizontalAlignment="Left" Command="{Binding GoToModsCommand}"/>
+          <TextBlock Text="Install, switch off or remove it there." Classes="dim" TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
 

@@ -43,7 +43,7 @@ public class ShellNavigationTests
             new NavItem(ScreenKey.Projects, "Projects"),
             new NavItem(ScreenKey.Build, "Build"),
             new NavItem(ScreenKey.Settings, "Settings"),
-            new NavItem(ScreenKey.Mods, "Mods"),
+            new NavItem(ScreenKey.Mods, "Mods Management"),
             new NavItem(ScreenKey.Backups, "Backups"),
             new NavItem(ScreenKey.Workspace, "Workspace"),
         };

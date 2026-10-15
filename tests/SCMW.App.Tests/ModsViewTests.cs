@@ -41,7 +41,7 @@ public class ModsViewTests
         var (view, _) = Shown(store);
 
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
-        Assert.Contains("Mods", texts);
+        Assert.Contains("Mods Management", texts);
         Assert.Contains("2 mods installed · 2 switched on.", texts);
         Assert.True(view.FindControl<Border>("DropZone")!.IsVisible);
         Assert.NotNull(view.FindControl<Button>("AddModButton"));

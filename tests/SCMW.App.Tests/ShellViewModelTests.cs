@@ -59,6 +59,6 @@ public class ShellViewModelTests
         vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Mods);
 
         Assert.Equal(ScreenKey.Mods, nav.Current);
-        Assert.Equal("Mods", vm.ScreenTitle);
+        Assert.Equal("Mods Management", vm.ScreenTitle);
     }
 }

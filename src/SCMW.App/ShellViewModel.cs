@@ -115,7 +115,7 @@ public partial class ShellViewModel : ObservableObject
             Nav(ScreenKey.BulkEdit, "Modify in bulk", hidden: true),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Build, "Build"),
-            Nav(ScreenKey.Mods, "Mods"),
+            Nav(ScreenKey.Mods, "Mods Management"),
             Nav(ScreenKey.Backups, "Backups"),
             Nav(ScreenKey.Settings, "Settings"),
             Nav(ScreenKey.Help, "Help"),

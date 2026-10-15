@@ -26,6 +26,13 @@
     <Setter Property="FontSize" Value="11"/>
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
   </Style>
+  <!-- Good news (a folder found, a build ready) and bad news: one home, so every screen agrees. -->
+  <Style Selector="TextBlock.good">
+    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.bad">
+    <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+  </Style>
 
   <!-- The "on the way" strip: a soft red bar for levels 3–5. -->
   <Style Selector="Border.ontheway">

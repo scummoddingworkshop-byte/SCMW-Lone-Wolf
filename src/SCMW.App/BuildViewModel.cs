@@ -493,6 +493,9 @@ public partial class BuildViewModel : ObservableObject
 
     [RelayCommand] private void GoToItems() => _nav.GoTo(ScreenKey.Workspace);
 
+    /// <summary>Where a built mod is installed, switched off or removed — the Mods screen.</summary>
+    [RelayCommand] private void GoToMods() => _nav.GoTo(ScreenKey.Mods);
+
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task Launch()
     {

@@ -3,15 +3,6 @@
              xmlns:vm="clr-namespace:SCMW.App"
              x:Class="SCMW.App.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
-  <UserControl.Styles>
-    <!-- The key-test answer: green when it works, red when it doesn't. -->
-    <Style Selector="TextBlock.dim.good">
-      <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
-    </Style>
-    <Style Selector="TextBlock.dim.bad">
-      <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
-    </Style>
-  </UserControl.Styles>
   <ScrollViewer>
     <StackPanel Spacing="16" Margin="24,8,24,24">
 

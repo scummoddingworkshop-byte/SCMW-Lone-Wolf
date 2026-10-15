@@ -123,6 +123,17 @@ public class BuildViewModelTests
     }
 
     [AvaloniaFact]
+    public void Go_to_mods_management_navigates()
+    {
+        var nav = new NavigationHost();
+        var vm = new BuildViewModel(null, nav);
+
+        vm.GoToModsCommand.Execute(null);
+
+        Assert.Equal(ScreenKey.Mods, nav.Current);
+    }
+
+    [AvaloniaFact]
     public void The_version_is_kept_in_memory()
     {
         var vm = new BuildViewModel();
