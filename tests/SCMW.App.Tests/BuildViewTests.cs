@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SCMW.App.Views;
 using SCMW.Backend.Build;
@@ -103,6 +104,37 @@ public class BuildViewTests : IDisposable
         // ...and with plenty of rows it is capped, so it can't push the button down.
         Assert.True(scroll.Bounds.Height <= scroll.MaxHeight + 1,
             $"the list grew to {scroll.Bounds.Height}, past its {scroll.MaxHeight} cap");
+    }
+
+    [AvaloniaFact]
+    public void The_field_tags_line_up_and_sit_beside_their_values()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        var id = projects.Current!.Id;
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", id, assetPath: "/a/Duct_Tape_ES");
+        changes.RecordEdit("Duct Tape", "Weight", "5", "3", id, assetPath: "/a/Duct_Tape_ES");
+
+        var (view, _) = ShownView(new BuildViewModel(changes, projects: projects));
+        Dispatcher.UIThread.RunJobs();   // let the shared-size columns settle
+
+        var texts = view.GetVisualDescendants().OfType<TextBlock>().ToList();
+        var tag1 = texts.First(t => t.Text == "Max Stack");
+        var tag2 = texts.First(t => t.Text == "Weight");
+        var value1 = texts.First(t => t.Text == "10 → 25");
+        var value2 = texts.First(t => t.Text == "5 → 3");
+
+        // The tags share one column, so they line up down the card...
+        Assert.Equal(tag1.Bounds.X, tag2.Bounds.X);
+        Assert.Equal(value1.Bounds.X, value2.Bounds.X);
+
+        // ...and each tag sits on the right of its row, right beside its value.
+        var row = Assert.IsType<Grid>(tag1.GetVisualParent());
+        Assert.True(tag1.Bounds.X > row.Bounds.Width / 2,
+            $"the tag sat at {tag1.Bounds.X} of {row.Bounds.Width} — it should be on the right");
+        Assert.True(value1.Bounds.X > tag1.Bounds.X + tag1.Bounds.Width,
+            "the value should follow its tag");
     }
 
     [AvaloniaFact]

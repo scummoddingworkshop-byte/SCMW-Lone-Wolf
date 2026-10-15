@@ -38,7 +38,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BuildChange">
               <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Grid.IsSharedSizeScope="True">
 
                   <!-- The item's picture, so the card is easy to scan. -->
                   <Border Grid.Column="0" Classes="thumb" Width="34" Height="34"
@@ -54,27 +54,32 @@
 
                   <StackPanel Grid.Column="1" Spacing="4">
 
-                    <!-- The item and its game file on one line: the name, then the path to its right. -->
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <!-- The item's name, with its game file right beside it. -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                       <TextBlock Grid.Column="0" Text="{Binding FriendlyName}" FontSize="15"
                                  FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"
                                  VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1" Text="{Binding Path, StringFormat='({0})'}" FontSize="11"
                                  Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
-                                 HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"
-                                 ToolTip.Tip="{Binding Path}"/>
+                                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
                     </Grid>
 
-                    <!-- Each changed value on one line: the field, then its before → after to the right. -->
+                    <!-- What changes: the field's tag, then its before → after. The tags share one
+                         column and the values share another, so both line up down the card; the tags
+                         sit right beside their values. -->
                     <ItemsControl ItemsSource="{Binding Values}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:BuildValueChange">
-                          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,1,0,1">
-                            <TextBlock Grid.Column="0" Text="{Binding ValueName}" FontSize="12"
+                          <Grid ColumnSpacing="10" Margin="0,1,0,1">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="*"/>
+                              <ColumnDefinition Width="Auto" SharedSizeGroup="pvTag"/>
+                              <ColumnDefinition Width="Auto" SharedSizeGroup="pvValue"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="1" Text="{Binding ValueName}" FontSize="12"
                                        Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Summary}" FontSize="12"
-                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
-                                       HorizontalAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Summary}" FontSize="12"
+                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                           </Grid>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
