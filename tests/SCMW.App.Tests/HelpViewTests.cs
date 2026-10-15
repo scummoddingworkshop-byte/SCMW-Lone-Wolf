@@ -17,6 +17,7 @@ public class HelpViewTests
         var topics = view.GetVisualDescendants().OfType<Expander>()
             .Select(e => e.Header as string).ToList();
 
+        Assert.Contains("What can I make?", topics);
         Assert.Contains("First time here?", topics);
         Assert.Contains("Getting your unlock key", topics);
         Assert.Contains("The whole journey, in four steps", topics);

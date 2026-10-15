@@ -19,6 +19,16 @@
       <TextBlock Classes="body"
                  Text="Plain answers to the things people ask most. Nothing here changes anything — it's just guidance."/>
 
+      <Expander Header="What can I make?" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="step" Text="A mod is a .pak file that carries content, not code — so it's safe to use, with no risk to your account."/>
+          <TextBlock Classes="step" Text="What a mod can do today:  change values on items, base-building parts and recipes (weight, stack size, health, timers); add a value an object doesn't have — like the auto-destruct timer that keeps a placed object from vanishing; tweak a recipe's ingredients; and adjust loot and spawn settings."/>
+          <TextBlock Classes="step" Text="What a mod can't do:  change how the game behaves while you play — a doctor reacting to your health, animals learning, weather soaking your clothes. Those need scripting, which is a separate, parked route (a future 'Wolf Pack'), not something a pak can carry."/>
+          <TextBlock Classes="step" Text="Where Lone Wolf sits on the ladder:  it starts at Level 1 (change a value), reaches Level 2 (change a recipe) and the first rung of Level 3 (add a field). New recipes, categories and whole objects (Levels 3–5) are on the way."/>
+          <TextBlock Classes="step" Text="Official tools are coming:  SCUM's own mod support (a full SDK and Workshop upload) is in active development. Lone Wolf is a companion to it, not a rival — and it's built to keep working alongside it."/>
+        </StackPanel>
+      </Expander>
+
       <Expander Header="First time here?" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="1.  In Settings, set your SCUM folder (press Detect if you're unsure where it is)."/>
@@ -46,7 +56,7 @@
       <Expander Header="The whole journey, in four steps" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="1.  Create a project.  In Projects, press New project and give it a name. That project becomes the one you're working in. It's just a container for your changes — nothing in the game is touched yet."/>
-          <TextBlock Classes="step" Text="2.  Edit your items.  In Items, find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
+          <TextBlock Classes="step" Text="2.  Edit your items.  In the Workspace, find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
           <TextBlock Classes="step" Text="3.  Build your mod.  In Build you'll see a list of what's in your mod. Press Build, and SCMW — Lone Wolf writes a finished .pak file into your workspace — and shows you where it landed."/>
           <TextBlock Classes="step" Text="4.  Add it to SCUM.  Press Install into SCUM to copy it into the game's mods folder, then use Launch modded to start SCUM and try it. From then on the Mods screen lists it, and you can switch it on or off."/>
           <TextBlock Classes="step" Text="Changed your mind later? Edit your items again, press Build again, then press Update the copy in SCUM — there's no need to remove it first. To take it back out, press Remove from SCUM."/>
@@ -55,7 +65,7 @@
 
       <Expander Header="Make your first change" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
-          <TextBlock Classes="step" Text="1.  Open Items and pick something (search, or use the category chips)."/>
+          <TextBlock Classes="step" Text="1.  Open the Workspace and pick something (search, or use the category chips)."/>
           <TextBlock Classes="step" Text="2.  Click a value, type a new one, and press Enter. Changed values show a 'changed' tag and 'was …'."/>
           <TextBlock Classes="step" Text="Nothing touches your game yet — changes are saved to the project you're working in."/>
         </StackPanel>
