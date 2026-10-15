@@ -68,7 +68,8 @@
       <ItemsControl Name="Grid" ItemsSource="{Binding VisibleProjects}" IsVisible="{Binding ShowGrid}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <UniformGrid Columns="3" ColumnSpacing="12" RowSpacing="12"/>
+            <UniformGrid ColumnSpacing="12" RowSpacing="12"
+                         Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}}"/>
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
