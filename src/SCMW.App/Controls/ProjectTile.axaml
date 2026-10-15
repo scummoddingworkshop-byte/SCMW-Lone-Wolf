@@ -28,9 +28,9 @@
         <TextBlock Name="WhenText" Classes="dim"/>
         <TextBlock Name="ChangesText" Classes="dim"/>
 
-        <!-- A description is free text, so it is held to two lines: the cards stay the same shape. -->
-        <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"
-                   MaxLines="2" TextTrimming="CharacterEllipsis"/>
+        <!-- A description is shown in full: the cards are all the same height regardless, and the
+             buttons below are pinned to the bottom. -->
+        <TextBlock Name="DescriptionText" Classes="dim" TextWrapping="Wrap"/>
       </StackPanel>
 
       <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">

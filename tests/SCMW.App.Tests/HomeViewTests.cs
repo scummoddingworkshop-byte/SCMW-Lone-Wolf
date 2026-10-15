@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using SCMW.App.Controls;
 using SCMW.App.Views;
@@ -158,6 +159,23 @@ public class HomeViewTests
 
         var fourth = Math.Round(opens[3].TranslatePoint(new Point(0, 0), view)!.Value.Y);
         Assert.True(fourth > tops[0], "the fourth card should start on the next row");
+    }
+
+    [AvaloniaFact]
+    public void A_project_description_is_shown_in_full()
+    {
+        var view = ShownView();
+
+        // No line cap and no ellipsis: a description reads whole. The cards stay equal height
+        // because the grid's cells are uniform, so this costs nothing.
+        var described = view.GetVisualDescendants().OfType<ProjectTile>()
+            .Select(t => t.FindControl<TextBlock>("DescriptionText")!)
+            .Where(t => !string.IsNullOrEmpty(t.Text))
+            .ToList();
+
+        Assert.NotEmpty(described);
+        Assert.All(described, t => Assert.Equal(0, t.MaxLines));
+        Assert.All(described, t => Assert.Equal(TextTrimming.None, t.TextTrimming));
     }
 
     [Fact]
