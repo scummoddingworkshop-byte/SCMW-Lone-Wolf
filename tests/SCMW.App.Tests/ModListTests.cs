@@ -36,6 +36,25 @@ public class ModListTests
     }
 
     [AvaloniaFact]
+    public void Placing_a_built_mod_lands_it_switched_off()
+    {
+        var list = new ModList();
+
+        var mod = list.Place("My first mod");
+
+        Assert.False(mod.IsExternal);
+        Assert.Equal("SCMW", mod.Badge);
+        Assert.False(mod.IsOn);              // a build arrives switched off
+
+        mod.IsOn = true;
+        var again = list.Place("My first mod");
+
+        Assert.Single(list.Mods);            // not duplicated
+        Assert.Same(mod, again);
+        Assert.False(again.IsOn);            // a rebuild switches it off again
+    }
+
+    [AvaloniaFact]
     public void Removing_drops_the_mod()
     {
         var list = new ModList();

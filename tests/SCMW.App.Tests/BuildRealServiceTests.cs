@@ -27,8 +27,12 @@ public class BuildRealServiceTests : IDisposable
 
         public IReadOnlyList<BuildItem>? SentItems;
 
-        public Task<InstallOutcome> InstallAsync(string id, string name, string version, string pak, CancellationToken ct)
-        { Arg = new(id, name, version, pak); return Task.FromResult(InstallResult); }
+        public Task<InstallOutcome> InstallAsync(string id, string name, string version, string pak,
+                                                 bool enabled, CancellationToken ct)
+        { Arg = new(id, name, version, pak); SentEnabled = enabled; return Task.FromResult(InstallResult); }
+
+        /// <summary>Whether the last copy into SCUM was asked for switched on or off.</summary>
+        public bool? SentEnabled;
 
         public Task<RemoveOutcome> RemoveAsync(string id, CancellationToken ct)
         { RemovedProjectId = id; return Task.FromResult(RemoveResult); }
@@ -45,7 +49,8 @@ public class BuildRealServiceTests : IDisposable
         public void Complete(BuildOutcome outcome) => _tcs.TrySetResult(outcome);
         public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i, IProgress<int>? p, CancellationToken ct)
             => _tcs.Task;
-        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak, CancellationToken ct)
+        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
+                                                 bool enabled, CancellationToken ct)
             => Task.FromResult(new InstallOutcome(true, "path", null));
         public Task<RemoveOutcome> RemoveAsync(string id, CancellationToken ct) => Task.FromResult(new RemoveOutcome(true, null));
         public bool IsInstalled(string id) => false;
@@ -70,57 +75,33 @@ public class BuildRealServiceTests : IDisposable
 
         Assert.True(vm.IsSucceeded);
         Assert.Equal(@"C:\ws\Builds\M\SCMW_M_v1.0.0_P.pak", vm.BuiltPakPath);
-        Assert.True(vm.CanInstall);
     }
 
     [AvaloniaFact]
-    public async Task Install_sends_the_built_pak_to_scum()
+    public async Task A_build_puts_the_mod_into_scum_switched_off()
     {
         var (vm, projects, service) = New();
-        await vm.BuildCommand.ExecuteAsync(null);
 
-        await vm.InstallCommand.ExecuteAsync(null);
+        await vm.BuildCommand.ExecuteAsync(null);
 
         Assert.Equal(projects.Current!.Id, service.Arg.Id);
         Assert.Equal(vm.BuiltPakPath, service.Arg.Pak);
+        Assert.False(service.SentEnabled);            // it arrives switched off...
         Assert.True(vm.HasInstalled);
+        Assert.Equal("Your mod is built and ready to be enabled in the Mods Management screen.",
+                     vm.SuccessMessage);              // ...and the screen says what to do about it
     }
 
     [AvaloniaFact]
-    public async Task After_installing_there_is_nothing_left_to_install()
+    public async Task Rebuilding_still_arrives_switched_off()
     {
-        var (vm, _, _) = New();
-        await vm.BuildCommand.ExecuteAsync(null);
-        Assert.True(vm.ShowInstallButton);
-        Assert.Equal("Install into SCUM", vm.InstallButtonLabel);
-
-        await vm.InstallCommand.ExecuteAsync(null);
-
-        Assert.True(vm.HasInstalled);
-        Assert.False(vm.ShowInstallButton);        // the copy in SCUM is exactly this build
-        Assert.Equal("Your mod is ready and installed into SCUM.", vm.SuccessMessage);
-    }
-
-    [AvaloniaFact]
-    public async Task Changing_after_installing_offers_an_update_not_a_second_install()
-    {
-        var (projects, root) = TestProjects.With("My first mod");
-        _roots.Add(root);
-        var changes = TestProjects.ChangeStore(projects);
-        changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
-        var service = new FakeService { Installed = true };
-        var vm = new BuildViewModel(changes, projects: projects, service: service);
+        var (vm, _, service) = New();
 
         await vm.BuildCommand.ExecuteAsync(null);
+        await vm.BuildCommand.ExecuteAsync(null);
 
-        Assert.True(vm.HasInstalled);              // SCUM still has the earlier copy
-        Assert.True(vm.ShowInstallButton);
-        Assert.Equal("Update the copy in SCUM", vm.InstallButtonLabel);
-        Assert.Contains("replace", vm.InstallHint);
-        Assert.Contains("earlier copy", vm.SuccessMessage);
-
-        await vm.InstallCommand.ExecuteAsync(null);
-        Assert.False(vm.ShowInstallButton);        // updated: up to date again
+        Assert.True(vm.IsSucceeded);
+        Assert.False(service.SentEnabled);            // a rebuild lands switched off too
     }
 
     [AvaloniaFact]
@@ -128,7 +109,6 @@ public class BuildRealServiceTests : IDisposable
     {
         var (vm, _, _) = New();
         await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
         Assert.True(vm.HasInstalled);
 
         await vm.RemoveCommand.ExecuteAsync(null);
@@ -142,7 +122,6 @@ public class BuildRealServiceTests : IDisposable
     {
         var (vm, projects, service) = New();
         await vm.BuildCommand.ExecuteAsync(null);
-        await vm.InstallCommand.ExecuteAsync(null);
 
         await vm.RemoveCommand.ExecuteAsync(null);
 

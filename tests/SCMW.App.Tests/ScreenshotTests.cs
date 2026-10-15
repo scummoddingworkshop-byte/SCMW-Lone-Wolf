@@ -494,7 +494,8 @@ public class ScreenshotTests
         private bool _installed;
         public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i, IProgress<int>? p, CancellationToken ct)
         { p?.Report(4); return Task.FromResult(new BuildOutcome(true, @"C:\Users\Fran\Documents\SCMW\Builds\My-first-mod\SCMW_My-first-mod_v1.0.0_P.pak", null)); }
-        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak, CancellationToken ct)
+        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
+                                                 bool enabled, CancellationToken ct)
         { _installed = true; return Task.FromResult(new InstallOutcome(true, @"C:\Games\SCUM\SCUM\Content\Paks\~mods\SCMW_My-first-mod_v1.0.0_P.pak", null)); }
         public Task<RemoveOutcome> RemoveAsync(string id, CancellationToken ct)
         { _installed = false; return Task.FromResult(new RemoveOutcome(true, null)); }

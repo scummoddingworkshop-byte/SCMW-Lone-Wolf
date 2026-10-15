@@ -42,6 +42,23 @@ public partial class ModList : ObservableObject
     /// <summary>Adds a mod that came from elsewhere.</summary>
     public InstalledMod Add(string name) => Track(new InstalledMod(name, external: true));
 
+    /// <summary>
+    /// Puts a mod built here into the list, switched OFF — how a fresh build arrives. The player
+    /// switches it on themselves, so nothing new affects the game without them choosing it.
+    /// </summary>
+    public InstalledMod Place(string name)
+    {
+        var existing = _mods.FirstOrDefault(m => !m.IsExternal && m.Name == name);
+        if (existing is not null)
+        {
+            existing.IsOn = false;
+            RaiseChanged();
+            return existing;
+        }
+
+        return Track(new InstalledMod(name, external: false) { IsOn = false });
+    }
+
     public void Remove(InstalledMod mod)
     {
         if (!_mods.Contains(mod)) return;

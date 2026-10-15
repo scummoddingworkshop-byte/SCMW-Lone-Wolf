@@ -1,12 +1,17 @@
 namespace SCMW.Backend.Build;
 
 /// <summary>
-/// Places our built `.pak` into SCUM's `~mods` folder. It removes only other versions of the
-/// SAME project, backs up (and can restore) any file whose name we would overwrite, and deletes
-/// exactly the recorded file on removal. One plain reason on failure; nothing half-done.
+/// Places our built `.pak` into SCUM's `~mods` folder. A build arrives switched OFF (the file name
+/// gains ".disabled"), so the player switches it on in Mods Management themselves. It removes only
+/// other versions of the SAME project, backs up (and can restore) any file whose name we would
+/// overwrite, and deletes exactly the recorded file on removal. One plain reason on failure;
+/// nothing half-done.
 /// </summary>
 public sealed class ModInstaller
 {
+    /// <summary>What a switched-off mod's file name ends with.</summary>
+    private const string DisabledSuffix = ".disabled";
+
     private readonly IInstallStore _store;
     private readonly string _backupsRoot;
 
@@ -16,7 +21,9 @@ public sealed class ModInstaller
         _backupsRoot = backupsRoot;
     }
 
-    public InstallOutcome Install(string gamePath, InstallRecord record, string sourcePakPath)
+    /// <param name="enabled">False places the mod switched off, which is how a build arrives.</param>
+    public InstallOutcome Install(string gamePath, InstallRecord record, string sourcePakPath,
+                                  bool enabled = true)
     {
         var mods = BuildNames.ModsFolder(gamePath);
         var paks = Path.GetDirectoryName(mods)!;
@@ -27,7 +34,9 @@ public sealed class ModInstaller
         try
         {
             Directory.CreateDirectory(mods);
-            var target = Path.Combine(mods, record.PakFileName);
+
+            // Switched on is "<name>.pak"; switched off is the same name with ".disabled" on the end.
+            var target = Path.Combine(mods, enabled ? record.PakFileName : record.PakFileName + DisabledSuffix);
             var temp = target + "." + Guid.NewGuid().ToString("N") + ".installing";
 
             // 1. Copy the new pak in under a temp name FIRST, so any failure changes nothing.
@@ -60,15 +69,15 @@ public sealed class ModInstaller
             // these are tidy-ups, and a hiccup is logged as a warning instead.
             try
             {
-                // 4. Remove a switched-off same-name copy (the Mods screen renames files to disable
-                //    them): it is the same mod, so keep only the switched-on one.
-                var disabledTwin = target + ".disabled";
-                if (File.Exists(disabledTwin))
+                // 4. Remove the same-name copy in the OTHER state (the Mods screen switches a mod on
+                //    and off by renaming the file): it is the same mod, so keep only the one we wrote.
+                var twin = enabled ? target + DisabledSuffix : Path.Combine(mods, record.PakFileName);
+                if (File.Exists(twin))
                 {
                     Directory.CreateDirectory(_backupsRoot);
-                    File.Copy(disabledTwin, Path.Combine(_backupsRoot,
-                        $"{Path.GetFileName(target)} ({DateTime.Now:yyyyMMdd-HHmmss}).disabled"), true);
-                    File.Delete(disabledTwin);
+                    File.Copy(twin, Path.Combine(_backupsRoot,
+                        $"{Path.GetFileName(twin)} ({DateTime.Now:yyyyMMdd-HHmmss}).replaced"), true);
+                    File.Delete(twin);
                 }
 
                 // 5. Remove older versions of THIS project only (never the file we just wrote).

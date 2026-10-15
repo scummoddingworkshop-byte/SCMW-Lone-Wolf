@@ -24,7 +24,7 @@ public class BuildInstallsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_successful_build_installs_the_mod()
+    public void A_successful_build_lands_in_mods_switched_off()
     {
         var (build, mods) = NewBuild();
         build.ProjectName = "Tape mod";
@@ -35,7 +35,7 @@ public class BuildInstallsTests : IDisposable
         var mod = Assert.Single(mods.Mods);
         Assert.Equal("Tape mod", mod.Name);
         Assert.False(mod.IsExternal);
-        Assert.True(mod.IsOn);
+        Assert.False(mod.IsOn);          // the player switches it on in Mods Management
     }
 
     [AvaloniaFact]

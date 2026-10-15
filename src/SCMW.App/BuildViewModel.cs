@@ -170,10 +170,9 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>"Install" the first time; "Update" once SCUM already has an older copy.</summary>
     public string InstallButtonLabel => HasInstalled ? "Update the copy in SCUM" : "Install into SCUM";
 
+    /// <summary>What the success panel says: the mod is in SCUM, switched off, waiting to be enabled.</summary>
     public string SuccessMessage =>
-        !HasInstalled ? "Your mod is built and ready to install."
-        : HasBuildToInstall ? "Your mod is built — SCUM still has the earlier copy."
-        : "Your mod is ready and installed into SCUM.";
+        "Your mod is built and ready to be enabled in the Mods Management screen.";
 
     /// <summary>A plain line getting ahead of the obvious question: what do these buttons do?</summary>
     public string InstallHint =>
@@ -337,7 +336,22 @@ public partial class BuildViewModel : ObservableObject
         {
             BuiltPakPath = outcome.PakPath;
             BuiltVersion = ModVersion;
+
+            // A build lands in SCUM switched off. Nothing new starts affecting the game until the
+            // player switches it on in Mods Management.
+            var placed = await _service!.InstallAsync(project.Id, project.Name, ModVersion,
+                outcome.PakPath, enabled: false, CancellationToken.None);
+            if (!placed.Ok)
+            {
+                ShowFailure("The mod was made, but it could not be put into SCUM.",
+                    placed.Error ?? "The file could not be copied into SCUM's mods folder.",
+                    "Check your SCUM folder in Settings, then press Build again.", "");
+                return;
+            }
+
             FinishSuccess();
+            HasInstalled = true;
+            _installedStamp = _builtStamp;
         }
         else
         {
@@ -417,7 +431,7 @@ public partial class BuildViewModel : ObservableObject
 
         BackUpSaveQuietly();   // keep the save before the mod can touch it (design §11)
         var outcome = await _service.InstallAsync(project.Id, project.Name, BuiltVersion ?? ModVersion,
-            BuiltPakPath, CancellationToken.None);
+            BuiltPakPath, enabled: true, CancellationToken.None);
         if (outcome.Ok)
         {
             HasInstalled = true;
@@ -549,7 +563,7 @@ public partial class BuildViewModel : ObservableObject
         StopTimer();
         StatusText = "";
         BackUpSaveQuietly();
-        if (_service is null) _mods?.Install(ProjectName);
+        if (_service is null) _mods?.Place(ProjectName);
         _builtStamp = CurrentStamp();
         State = BuildState.Succeeded;
         NotifyInstallState();

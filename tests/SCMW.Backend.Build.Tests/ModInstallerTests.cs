@@ -33,6 +33,41 @@ public class ModInstallerTests : IDisposable
     }
 
     [Fact]
+    public void A_switched_off_install_lands_as_a_disabled_file()
+    {
+        var (installer, store) = NewInstaller();
+        var game = Game("game");
+        Directory.CreateDirectory(Path.Combine(game, "SCUM", "Content", "Paks"));
+        var pak = Path.Combine(_root, "SCMW_Tape_v1.0.0_P.pak"); File.WriteAllText(pak, "pak");
+        var record = new InstallRecord("p1", "Tape", "1.0.0", "SCMW_Tape_v1.0.0_P.pak", pak, "", DateTime.UtcNow, null);
+
+        var result = installer.Install(game, record, pak, enabled: false);
+
+        Assert.True(result.Ok, result.Error);
+        Assert.True(File.Exists(Path.Combine(ModsOf(game), "SCMW_Tape_v1.0.0_P.pak.disabled")));
+        Assert.False(File.Exists(Path.Combine(ModsOf(game), "SCMW_Tape_v1.0.0_P.pak")));
+        Assert.Equal(Path.Combine(ModsOf(game), "SCMW_Tape_v1.0.0_P.pak.disabled"),
+                     store.Load("p1")!.InstalledPath);
+    }
+
+    [Fact]
+    public void Rebuilding_switched_off_replaces_a_switched_on_copy()
+    {
+        var (installer, _) = NewInstaller();
+        var game = Game("game");
+        var mods = ModsOf(game); Directory.CreateDirectory(mods);
+        File.WriteAllText(Path.Combine(mods, "SCMW_Tape_v1.0.0_P.pak"), "the copy that was switched on");
+        var pak = Path.Combine(_root, "SCMW_Tape_v1.0.0_P.pak"); File.WriteAllText(pak, "new");
+        var record = new InstallRecord("p1", "Tape", "1.0.0", "SCMW_Tape_v1.0.0_P.pak", pak, "", DateTime.UtcNow, null);
+
+        var result = installer.Install(game, record, pak, enabled: false);
+
+        Assert.True(result.Ok, result.Error);
+        Assert.True(File.Exists(Path.Combine(mods, "SCMW_Tape_v1.0.0_P.pak.disabled")));
+        Assert.False(File.Exists(Path.Combine(mods, "SCMW_Tape_v1.0.0_P.pak")));  // the on copy is gone
+    }
+
+    [Fact]
     public void Installing_a_newer_version_removes_only_our_older_versions()
     {
         var (installer, _) = NewInstaller();

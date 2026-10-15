@@ -16,8 +16,12 @@ public interface IBuildService
 {
     Task<BuildOutcome> BuildAsync(string projectName, string version,
         IReadOnlyList<BuildItem> items, IProgress<int>? progress, CancellationToken ct);
+
+    /// <summary>Copies a built pak into SCUM's mods folder. <paramref name="enabled"/> false puts it
+    /// there switched off — which is how a build arrives; the player enables it in Mods Management.</summary>
     Task<InstallOutcome> InstallAsync(string projectId, string projectName, string version,
-        string pakPath, CancellationToken ct);
+        string pakPath, bool enabled, CancellationToken ct);
+
     Task<RemoveOutcome> RemoveAsync(string projectId, CancellationToken ct);
     bool IsInstalled(string projectId);
 }
@@ -69,13 +73,13 @@ public sealed class BuildService : IBuildService, IDisposable
         => _builder.BuildAsync(new BuildRequest(projectName, version, items), progress, ct);
 
     public Task<InstallOutcome> InstallAsync(string projectId, string projectName, string version,
-        string pakPath, CancellationToken ct)
+        string pakPath, bool enabled, CancellationToken ct)
     {
         var record = new InstallRecord(projectId, projectName, version, Path.GetFileName(pakPath),
             pakPath, InstalledPath: "", DateTime.UtcNow, BackupPath: null);
 
         // Copying the pak is disk work — keep it off the window's thread.
-        return Task.Run(() => _installer.Install(_settings.GamePath!, record, pakPath), ct);
+        return Task.Run(() => _installer.Install(_settings.GamePath!, record, pakPath, enabled), ct);
     }
 
     public Task<RemoveOutcome> RemoveAsync(string projectId, CancellationToken ct)

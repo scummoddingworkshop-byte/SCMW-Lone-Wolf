@@ -240,7 +240,7 @@ public class BuildViewTests : IDisposable
             Assert.DoesNotContain(buttons, b => (b.Content as string) == "Launch SCUM");
 
             var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
-            Assert.Contains("Your mod is built and ready to install.", texts);
+            Assert.Contains("Your mod is built and ready to be enabled in the Mods Management screen.", texts);
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -249,7 +249,8 @@ public class BuildViewTests : IDisposable
     {
         public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i, IProgress<int>? p, CancellationToken ct)
         { p?.Report(4); return Task.FromResult(new BuildOutcome(true, @"C:\ws\M_v1.0.0_P.pak", null)); }
-        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak, CancellationToken ct)
+        public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
+                                                 bool enabled, CancellationToken ct)
             => Task.FromResult(new InstallOutcome(true, @"C:\g\~mods\M_v1.0.0_P.pak", null));
         public Task<RemoveOutcome> RemoveAsync(string id, CancellationToken ct) => Task.FromResult(new RemoveOutcome(true, null));
         public bool IsInstalled(string id) => false;
