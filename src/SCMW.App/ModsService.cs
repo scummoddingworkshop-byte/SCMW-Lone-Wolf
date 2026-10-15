@@ -7,9 +7,11 @@ using SCMW.Backend.Build;
 
 namespace SCMW.App;
 
-/// <summary>One mod on disk: its file name, a friendly name, whether it is switched on, and whether
-/// SCMW built it (SCMW badge) or it came from elsewhere (External).</summary>
-public sealed record ModsEntry(string FileName, string DisplayName, bool IsOn, bool IsExternal);
+/// <summary>One mod on disk: its file name, a friendly name, whether it is switched on, whether
+/// SCMW built it (SCMW badge) or it came from elsewhere (External), and whether SCMW may change it
+/// (a mod in another tool's folder is listed but left alone).</summary>
+public sealed record ModsEntry(string FileName, string DisplayName, bool IsOn, bool IsExternal,
+                               bool Managed = true, string Location = "~mods");
 
 /// <summary>Whether a change worked; one plain reason if not.</summary>
 public sealed record ModsResult(bool Ok, string? Error, WriteFailureKind Failure = WriteFailureKind.None);
@@ -41,6 +43,7 @@ public sealed class ModsService : IModsService
     private const string OnSuffix = ".pak";
 
     private readonly string _modsFolder;
+    private readonly IReadOnlyList<string> _otherModsFolders;
     private readonly string _backupsRoot;
     private readonly string _importedPath;
     private readonly string _buildsRoot;
@@ -49,6 +52,19 @@ public sealed class ModsService : IModsService
     {
         var root = (gameRoot ?? "").TrimEnd('\\', '/');
         _modsFolder = root.Length == 0 ? "" : BuildNames.ModsFolder(root);
+
+        // Other tools put mods beside ~mods (e.g. Vortex's "Mods", and UE's "LogicMods"). We LIST
+        // them so nothing is hidden, but we never switch or remove them — that would stomp on
+        // someone else's setup (design §15, "good neighbours").
+        var paks = root.Length == 0 ? "" : Path.GetDirectoryName(_modsFolder)!;
+        _otherModsFolders = paks.Length == 0
+            ? Array.Empty<string>()
+            : new[]
+            {
+                Path.Combine(paks, "Mods"),
+                Path.Combine(paks, "LogicMods"),
+            };
+
         _backupsRoot = Path.Combine(workspaceRoot, "Backups", "mods");
         _buildsRoot = Path.Combine(workspaceRoot, "Builds");
         _importedPath = Path.Combine(workspaceRoot, "mods", "imported.json");
@@ -60,20 +76,29 @@ public sealed class ModsService : IModsService
 
     public IReadOnlyList<ModsEntry> List()
     {
-        if (!Directory.Exists(_modsFolder)) return Array.Empty<ModsEntry>();
-
         var ours = OurBaseNames();
         var entries = new List<ModsEntry>();
-        foreach (var path in Directory.GetFiles(_modsFolder))
+        Collect(entries, _modsFolder, "~mods", managed: true, ours);
+        foreach (var folder in _otherModsFolders)
+            Collect(entries, folder, Path.GetFileName(folder), managed: false, ours);
+        return entries.OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>Adds the mod files in one folder. A mod in another tool's folder is listed but not
+    /// managed (never switched or removed by us).</summary>
+    private static void Collect(List<ModsEntry> entries, string folder, string location, bool managed,
+                                HashSet<string> ours)
+    {
+        if (!Directory.Exists(folder)) return;
+        foreach (var path in Directory.GetFiles(folder))
         {
             var name = Path.GetFileName(path);
             var split = Split(name);
             if (split is null) continue;
             var (isOn, display) = split.Value;
-            entries.Add(new ModsEntry(name, display, isOn, IsExternal: !ours.Contains(display)));
+            entries.Add(new ModsEntry(name, display, isOn,
+                IsExternal: !managed || !ours.Contains(display), Managed: managed, Location: location));
         }
-
-        return entries.OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private static (bool IsOn, string Display)? Split(string fileName)
@@ -83,6 +108,15 @@ public sealed class ModsService : IModsService
         if (fileName.EndsWith(OnSuffix, StringComparison.OrdinalIgnoreCase))
             return (true, fileName[..^OnSuffix.Length]);
         return null;
+    }
+
+    /// <summary>A plain reason for a file we will not touch: it sits in another tool's folder.</summary>
+    private string NotOursMessage(string fileName)
+    {
+        var elsewhere = _otherModsFolders.FirstOrDefault(f => File.Exists(Path.Combine(f, fileName)));
+        return elsewhere is null
+            ? "That file is not a SCUM mod."
+            : $"\"{fileName}\" sits in SCUM's {Path.GetFileName(elsewhere)} folder, which another tool manages — SCMW — Lone Wolf leaves it alone.";
     }
 
     /// <summary>The display base-names of every mod we built (from Plan 13's per-project records),
@@ -112,6 +146,8 @@ public sealed class ModsService : IModsService
     public ModsResult SetEnabled(string fileName, bool enabled)
     {
         var path = Path.Combine(_modsFolder, fileName);
+        if (!File.Exists(path)) return new ModsResult(false, NotOursMessage(fileName));
+
         var isOff = fileName.EndsWith(OffSuffix, StringComparison.OrdinalIgnoreCase);
         var isOn = !isOff && fileName.EndsWith(OnSuffix, StringComparison.OrdinalIgnoreCase);
         if (!isOn && !isOff) return new ModsResult(false, "That file is not a SCUM mod.");
@@ -144,7 +180,7 @@ public sealed class ModsService : IModsService
     {
         foreach (var entry in List())
         {
-            if (entry.IsOn == enabled) continue;
+            if (!entry.Managed || entry.IsOn == enabled) continue;
             var result = SetEnabled(entry.FileName, enabled);
             if (!result.Ok) return result;
         }
@@ -154,7 +190,13 @@ public sealed class ModsService : IModsService
     public ModsResult Remove(string fileName)
     {
         var path = Path.Combine(_modsFolder, fileName);
-        if (!File.Exists(path)) return new ModsResult(true, null);
+        if (!File.Exists(path))
+        {
+            // A mod listed from another tool's folder is never removed by us (design §15).
+            return _otherModsFolders.Any(f => File.Exists(Path.Combine(f, fileName)))
+                ? new ModsResult(false, NotOursMessage(fileName))
+                : new ModsResult(true, null);   // already gone
+        }
 
         try
         {

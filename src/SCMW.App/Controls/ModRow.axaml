@@ -16,10 +16,13 @@
         </StackPanel>
 
         <ToggleSwitch Grid.Column="1" Name="Switch" VerticalAlignment="Center"
-                      IsChecked="{Binding IsOn, Mode=TwoWay}"/>
+                      IsChecked="{Binding IsOn, Mode=TwoWay}"
+                      IsEnabled="{Binding Managed}"
+                      ToolTip.Tip="Another tool manages this mod — SCMW — Lone Wolf leaves it alone."/>
 
         <Button Grid.Column="2" Name="RemoveButton" Classes="secondary" Content="Remove"
                 VerticalAlignment="Center"
+                IsEnabled="{Binding Managed}"
                 Command="{Binding $parent[controls:ModRow].RequestRemoveCommand}"
                 CommandParameter="{Binding}"/>
       </Grid>

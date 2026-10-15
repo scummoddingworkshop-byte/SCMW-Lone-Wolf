@@ -73,6 +73,43 @@ public class ModsServiceTests : IDisposable
         Assert.False(svc.IsAvailable);
     }
 
+    private string OtherMods(string folder) =>
+        Path.Combine(GameRoot, "SCUM", "Content", "Paks", folder);
+
+    [Fact] // design §15: recognise other tools' folders, but never touch them
+    public void A_mod_in_another_tools_folder_is_listed_but_not_managed()
+    {
+        var svc = NewService();
+        var dir = OtherMods("Mods");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "VortexMod.pak"), "pak");
+
+        var entry = Assert.Single(svc.List());
+        Assert.Equal("VortexMod", entry.DisplayName);
+        Assert.False(entry.Managed);
+        Assert.Equal("Mods", entry.Location);
+        Assert.True(entry.IsExternal);
+    }
+
+    [Fact]
+    public void Another_tools_mod_is_never_switched_or_removed()
+    {
+        var svc = NewService();
+        var dir = OtherMods("LogicMods");
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, "Logic.pak");
+        File.WriteAllText(file, "pak");
+
+        var switched = svc.SetEnabled("Logic.pak", false);
+        Assert.False(switched.Ok);
+        Assert.Contains("leaves it alone", switched.Error);
+        Assert.True(File.Exists(file));                       // untouched
+
+        var removed = svc.Remove("Logic.pak");
+        Assert.False(removed.Ok);
+        Assert.True(File.Exists(file));                       // untouched
+    }
+
     [Fact]
     public void Switching_a_mod_off_renames_it_and_back_on_restores_it()
     {

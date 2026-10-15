@@ -91,7 +91,8 @@ public partial class ModsViewModel : ObservableObject
 
         foreach (var entry in _service.List())
         {
-            var mod = new InstalledMod(entry.DisplayName, entry.IsExternal, entry.IsOn, entry.FileName);
+            var mod = new InstalledMod(entry.DisplayName, entry.IsExternal, entry.IsOn, entry.FileName,
+                                       entry.Managed, entry.Location);
             mod.PropertyChanged += OnModChanged;
             _real.Add(mod);
         }
