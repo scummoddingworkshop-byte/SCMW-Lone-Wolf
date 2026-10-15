@@ -38,24 +38,22 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BuildChange">
               <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Grid.IsSharedSizeScope="True">
+                <Grid ColumnDefinitions="2*,1*" ColumnSpacing="16" Grid.IsSharedSizeScope="True">
 
-                  <!-- The item's picture, so the card is easy to scan. -->
-                  <Border Grid.Column="0" Classes="thumb" Width="34" Height="34"
-                          VerticalAlignment="Top" Margin="0,1,0,0">
-                    <Panel>
-                      <TextBlock Text="SCMW" FontSize="8"
-                                 Foreground="{StaticResource TextDimBrush}"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                      <Image Source="{Binding Picture}" Stretch="UniformToFill"
-                             IsVisible="{Binding HasPicture}"/>
-                    </Panel>
-                  </Border>
-
-                  <StackPanel Grid.Column="1" Spacing="4">
-
-                    <!-- The item's name, with its game file right beside it. -->
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                  <!-- Left (about two thirds): the item's picture and its name, centred on each other. -->
+                  <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="10"
+                        VerticalAlignment="Center">
+                    <Border Grid.Column="0" Classes="thumb" Width="34" Height="34">
+                      <Panel>
+                        <TextBlock Text="SCMW" FontSize="8"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding Picture}" Stretch="UniformToFill"
+                               IsVisible="{Binding HasPicture}"/>
+                      </Panel>
+                    </Border>
+                    <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                          VerticalAlignment="Center">
                       <TextBlock Grid.Column="0" Text="{Binding FriendlyName}" FontSize="15"
                                  FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"
                                  VerticalAlignment="Center"/>
@@ -63,29 +61,27 @@
                                  Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
                     </Grid>
+                  </Grid>
 
-                    <!-- What changes: the field's tag, then its before → after. The tags share one
-                         column and the values share another, so both line up down the card; the tags
-                         sit right beside their values. -->
-                    <ItemsControl ItemsSource="{Binding Values}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:BuildValueChange">
-                          <Grid ColumnSpacing="10" Margin="0,1,0,1">
-                            <Grid.ColumnDefinitions>
-                              <ColumnDefinition Width="*"/>
-                              <ColumnDefinition Width="Auto" SharedSizeGroup="pvTag"/>
-                              <ColumnDefinition Width="Auto" SharedSizeGroup="pvValue"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1" Text="{Binding ValueName}" FontSize="12"
-                                       Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Summary}" FontSize="12"
-                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                  <!-- Right (about one third): the changed fields, centred on the item block. The tags
+                       share one column and the values share another, so both line up down the card. -->
+                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Values}" VerticalAlignment="Center">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BuildValueChange">
+                        <Grid ColumnSpacing="8" Margin="0,1,0,1">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="pvTag"/>
+                            <ColumnDefinition Width="*"/>
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Grid.Column="0" Text="{Binding ValueName}" FontSize="12"
+                                     Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Summary}" FontSize="12"
+                                     Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
 
-                  </StackPanel>
                 </Grid>
               </Border>
             </DataTemplate>

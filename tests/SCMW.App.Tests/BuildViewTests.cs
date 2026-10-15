@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -107,7 +108,7 @@ public class BuildViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_field_tags_line_up_and_sit_beside_their_values()
+    public void The_field_tags_line_up_in_the_right_third_beside_the_name()
     {
         var (projects, root) = TestProjects.With("My first mod");
         _roots.Add(root);
@@ -120,21 +121,30 @@ public class BuildViewTests : IDisposable
         Dispatcher.UIThread.RunJobs();   // let the shared-size columns settle
 
         var texts = view.GetVisualDescendants().OfType<TextBlock>().ToList();
+        var name = texts.First(t => t.Text == "Duct Tape");
         var tag1 = texts.First(t => t.Text == "Max Stack");
         var tag2 = texts.First(t => t.Text == "Weight");
         var value1 = texts.First(t => t.Text == "10 → 25");
         var value2 = texts.First(t => t.Text == "5 → 3");
 
-        // The tags share one column, so they line up down the card...
+        // The tags share one column and the values share another, so both line up down the card.
         Assert.Equal(tag1.Bounds.X, tag2.Bounds.X);
         Assert.Equal(value1.Bounds.X, value2.Bounds.X);
 
-        // ...and each tag sits on the right of its row, right beside its value.
-        var row = Assert.IsType<Grid>(tag1.GetVisualParent());
-        Assert.True(tag1.Bounds.X > row.Bounds.Width / 2,
-            $"the tag sat at {tag1.Bounds.X} of {row.Bounds.Width} — it should be on the right");
-        Assert.True(value1.Bounds.X > tag1.Bounds.X + tag1.Bounds.Width,
-            "the value should follow its tag");
+        var card = tag1.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("card"));
+        var fields = tag1.GetVisualAncestors().OfType<ItemsControl>().First();
+        var atFields = fields.TranslatePoint(new Point(0, 0), card)!.Value;
+        var atName = name.TranslatePoint(new Point(0, 0), card)!.Value;
+
+        // The changed fields sit in the right third, beside the item's name...
+        Assert.True(atFields.X > card.Bounds.Width / 2,
+            $"the fields sat at {atFields.X} of {card.Bounds.Width} — they should be in the right third");
+
+        // ...and share a middle line with the icon and name.
+        var fieldsMiddle = atFields.Y + fields.Bounds.Height / 2;
+        var nameMiddle = atName.Y + name.Bounds.Height / 2;
+        Assert.True(Math.Abs(fieldsMiddle - nameMiddle) < 2,
+            $"the fields' middle was {fieldsMiddle} but the name's was {nameMiddle} — they should match");
     }
 
     [AvaloniaFact]
