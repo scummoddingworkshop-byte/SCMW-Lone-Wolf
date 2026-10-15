@@ -378,4 +378,29 @@ public class BuildRealServiceTests : IDisposable
 
         Assert.Equal(1, launcher.Modded);
     }
+
+    [AvaloniaFact] // design §11: a save backup before launching the modded game too
+    public async Task Launching_backs_up_the_save_first()
+    {
+        var launcher = new FakeLauncher();
+        var saves = new RecordingSaves();
+        var vm = new BuildViewModel(launcher: launcher, saves: saves);
+
+        await vm.LaunchCommand.ExecuteAsync(null);
+
+        Assert.True(saves.BackedUp);
+        Assert.Equal(1, launcher.Modded);
+    }
+
+    /// <summary>A stand-in save service that only records whether a backup was taken.</summary>
+    private sealed class RecordingSaves : ISaveBackupsService
+    {
+        public bool BackedUp { get; private set; }
+        public bool IsAvailable => true;
+        public string SaveFolder => "";
+        public IReadOnlyList<SaveSnapshot> List() => Array.Empty<SaveSnapshot>();
+        public string? BackUp() { BackedUp = true; return null; }
+        public string? Restore(string snapshotId) => null;
+        public string? Delete(string snapshotId) => null;
+    }
 }

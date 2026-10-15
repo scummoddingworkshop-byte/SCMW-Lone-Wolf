@@ -566,6 +566,7 @@ public partial class BuildViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task Launch()
     {
+        BackUpSaveQuietly();   // keep the save before the modded game can touch it (design §11)
         if (_launcher is not null) await _launcher.LaunchModdedAsync();
     }
 
