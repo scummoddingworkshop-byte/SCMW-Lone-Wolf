@@ -77,6 +77,23 @@ public partial class BackupsViewModel : ObservableObject
     /// <summary>The backups currently shown, newest first.</summary>
     public ObservableCollection<BackupRow> Backups { get; }
 
+    /// <summary>Deleted projects on their own, newest first — the screen's Projects area.</summary>
+    public ObservableCollection<BackupRow> ProjectBackups { get; } = new();
+
+    /// <summary>Replaced mods on their own, newest first — the screen's Mods area.</summary>
+    public ObservableCollection<BackupRow> ModBackups { get; } = new();
+
+    /// <summary>A plain line saying what the Projects area is for.</summary>
+    public string ProjectNote => "Kept when you delete a project — Restore puts it back in your Projects list.";
+
+    /// <summary>A plain line saying what the Mods area is for.</summary>
+    public string ModNote => "Kept when a build replaces a mod already in SCUM — Restore puts the older copy back.";
+
+    public bool HasProjectBackups => ProjectBackups.Count > 0;
+    public bool ShowNoProjectBackups => ProjectBackups.Count == 0;
+    public bool HasModBackups => ModBackups.Count > 0;
+    public bool ShowNoModBackups => ModBackups.Count == 0;
+
     /// <summary>A plain line for the last thing that happened (a restore, a delete, a refusal).</summary>
     [ObservableProperty] private string _message = "";
 
@@ -97,14 +114,30 @@ public partial class BackupsViewModel : ObservableObject
 
     /// <summary>Re-reads the backups from disk. Called at construction and after any change.</summary>
     public void Refresh()
-    {        Backups.Clear();
+    {
+        Backups.Clear();
+        ProjectBackups.Clear();
+        ModBackups.Clear();
+
         if (_service is not null)
         {
-            foreach (var entry in _service.List()) Backups.Add(new BackupRow(entry));
+            foreach (var entry in _service.List())
+            {
+                var row = new BackupRow(entry);
+                Backups.Add(row);
+
+                // The same row feeds its own area, so both stay in step.
+                if (entry.Kind == BackupKind.Project) ProjectBackups.Add(row);
+                else ModBackups.Add(row);
+            }
         }
 
         OnPropertyChanged(nameof(HasBackups));
         OnPropertyChanged(nameof(ShowEmptyState));
+        OnPropertyChanged(nameof(HasProjectBackups));
+        OnPropertyChanged(nameof(ShowNoProjectBackups));
+        OnPropertyChanged(nameof(HasModBackups));
+        OnPropertyChanged(nameof(ShowNoModBackups));
         OnPropertyChanged(nameof(Summary));
     }
 

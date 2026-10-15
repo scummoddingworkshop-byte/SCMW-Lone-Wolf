@@ -159,4 +159,36 @@ public class BackupsViewModelTests
         Assert.Equal("p", fake.Deleted);
         Assert.True(vm.ShowEmptyState);
     }
+
+    [AvaloniaFact]
+    public void Projects_and_mods_are_listed_in_their_own_areas()
+    {
+        var fake = new FakeBackups();
+        fake.Entries.Add(new BackupEntry(BackupKind.Mod, "SCMW_Tape_v1.0.0_P.pak", DateTime.UtcNow, "mod"));
+        fake.Entries.Add(new BackupEntry(BackupKind.Project, "My first mod abc12345", DateTime.UtcNow, "project"));
+        var vm = new BackupsViewModel(fake);
+
+        var project = Assert.Single(vm.ProjectBackups);
+        Assert.Equal("My first mod abc12345", project.DisplayName);
+        var mod = Assert.Single(vm.ModBackups);
+        Assert.Equal("SCMW_Tape_v1.0.0_P.pak", mod.DisplayName);
+
+        Assert.True(vm.HasProjectBackups);
+        Assert.True(vm.HasModBackups);
+        Assert.False(vm.ShowNoProjectBackups);
+        Assert.False(vm.ShowNoModBackups);
+    }
+
+    [AvaloniaFact]
+    public void Each_area_says_what_it_is_and_when_it_holds_nothing_yet()
+    {
+        var vm = new BackupsViewModel(new FakeBackups());
+
+        Assert.False(vm.HasProjectBackups);
+        Assert.False(vm.HasModBackups);
+        Assert.True(vm.ShowNoProjectBackups);
+        Assert.True(vm.ShowNoModBackups);
+        Assert.False(string.IsNullOrWhiteSpace(vm.ProjectNote));
+        Assert.False(string.IsNullOrWhiteSpace(vm.ModNote));
+    }
 }
