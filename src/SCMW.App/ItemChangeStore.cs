@@ -56,6 +56,23 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
+    /// Change the value of an "add a field" record in place (an added field's value lives in that
+    /// record, so editing it must update the record, never add a separate Set). Returns true when it
+    /// was saved; false when the record is gone or the save failed (never throws).
+    /// </summary>
+    public bool UpdateAddField(string projectFolder, Guid recordId, string newValue)
+    {
+        if (string.IsNullOrWhiteSpace(projectFolder)) return false;
+
+        var record = _store.Load(projectFolder).FirstOrDefault(r => r.Id == recordId);
+        if (record is null) return false;
+
+        var saved = _store.Replace(projectFolder, record with { NewValue = newValue });
+        Changed?.Invoke();
+        return saved;
+    }
+
+    /// <summary>
     /// Append a multiply (scale by a factor) to the project's <c>changes.json</c>. The factor is kept
     /// as the record's new value; the factor always scales the file's own value, so the newest change
     /// to the field wins. Returns false when it could not be saved (so the screen can say so).

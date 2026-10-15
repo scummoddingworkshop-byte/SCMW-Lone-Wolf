@@ -460,6 +460,43 @@ public class WorkspaceViewTests
             var still = Assert.Single(vm.AddableFields);
             Assert.True(still.IsAdded);
             Assert.Equal(record.Id, still.RecordId);
+
+            // And it shows in the item's own field list, as "added", with its value.
+            var row = vm.Fields.Single(f => f.TechnicalName == "_autoDestructTime");
+            Assert.True(row.IsAdded);
+            Assert.Equal("0", row.Value);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Editing_an_added_field_updates_its_record()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            add.Draft = "0";
+            vm.AddCommand.Execute(add);
+
+            var row = vm.Fields.Single(f => f.TechnicalName == "_autoDestructTime");
+            vm.BeginEditCommand.Execute(row);
+            row.Draft = "30";
+            vm.CommitEditCommand.Execute(row);
+
+            // Still ONE record (the add), with the new value — no separate Set.
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(ChangeOperation.AddField, record.Operation);
+            Assert.Equal("30", record.NewValue);
+            Assert.Equal("30", row.Value);
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -489,6 +526,7 @@ public class WorkspaceViewTests
             Assert.False(add.IsAdded);            // back to the "add" controls
             Assert.Null(add.RecordId);
             Assert.Equal("", add.Draft);          // the old value is cleared, so the row looks fresh
+            Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "_autoDestructTime");   // row gone
         }
         finally { TestProjects.Cleanup(root); }
     }

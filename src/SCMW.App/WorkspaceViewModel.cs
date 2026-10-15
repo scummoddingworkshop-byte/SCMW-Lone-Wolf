@@ -272,6 +272,14 @@ public partial class WorkspaceViewModel : ObservableObject
             }
         }
 
+        // A field the project ADDED to this item shows as its own row too, with the value it was
+        // given, so it can be seen and changed here — not only in the "fields you could add" card.
+        if (!string.IsNullOrEmpty(assetPath))
+        {
+            foreach (var record in AddedRecordsFor(assetPath))
+                Fields.Add(AddedRow(record));
+        }
+
         HasFields = Fields.Count > 0;
 
         AddableFields.Clear();
@@ -280,6 +288,49 @@ public partial class WorkspaceViewModel : ObservableObject
             foreach (var field in addable) AddableFields.Add(field);
         }
         OnPropertyChanged(nameof(HasAddableFields));
+    }
+
+    /// <summary>The project's "add a field" records for this item (its own file or its class file).</summary>
+    private IEnumerable<ChangeRecord> AddedRecordsFor(string assetPath) =>
+        Records().Where(r => r.Operation == ChangeOperation.AddField
+                             && IsTargetOf(r, assetPath, ClassFileOf(assetPath)));
+
+    /// <summary>A field row for a field the project added to the item, described by the library.</summary>
+    private WorkspaceField AddedRow(ChangeRecord record)
+    {
+        var definition = _library.Lookup(_kind, record.FieldTechnicalName);
+        return new WorkspaceField(
+            label: definition?.Label ?? FieldNames.Friendly(record.FieldTechnicalName),
+            unit: definition?.Unit ?? string.Empty,
+            value: record.NewValue,
+            risk: definition?.Risk ?? Risk.Unknown,
+            writable: true,
+            meaning: definition?.Meaning ?? string.Empty,
+            technicalName: record.FieldTechnicalName,
+            described: definition is not null,
+            type: definition?.Type ?? FieldType.Unknown)
+        {
+            IsAdded = true,
+            AddRecordId = record.Id,
+        };
+    }
+
+    /// <summary>Rebuild just the "added field" rows in the list from the project's records.</summary>
+    private void RefreshAddedFieldRows()
+    {
+        for (var i = Fields.Count - 1; i >= 0; i--)
+        {
+            if (Fields[i].IsAdded) Fields.RemoveAt(i);
+        }
+
+        var path = SelectedAsset?.AssetId;
+        if (!string.IsNullOrEmpty(path))
+        {
+            foreach (var record in AddedRecordsFor(path))
+                Fields.Add(AddedRow(record));
+        }
+
+        HasFields = Fields.Count > 0;
     }
 
     /// <summary>Open a file: remember it, then read and show ITS own fields from the game — the
@@ -490,6 +541,9 @@ public partial class WorkspaceViewModel : ObservableObject
 
         // The field is now part of the project: show it as added, with a Remove option.
         if (id is { } recordId) field.MarkAdded(recordId);
+
+        // And show it in the item's own field list too.
+        RefreshAddedFieldRows();
     }
 
     /// <summary>Remove a field this project added to the item (undo its add record).</summary>
@@ -503,6 +557,9 @@ public partial class WorkspaceViewModel : ObservableObject
 
         _changes.Undo(folder, id);
         field.MarkRemoved();
+
+        // And drop its row from the item's field list.
+        RefreshAddedFieldRows();
     }
 
     /// <summary>Run an action on the UI thread (the field rows are bound to the view).</summary>
@@ -565,6 +622,17 @@ public partial class WorkspaceViewModel : ObservableObject
         if (NeedsProject)
         {
             field.IsEditing = false;   // leave the shown value alone; the banner says why
+            return;
+        }
+
+        // An added field's value lives in its "add" record — edit that record, never add a separate Set.
+        if (field.IsAdded && field.AddRecordId is { } addId)
+        {
+            var addedFolder = _projects?.Chosen?.FolderPath;
+            field.Value = draft;
+            field.IsEditing = false;
+            if (draft != field.OriginalValue && addedFolder is not null)
+                _changes.UpdateAddField(addedFolder, addId, draft);
             return;
         }
 
@@ -726,8 +794,17 @@ public partial class WorkspaceField : ObservableObject
     /// <summary>True when the field library describes this field.</summary>
     public bool Described { get; }
 
+    /// <summary>True when this row is a field the project ADDED to the item (not one the file has).</summary>
+    public bool IsAdded { get; init; }
+
+    /// <summary>The add record's id, for editing/removing an added field (null otherwise).</summary>
+    public Guid? AddRecordId { get; init; }
+
     /// <summary>True when the shown value differs from the baseline (we changed it).</summary>
     public bool IsChanged => Value != OriginalValue;
+
+    /// <summary>True when the "changed" chip should show (an added field shows "added" instead).</summary>
+    public bool ShowChanged => IsChanged && !IsAdded;
 
     /// <summary>Plain "was 10" line shown under a changed value.</summary>
     public string WasText => $"was {OriginalValue}";
@@ -784,11 +861,16 @@ public partial class WorkspaceField : ObservableObject
         OriginalValue = original;
     }
 
-    partial void OnValueChanged(string value) => OnPropertyChanged(nameof(IsChanged));
+    partial void OnValueChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsChanged));
+        OnPropertyChanged(nameof(ShowChanged));
+    }
 
     partial void OnOriginalValueChanged(string value)
     {
         OnPropertyChanged(nameof(IsChanged));
+        OnPropertyChanged(nameof(ShowChanged));
         OnPropertyChanged(nameof(WasText));
     }
 

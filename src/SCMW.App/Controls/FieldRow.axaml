@@ -99,8 +99,12 @@
               CommandParameter="{Binding}">
         <TextBlock Text="×2 / half / +50%" Classes="dim"/>
       </Button>
+      <Border Name="AddedChip" Classes="chip" VerticalAlignment="Center"
+              IsVisible="{Binding IsAdded}">
+        <TextBlock Text="added" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+      </Border>
       <Border Name="ChangedChip" Classes="chip" VerticalAlignment="Center"
-              IsVisible="{Binding IsChanged}">
+              IsVisible="{Binding ShowChanged}">
         <TextBlock Text="changed" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
       </Border>
     </StackPanel>

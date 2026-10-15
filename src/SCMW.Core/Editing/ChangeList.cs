@@ -175,6 +175,31 @@ public sealed class ProjectChangeStore : IChangeStore
         }
     }
 
+    /// <summary>
+    /// Replace the record with the same <see cref="ChangeRecord.Id"/> in place (keeping its position),
+    /// or append it when absent. True when it is saved; false on a failed write (the previous list is
+    /// left unchanged). Never throws.
+    /// </summary>
+    public bool Replace(string projectFolder, ChangeRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        lock (_gate)
+        {
+            if (IsBlankFolder(projectFolder))
+                return false;
+
+            var records = Load(projectFolder).ToList();
+            var at = records.FindIndex(r => r.Id == record.Id);
+            if (at >= 0)
+                records[at] = record;
+            else
+                records.Add(record);
+
+            return TrySave(projectFolder, records);
+        }
+    }
+
     public string? AppliedValue(string projectFolder, string assetId, string field, string? gameValue) =>
         SCMW.Core.Editing.AppliedValue.Resolve(Load(projectFolder), assetId, field, gameValue);
 
