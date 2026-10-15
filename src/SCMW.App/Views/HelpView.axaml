@@ -19,13 +19,15 @@
       <TextBlock Classes="body"
                  Text="Plain answers to the things people ask most. Nothing here changes anything — it's just guidance."/>
 
-      <Expander Header="What can I make?" HorizontalAlignment="Stretch">
+      <Expander Header="What can I make right now in SCMW — Lone Wolf?" HorizontalAlignment="Stretch">
         <StackPanel Spacing="8">
-          <TextBlock Classes="step" Text="A mod is a .pak file that carries content, not code — so it's safe to use, with no risk to your account."/>
-          <TextBlock Classes="step" Text="What a mod can do today:  change values on items, base-building parts and recipes — weight, stack size, health, timers, and a recipe's XP reward or how much it makes. You can also add a value an object doesn't have, like the auto-destruct timer that keeps a placed object from vanishing."/>
-          <TextBlock Classes="step" Text="What a mod can't do:  change how the game behaves while you play — a doctor reacting to your health, animals learning, weather soaking your clothes. Those need scripting, which is a separate, parked route (a future 'Wolf Pack'), not something a pak can carry."/>
-          <TextBlock Classes="step" Text="Where Lone Wolf sits on the ladder:  it starts at Level 1 (change a value), reaches Level 2 (change a recipe) and the first rung of Level 3 (add a field). New recipes, categories and whole objects (Levels 3–5) are on the way."/>
-          <TextBlock Classes="step" Text="Official tools are coming:  SCUM's own mod support (a full SDK and Workshop upload) is in active development. Lone Wolf is a companion to it, not a rival — and it's built to keep working alongside it."/>
+          <TextBlock Classes="step" Text="A mod is a .pak file that carries content, not code — so it's safe to use, with no risk to your account. Right now you can:"/>
+          <TextBlock Classes="step" Text="•  change values on items, base-building parts and recipes — an item's weight, stack size or health, or a recipe's XP reward;"/>
+          <TextBlock Classes="step" Text="•  change how much a recipe produces;"/>
+          <TextBlock Classes="step" Text="•  add the auto-destruct timer to an item that doesn't have one, so a placed object stays put."/>
+          <TextBlock Classes="step" Text="So right now, you can complete actions at Level 1 (easy changes, such as changing the inventory space an item requires), some of Level 2 (a bit more advanced, like changing the experience gained for crafting an object), and one at Level 3 (adding the auto-destruct field to an item that doesn't include it natively). More will be added as the app develops."/>
+          <TextBlock Classes="step" Text="The plan is to complete the ladder with Levels 3, 4 and 5 — progressively harder changes that require editing several files, and that will eventually allow new recipes, new categories and whole new objects."/>
+          <TextBlock Classes="step" Text="I hope you enjoy what you can do with the app today. Comments are always welcome. If you'd like to help, there's a button at the end of the Settings page where you can leave a small donation — no pressure! And thank you for giving SCMW — Lone Wolf a go; I hope it helps!"/>
         </StackPanel>
       </Expander>
 
