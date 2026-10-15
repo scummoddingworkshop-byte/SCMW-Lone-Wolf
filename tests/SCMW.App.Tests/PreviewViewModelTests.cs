@@ -49,6 +49,32 @@ public class PreviewViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // polish: a field added to an item's class file joins the item's other changes
+    public void An_added_field_on_the_class_file_shares_the_items_card()
+    {
+        var (projects, root) = TestProjects.With("Watering can mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+
+            // The item file (size in inventory) and its class file (where the timer lives) are one item.
+            changes.RecordEdit("/a/Watering_Can_ES", "MaxStackSize", "5", "10", id,
+                               assetPath: "/a/Watering_Can_ES");
+            changes.RecordAddField("/a/Watering_Can", "_autoDestructTime", "30", "/a/Stone_ES", id,
+                                   assetPath: "/a/Watering_Can");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            var can = Assert.Single(vm.Changes);            // one item, one card — not two
+            Assert.Equal("/a/Watering_Can_ES", can.Path);
+            Assert.Equal(2, can.Values.Count);
+            Assert.Contains(can.Values, v => v.ValueName == "Max Stack");
+            Assert.Contains(can.Values, v => v.ValueName == "Auto Destruct Time");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // polish: each change shows the item's friendly name and its full path
     public void The_preview_names_each_item_and_shows_its_path()
     {

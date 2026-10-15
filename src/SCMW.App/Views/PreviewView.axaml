@@ -37,40 +37,51 @@
         <ItemsControl Name="ChangeList" ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BuildChange">
-              <Border Classes="card" Margin="0,0,0,10">
-                <StackPanel Spacing="8">
+              <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
 
-                  <!-- The item: its picture, its friendly name, and its full game path in brackets. -->
-                  <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
-                      <Panel>
-                        <TextBlock Text="SCMW" FontSize="8"
-                                   Foreground="{StaticResource TextDimBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <Image Source="{Binding Picture}" Stretch="UniformToFill"
-                               IsVisible="{Binding HasPicture}"/>
-                      </Panel>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center">
-                      <TextBlock Text="{Binding FriendlyName}" FontSize="15" FontWeight="SemiBold"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding Path, StringFormat='({0})'}" Classes="dim"
-                                 TextWrapping="Wrap"/>
-                    </StackPanel>
+                  <!-- The item's picture, so the card is easy to scan. -->
+                  <Border Grid.Column="0" Classes="thumb" Width="34" Height="34"
+                          VerticalAlignment="Top" Margin="0,1,0,0">
+                    <Panel>
+                      <TextBlock Text="SCMW" FontSize="8"
+                                 Foreground="{StaticResource TextDimBrush}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      <Image Source="{Binding Picture}" Stretch="UniformToFill"
+                             IsVisible="{Binding HasPicture}"/>
+                    </Panel>
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Spacing="4">
+
+                    <!-- The item and its game file on one line: the name, then the path to its right. -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                      <TextBlock Grid.Column="0" Text="{Binding FriendlyName}" FontSize="15"
+                                 FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"
+                                 VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Path, StringFormat='({0})'}" FontSize="11"
+                                 Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
+                                 HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{Binding Path}"/>
+                    </Grid>
+
+                    <!-- Each changed value on one line: the field, then its before → after to the right. -->
+                    <ItemsControl ItemsSource="{Binding Values}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BuildValueChange">
+                          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,1,0,1">
+                            <TextBlock Grid.Column="0" Text="{Binding ValueName}" FontSize="12"
+                                       Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Summary}" FontSize="12"
+                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                   </StackPanel>
-
-                  <ItemsControl ItemsSource="{Binding Values}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:BuildValueChange">
-                        <Grid ColumnDefinitions="Auto,12,*" Margin="0,2,0,0">
-                          <TextBlock Grid.Column="0" Text="{Binding ValueName}" Classes="dim"/>
-                          <TextBlock Grid.Column="2" Text="{Binding Summary}"/>
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-
-                </StackPanel>
+                </Grid>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

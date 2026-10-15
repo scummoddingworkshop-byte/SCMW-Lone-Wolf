@@ -14,17 +14,40 @@ namespace SCMW.App;
 /// </summary>
 public static class ChangeDiff
 {
-    /// <summary>One row per changed file (matched by path when it has one, so same-named files stay apart).</summary>
+    /// <summary>
+    /// One row per changed item (matched by path when it has one, so same-named files stay apart).
+    /// A change made against an item's class file joins the item file, so one item is one card.
+    /// </summary>
     public static IReadOnlyList<BuildChange> Build(IEnumerable<ChangeRecord> records) =>
         records
-            .GroupBy(r => r.AssetPath ?? r.AssetId, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(r => ItemKey(r.AssetPath ?? r.AssetId), StringComparer.OrdinalIgnoreCase)
             .Select(g => new BuildChange(
-                g.First().AssetId,
+                ItemNameOf(g),
                 g.GroupBy(r => r.FieldTechnicalName)
                     .Select(FieldRow)
                     .ToList(),
                 g.Key))
             .ToList();
+
+    /// <summary>
+    /// The item a record belongs to: a change made against an item's class file — the "_ES"-less
+    /// path, where the game keeps item-level values like the auto-destruct timer — belongs with the
+    /// item file itself, so an item with several changes shows as one card, not two.
+    /// </summary>
+    private static string ItemKey(string path)
+    {
+        if (path.EndsWith("_ES", StringComparison.OrdinalIgnoreCase)) return path;
+
+        // Only a real game path can be a class file; a bare recorded name has no file behind it.
+        var isPath = path.Contains('/') || path.Contains('\\');
+        return isPath ? path + "_ES" : path;
+    }
+
+    /// <summary>The item file's own name for the card's heading (a class file is only a donor).</summary>
+    private static string ItemNameOf(IGrouping<string, ChangeRecord> group) =>
+        group.FirstOrDefault(r => (r.AssetPath ?? r.AssetId)
+                .EndsWith("_ES", StringComparison.OrdinalIgnoreCase))?.AssetId
+        ?? group.First().AssetId;
 
     /// <summary>
     /// One field's diff. The value before is the field's game value (the first record's old value);
