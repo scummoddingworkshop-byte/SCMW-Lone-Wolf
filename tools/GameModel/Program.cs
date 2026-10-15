@@ -2,6 +2,7 @@ using System.Globalization;
 using CUE4Parse.UE4.Assets.Exports.Internationalization;
 using SCMW.Backend.Pak;
 using SCMW.Core.Content;
+using SCMW.Core.Logging;
 using SCMW.Core.Settings;
 using SCMW.Core.Setup;
 
@@ -29,15 +30,16 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("The reader failed: " + ex.Message);
+            // Details go to the log (any key is hidden there); the console stays plain.
+            Log.Warn("GameModel: the reader failed (" + ex.GetType().Name + ").");
+            Console.Error.WriteLine("The reader failed. See the log for details.");
             return 1;
         }
     }
 
     private static int Run(Options options)
     {
-        // 1. What we know about the game: where it is, its key, and its build. Prefer what
-        // the app saved (so a normal run needs no arguments), then the game itself.
+        // 1. What we know about the game: where it is, its key, and its build.
         var settings = new JsonSettingsStore(
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SCMW"))
             .Load();
@@ -50,9 +52,11 @@ internal static class Program
 
         var aesKey = options.AesKey ?? settings.AesKey;
 
-        var buildId = located.Found && !string.IsNullOrEmpty(located.BuildId)
-            ? located.BuildId
-            : (string.IsNullOrWhiteSpace(settings.BuildId) ? "unknown" : settings.BuildId);
+        // Only trust a build id we can tie to the folder we are actually reading.
+        var buildId =
+            located.Found && OutputGuard.SamePath(gamePath, located.Path) && !string.IsNullOrEmpty(located.BuildId) ? located.BuildId
+            : OutputGuard.SamePath(gamePath, settings.GamePath) && !string.IsNullOrWhiteSpace(settings.BuildId) ? settings.BuildId!
+            : "unknown";
 
         if (string.IsNullOrWhiteSpace(gamePath))
         {
@@ -73,10 +77,29 @@ internal static class Program
             return 3;
         }
 
+        // Never write into a folder that isn't ours. Checked before the long read.
+        var guardError = OutputGuard.Check(options.OutDir, options.Limit is not null);
+        if (guardError is not null)
+        {
+            Console.Error.WriteLine(guardError);
+            return 4;
+        }
+
+        Log.RegisterSecret(aesKey);
+
         Console.WriteLine($"Game:  {gamePath}");
         Console.WriteLine($"Build: {buildId}");
         Console.WriteLine($"Paks:  {paks}");
         Console.WriteLine();
+
+        // Our own meanings (meanings.md), if we have written any yet. Read-only here.
+        var meaningsPath = Path.Combine(options.OutDir, "meanings.md");
+        var meaningBook = File.Exists(meaningsPath)
+            ? MeaningBook.Parse(File.ReadAllText(meaningsPath))
+            : new Dictionary<(string Family, string Field), Meaning>();
+        Console.WriteLine(File.Exists(meaningsPath)
+            ? $"Meanings: {meaningBook.Count} read from meanings.md."
+            : "Meanings: none yet — every field will show 'Assumed (not yet reviewed)'.");
 
         // 2. Mount the game through the app's engine.
         using var mount = new PakMount();
@@ -88,25 +111,18 @@ internal static class Program
             return 3;
         }
 
-        // 3. Walk the families and read every field of every asset.
+        // 3. Walk the families and read every field of every asset. Nothing is written
+        // until the whole read finishes, so a failure can never leave half a notebook.
         var allPaths = mount.FilePaths.ToArray();
         Console.WriteLine($"{allPaths.Length:N0} files in the paks.");
 
         var readDate = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var fieldsDir = Path.Combine(options.OutDir, "fields");
-        Directory.CreateDirectory(fieldsDir);
-
-        // Our own meanings (meanings.md), if we have written any yet. Read-only here.
-        var meaningsPath = Path.Combine(options.OutDir, "meanings.md");
-        var meaningBook = File.Exists(meaningsPath)
-            ? MeaningBook.Parse(File.ReadAllText(meaningsPath))
-            : new Dictionary<(string Family, string Field), Meaning>();
-        Console.WriteLine(File.Exists(meaningsPath)
-            ? $"Meanings: {meaningBook.Count} read from meanings.md."
-            : "Meanings: none yet — every field will show 'Assumed (not yet reviewed)'.");
-
+        var pages = new List<(string Family, string Markdown)>();
         var summaries = new List<FamilySummary>();
         var links = new LinkCollector();
+        var read = 0;
+        var failed = 0;
+
         foreach (var family in FamilyRules.Families)
         {
             var paths = allPaths
@@ -122,11 +138,27 @@ internal static class Program
             for (var i = 0; i < paths.Length; i++)
             {
                 var assetId = paths[i][..^".uasset".Length];
-                var fields = source.FieldsAsync(assetId).GetAwaiter().GetResult();
-                if (family == "string_tables")
-                    fields = fields.Concat(ReadStringTable(mount, assetId)).ToArray();
-                perAsset.Add(fields);
-                links.Add(family, assetId, fields);
+                try
+                {
+                    var fields = source.FieldsAsync(assetId).GetAwaiter().GetResult();
+
+                    // Links come from the game's own fields — not the synthetic string-table
+                    // rows, whose summary text must never be mistaken for a reference.
+                    links.Add(family, assetId, fields);
+
+                    if (family == "string_tables")
+                        fields = fields.Concat(ReadStringTable(mount, assetId)).ToArray();
+
+                    perAsset.Add(fields);
+                    read++;
+                }
+                catch (Exception ex)
+                {
+                    // One odd asset must not stop the run.
+                    failed++;
+                    Log.Warn($"GameModel: could not read '{assetId}' ({ex.GetType().Name}).");
+                }
+
                 if ((i + 1) % 250 == 0)
                     Console.WriteLine($"  {i + 1:N0}/{paths.Length:N0}");
             }
@@ -135,24 +167,29 @@ internal static class Program
             var forFamily = meaningBook
                 .Where(pair => pair.Key.Family == family)
                 .ToDictionary(pair => pair.Key.Field, pair => pair.Value);
-            File.WriteAllText(
-                Path.Combine(fieldsDir, family + ".md"),
-                NotebookWriter.FamilyPage(family, rows, paths.Length, buildId, readDate, forFamily));
 
+            pages.Add((family, NotebookWriter.FamilyPage(
+                family, rows, paths.Length, buildId, readDate, forFamily, options.Limit)));
             summaries.Add(new FamilySummary(family, paths.Length, rows.Count));
             Console.WriteLine($"  -> {rows.Count} distinct fields.");
         }
 
-        // 4. The index that ties the family pages together.
+        // 4. Write everything now the read is complete.
+        var fieldsDir = Path.Combine(options.OutDir, "fields");
+        Directory.CreateDirectory(fieldsDir);
+        foreach (var (family, markdown) in pages)
+            File.WriteAllText(Path.Combine(fieldsDir, family + ".md"), markdown);
+
         File.WriteAllText(
             Path.Combine(options.OutDir, "index.md"),
-            NotebookWriter.IndexPage(summaries, buildId, readDate));
+            NotebookWriter.IndexPage(summaries, buildId, readDate, options.Limit));
 
         File.WriteAllText(
             Path.Combine(options.OutDir, "links.md"),
             NotebookWriter.LinksPage(links.Rows(), buildId, readDate));
 
         Console.WriteLine();
+        Console.WriteLine($"Read {read:N0} assets" + (failed > 0 ? $"; skipped {failed:N0} that could not be read (see the log)." : "."));
         Console.WriteLine($"Notebook written to {options.OutDir}");
         return 0;
     }

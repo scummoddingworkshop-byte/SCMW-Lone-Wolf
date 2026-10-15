@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace SCMW.GameModel;
 
 /// <summary>One field's authored meaning and how far we trust it.</summary>
@@ -27,7 +29,7 @@ internal static class MeaningBook
 
             if (family.Length == 0 || !line.StartsWith('|')) continue;
 
-            var cells = line.Trim('|').Split('|');
+            var cells = SplitCells(line);
             if (cells.Length < 3) continue;
 
             var field = cells[0].Trim().Trim('`');
@@ -42,5 +44,36 @@ internal static class MeaningBook
         }
 
         return book;
+    }
+
+    /// <summary>Splits a table row on unescaped '|' and turns "\|" back into a plain "|".</summary>
+    private static string[] SplitCells(string line)
+    {
+        var text = line.Trim();
+        if (text.StartsWith('|')) text = text[1..];
+        if (text.EndsWith('|')) text = text[..^1];
+
+        var cells = new List<string>();
+        var current = new StringBuilder();
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\\' && i + 1 < text.Length && text[i + 1] == '|')
+            {
+                current.Append('|');
+                i++;
+            }
+            else if (text[i] == '|')
+            {
+                cells.Add(current.ToString());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(text[i]);
+            }
+        }
+
+        cells.Add(current.ToString());
+        return cells.ToArray();
     }
 }

@@ -99,4 +99,14 @@ public class NotebookWriterTests
         Assert.Contains("25804202", page);
         Assert.Contains("| `recipes` | `crafting_tags` | 136 | 40 | `Ingredients[0].AllowedTypes[0]` | `CI_Metal_Scrap` |", page);
     }
+
+    [Fact]
+    public void Family_page_marks_a_limited_run()
+    {
+        var page = NotebookWriter.FamilyPage(
+            "items", new[] { Row("Weight") }, assetCount: 5, buildId: "25804202", readDate: "2026-10-15",
+            meanings: null, limitedTo: 5);
+
+        Assert.Contains("Limited run", page);
+    }
 }

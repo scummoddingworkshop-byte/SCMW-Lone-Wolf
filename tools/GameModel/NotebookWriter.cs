@@ -13,12 +13,14 @@ internal static class NotebookWriter
 {
     internal static string FamilyPage(
         string family, IReadOnlyList<FieldRow> rows, int assetCount, string buildId, string readDate,
-        IReadOnlyDictionary<string, Meaning>? meanings = null)
+        IReadOnlyDictionary<string, Meaning>? meanings = null, int? limitedTo = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# Fields — family `{family}`");
         sb.AppendLine();
         sb.AppendLine($"Read from **{assetCount}** assets. SCUM build **{buildId}** (read {readDate}).");
+        if (limitedTo is int limit)
+            sb.AppendLine($"> **Limited run:** only the first **{limit}** assets of this family were read — not a full notebook.");
         sb.AppendLine();
         sb.AppendLine($"Distinct fields: **{rows.Count}**.");
         sb.AppendLine();
@@ -42,12 +44,14 @@ internal static class NotebookWriter
         return "Assumed (not yet reviewed)";
     }
 
-    internal static string IndexPage(IReadOnlyList<FamilySummary> families, string buildId, string readDate)
+    internal static string IndexPage(IReadOnlyList<FamilySummary> families, string buildId, string readDate, int? limitedTo = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# The Game Model — what's in SCUM's data");
         sb.AppendLine();
         sb.AppendLine($"The facts below were read from the installed game: SCUM build **{buildId}** (read {readDate}).");
+        if (limitedTo is int limit)
+            sb.AppendLine($"> **Limited run:** only the first **{limit}** assets of each family were read — not a full notebook.");
         sb.AppendLine();
         sb.AppendLine("The field tables are written by the reading tool. Re-run it after a SCUM update and diff " +
                       "the notebook to see exactly what moved.");

@@ -44,4 +44,19 @@ public class MeaningBookTests
     [Fact]
     public void Ignores_the_header_and_separator_rows()
         => Assert.DoesNotContain(("items", "field"), MeaningBook.Parse(Sample).Keys);
+
+    [Fact]
+    public void Unescapes_a_pipe_written_inside_a_meaning()
+    {
+        var book = MeaningBook.Parse("""
+            ## items
+
+            | field | meaning | confidence |
+            |---|---|---|
+            | `Weight` | mass \| in grams | Assumed |
+            """);
+
+        Assert.Equal("mass | in grams", book[("items", "Weight")].Text);
+        Assert.Equal("Assumed", book[("items", "Weight")].Confidence);
+    }
 }
