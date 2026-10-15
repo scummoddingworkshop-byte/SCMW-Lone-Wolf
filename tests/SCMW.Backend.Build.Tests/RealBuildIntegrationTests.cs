@@ -390,13 +390,15 @@ public class RealBuildIntegrationTests
                 mount.FilePaths.First(p => p.EndsWith("/" + fileName + ".uasset", StringComparison.OrdinalIgnoreCase))[..^7];
 
             var item = ByFile("Radio_ES");
-            var recipe = ByFile("CR_Watchtower_Base_Upgr1");
-            var baseEl = ByFile("BP_Base_WatchtowerBottom_Upgr1");
+            var recipe = ByFile("CR_Watchtower_Base_Upgr1");            // icon on the recipe itself
+            var productRecipe = ByFile("CR_1H_Improvised_Tomahawk");    // no icon: sourced from its Product
+            var baseEl = ByFile("BP_Base_WatchtowerBottom_Upgr1");      // borrowed from its placing recipe
 
-            await source.ExtractIconsAsync(new[] { item, recipe, baseEl });
+            await source.ExtractIconsAsync(new[] { item, recipe, productRecipe, baseEl });
 
             Assert.NotNull(source.Icons.GetIconPath(item));
             Assert.NotNull(source.Icons.GetIconPath(recipe));
+            Assert.NotNull(source.Icons.GetIconPath(productRecipe));
             Assert.NotNull(source.Icons.GetIconPath(baseEl));
         }
         finally { Directory.Delete(work, true); }

@@ -91,7 +91,9 @@ public sealed class PakIconSource : IItemIconSource
         _recipeIcons = new Lazy<Dictionary<string, string>>(BuildRecipeIcons);
     }
 
-    public IconSourceResult Resolve(string assetId)
+    public IconSourceResult Resolve(string assetId) => Resolve(assetId, depth: 0);
+
+    private IconSourceResult Resolve(string assetId, int depth)
     {
         if (string.IsNullOrWhiteSpace(assetId))
             return IconSourceResult.NotLoaded;
@@ -132,9 +134,18 @@ public sealed class PakIconSource : IItemIconSource
         // Not a blueprint (a data asset, e.g. a recipe): read the asset object itself.
         if (TryLoadAssetObject(assetId, out var asset) && asset is not null)
         {
-            return TryReadIconReference(asset, out var assetIcon)
-                ? IconSourceResult.Resolved(assetIcon!)
-                : IconSourceResult.NoIcon;
+            if (TryReadIconReference(asset, out var assetIcon))
+                return IconSourceResult.Resolved(assetIcon!);
+
+            // A recipe with no icon of its own: use the item it makes (its "Product"). One level only.
+            if (depth == 0 && TryReadProductPath(asset, out var productPath))
+            {
+                var fromProduct = Resolve(productPath!, depth + 1);
+                if (fromProduct.Outcome == IconSourceOutcome.Resolved)
+                    return fromProduct;
+            }
+
+            return IconSourceResult.NoIcon;
         }
 
         // Could not load it at all: not an item, or a transient failure. Retryable — never
@@ -197,6 +208,20 @@ public sealed class PakIconSource : IItemIconSource
                 map[key] = icon;
         }
         return map;
+    }
+
+    /// <summary>A data asset's <c>Product</c> — the item it makes — as a package path, or false.</summary>
+    private static bool TryReadProductPath(UObject asset, out string? productPath)
+    {
+        productPath = null;
+        foreach (var prop in asset.Properties)
+        {
+            var name = string.IsNullOrEmpty(prop.Name.Text) ? prop.Name.ToString() : prop.Name.Text;
+            if (name != "Product") continue;
+            productPath = NormalizeProductPath(prop.Tag?.GenericValue?.ToString());
+            return productPath is not null;
+        }
+        return false;
     }
 
     /// <summary>
