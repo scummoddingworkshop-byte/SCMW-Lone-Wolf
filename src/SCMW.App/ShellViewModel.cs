@@ -110,7 +110,9 @@ public partial class ShellViewModel : ObservableObject
         {
             Nav(ScreenKey.Home, "Home"),
             Nav(ScreenKey.Workspace, "Workspace"),
-            Nav(ScreenKey.BulkEdit, "Modify in bulk"),
+            // "Modify in bulk" is hidden from the rail for now — its screen and mechanics stay in
+            // place, so dropping the hidden flag brings the row back when we review it.
+            Nav(ScreenKey.BulkEdit, "Modify in bulk", hidden: true),
             Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods"),
@@ -120,7 +122,8 @@ public partial class ShellViewModel : ObservableObject
         };
 
         // The rail's three labelled bands, built once from the one source of band membership.
-        Bands = NavBands.Group(Sidebar)
+        // A hidden area keeps its screen but gets no rail row.
+        Bands = NavBands.Group(Sidebar.Where(i => !i.Hidden))
                         .Select(g => new NavBandSection(g.Band, g.Items))
                         .ToList();
         foreach (var band in Bands)
@@ -186,10 +189,10 @@ public partial class ShellViewModel : ObservableObject
     public SCMW.Core.Content.IContentSource ContentSource { get; }
 
     /// <summary>One rail row, with its light/dark icons loaded.</summary>
-    private static NavItem Nav(ScreenKey key, string label)
+    private static NavItem Nav(ScreenKey key, string label, bool hidden = false)
     {
         var (light, dark) = RailIcons.For(key);
-        return new NavItem(key, label, light, dark);
+        return new NavItem(key, label, light, dark) { Hidden = hidden };
     }
 
     /// <summary>True once the player has told us where SCUM is and given an unlock key.</summary>

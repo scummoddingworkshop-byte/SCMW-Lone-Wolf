@@ -164,18 +164,19 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
-    /// Remove every recorded change for one item — matched by the file's path when the row carries
-    /// one, otherwise by the recorded name — so it reverts to the game's own values. Returns null on
-    /// success, otherwise one plain message.
+    /// Remove every recorded change for one item — a field added to the item's class file counts as
+    /// the same item — so it reverts to the game's own values. Returns null on success, otherwise one
+    /// plain message.
     /// </summary>
     public string? RemoveItem(string projectFolder, string assetName)
     {
         if (string.IsNullOrWhiteSpace(projectFolder))
             return "That project folder is unavailable.";
 
+        var item = ChangeDiff.ItemKey(assetName);
         var ids = _store.Load(projectFolder)
-            .Where(r => string.Equals(r.AssetId, assetName, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(r.AssetPath, assetName, StringComparison.OrdinalIgnoreCase))
+            .Where(r => string.Equals(ChangeDiff.ItemKey(r.AssetPath ?? r.AssetId), item,
+                                      StringComparison.OrdinalIgnoreCase))
             .Select(r => r.Id)
             .ToList();
 

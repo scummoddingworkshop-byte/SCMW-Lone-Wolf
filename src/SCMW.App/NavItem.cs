@@ -11,4 +11,7 @@ public sealed record NavItem(ScreenKey Key, string Label,
 {
     /// <summary>Which band of the rail this row sits in.</summary>
     public NavBand Band => NavBands.For(Key);
+
+    /// <summary>True for an area that exists but is kept out of the rail for now.</summary>
+    public bool Hidden { get; init; }
 }

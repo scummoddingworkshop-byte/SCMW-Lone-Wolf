@@ -94,6 +94,52 @@ public class PreviewViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // polish: an item can be taken out of the mod from the preview
+    public void Removing_an_item_from_the_preview_drops_its_changes()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            changes.RecordEdit("/a/Duct_Tape_ES", "MaxStackSize", "10", "25", id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("/a/AK_15_ES", "Damage", "45", "60", id, assetPath: "/a/AK_15_ES");
+
+            var vm = new PreviewViewModel(changes, projects);
+            Assert.Equal(2, vm.Changes.Count);
+
+            vm.RemoveItemCommand.Execute(vm.Changes.Single(c => c.Path == "/a/Duct_Tape_ES"));
+
+            var left = Assert.Single(vm.Changes);
+            Assert.Equal("/a/AK_15_ES", left.Path);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // polish: removing an item also drops a field added to its class file
+    public void Removing_an_item_also_drops_a_field_added_to_its_class_file()
+    {
+        var (projects, root) = TestProjects.With("Watering can mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            changes.RecordEdit("/a/Watering_Can_ES", "MaxStackSize", "5", "10", id,
+                               assetPath: "/a/Watering_Can_ES");
+            changes.RecordAddField("/a/Watering_Can", "_autoDestructTime", "30", "/a/Stone_ES", id,
+                                   assetPath: "/a/Watering_Can");
+
+            var vm = new PreviewViewModel(changes, projects);
+            var can = Assert.Single(vm.Changes);
+
+            vm.RemoveItemCommand.Execute(can);
+
+            Assert.Empty(vm.Changes);
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // with nothing chosen, the preview says so instead of showing a fall-back's changes
     public void The_preview_says_so_when_no_project_is_chosen()
     {

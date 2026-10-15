@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SCMW.Core.Content;
 
 namespace SCMW.App;
@@ -77,6 +78,16 @@ public partial class PreviewViewModel : ObservableObject
 
         // Item pictures are a fast follow: the list is usable without them.
         _ = ExtractIconsAsync();
+    }
+
+    /// <summary>Removes every change for one item, so it reverts to the game's own values.</summary>
+    [RelayCommand]
+    private void RemoveItem(BuildChange? row)
+    {
+        var folder = _projects?.Chosen?.FolderPath;
+        if (row is null || folder is null || _changes is null) return;
+
+        _changes.RemoveItem(folder, row.Path);   // raises Changed → Refresh
     }
 
     /// <summary>Extract the changed items' icons into the cache, then point each row at its picture.</summary>

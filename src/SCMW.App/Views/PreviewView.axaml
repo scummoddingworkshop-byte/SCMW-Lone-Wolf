@@ -38,7 +38,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BuildChange">
               <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
-                <Grid ColumnDefinitions="2*,1*" ColumnSpacing="16" Grid.IsSharedSizeScope="True">
+                <Grid ColumnDefinitions="2*,1*,Auto" ColumnSpacing="16" Grid.IsSharedSizeScope="True">
 
                   <!-- Left (about two thirds): the item's picture and its name, centred on each other. -->
                   <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="10"
@@ -81,6 +81,12 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+
+                  <!-- Take this item out of the mod (undo all of its changes). -->
+                  <Button Grid.Column="2" Classes="secondary" Content="Remove" VerticalAlignment="Center"
+                          ToolTip.Tip="Remove this item's changes"
+                          Command="{Binding $parent[UserControl].((vm:PreviewViewModel)DataContext).RemoveItemCommand}"
+                          CommandParameter="{Binding}"/>
 
                 </Grid>
               </Border>

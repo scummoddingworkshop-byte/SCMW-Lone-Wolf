@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SCMW.App.Views;
 
@@ -67,7 +69,7 @@ public class ShellNavigationTests
                      vm.Bands.Select(b => b.Band));
         Assert.Equal(new[] { ScreenKey.Home }, vm.Bands[0].Items.Select(i => i.Key));
         Assert.Equal(
-            new[] { ScreenKey.Workspace, ScreenKey.BulkEdit, ScreenKey.Projects },
+            new[] { ScreenKey.Workspace, ScreenKey.Projects },
             vm.Bands[1].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
                      vm.Bands[2].Items.Select(i => i.Key));
@@ -111,6 +113,26 @@ public class ShellNavigationTests
         Assert.Contains("MAKE", labels);
         Assert.Contains("SHIP", labels);
         Assert.Contains("APP", labels);
+    }
+
+    [AvaloniaFact]
+    public void The_home_row_lines_up_with_the_hero_banner()
+    {
+        var nav = new NavigationHost();
+        var window = new MainWindow { DataContext = new ShellViewModel(nav) };
+        window.Show();
+        nav.GoTo(ScreenKey.Home);
+        Dispatcher.UIThread.RunJobs();
+
+        var label = window.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "Home");
+        var row = label.GetVisualAncestors().OfType<ListBoxItem>().First();
+        var hero = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "Hero");
+
+        var rowTop = row.TranslatePoint(new Point(0, 0), window)!.Value.Y;
+        var heroTop = hero.TranslatePoint(new Point(0, 0), window)!.Value.Y;
+
+        Assert.True(Math.Abs(rowTop - heroTop) <= 2,
+            $"the Home row sat at {rowTop} but the hero banner at {heroTop} — they should line up");
     }
 
     [AvaloniaFact]

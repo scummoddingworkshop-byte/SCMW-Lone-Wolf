@@ -6,10 +6,22 @@
         x:DataType="vm:ShellViewModel"
         Title="{Binding WindowTitle}"
         Background="{StaticResource BgBaseBrush}">
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*">
     <controls:HeaderBar x:Name="Header" Grid.Row="0"/>
 
-    <Grid Grid.Row="1" ColumnDefinitions="220,*">
+    <!-- The "on the way" strip: the ladder with plain meaning (design §3); dismissable. It spans the
+         whole window, so the rail and the screen below it always start on the same line. -->
+    <Border Grid.Row="1" Classes="ontheway" Margin="20,16,20,0" IsVisible="{Binding ShowOnTheWay}">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding OnTheWayText}" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{StaticResource WarningBrush}"/>
+        <Button Grid.Column="1" Name="DismissOnTheWay" Content="✕" ToolTip.Tip="Dismiss"
+                Margin="8,0,0,0" VerticalAlignment="Top"
+                Command="{Binding DismissOnTheWayCommand}"/>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="220,*">
     <!-- Left rail -->
     <Border Grid.Column="0" Background="{StaticResource BgPanelBrush}"
             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
@@ -36,8 +48,11 @@
                      IsVisible="{Binding ShowLaunchNote}"/>
         </StackPanel>
 
-        <!-- The three bands: Make · Ship · App -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8,4,8,0">
+        <!-- The three bands: Make · Ship · App. The top margin lines the first row (Home) up with
+             the top of the Home screen's hero banner: the banner sits 20px (the shell's content
+             margin) + 8px (the screen's own top margin) below the content top, and this row carries
+             its own 2px top margin. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8,26,8,0">
         <ItemsControl ItemsSource="{Binding Bands}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:NavBandSection">
@@ -71,19 +86,7 @@
     </Border>
 
     <!-- Content -->
-    <Grid Grid.Column="1" RowDefinitions="Auto,*">
-      <!-- The "on the way" strip: the ladder with plain meaning (design §3); dismissable. -->
-      <Border Grid.Row="0" Classes="ontheway" Margin="20,16,20,0" IsVisible="{Binding ShowOnTheWay}">
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Grid.Column="0" Text="{Binding OnTheWayText}" FontSize="12" TextWrapping="Wrap"
-                     Foreground="{StaticResource WarningBrush}"/>
-          <Button Grid.Column="1" Name="DismissOnTheWay" Content="✕" ToolTip.Tip="Dismiss"
-                  Margin="8,0,0,0" VerticalAlignment="Top"
-                  Command="{Binding DismissOnTheWayCommand}"/>
-        </Grid>
-      </Border>
-      <ContentControl Grid.Row="1" Content="{Binding ActiveView}" Margin="20"/>
-    </Grid>
+    <ContentControl Grid.Column="1" Content="{Binding ActiveView}" Margin="20"/>
     </Grid>
   </Grid>
 

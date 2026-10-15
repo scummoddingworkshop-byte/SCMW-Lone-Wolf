@@ -34,7 +34,7 @@ public static class ChangeDiff
     /// path, where the game keeps item-level values like the auto-destruct timer — belongs with the
     /// item file itself, so an item with several changes shows as one card, not two.
     /// </summary>
-    private static string ItemKey(string path)
+    internal static string ItemKey(string path)
     {
         if (path.EndsWith("_ES", StringComparison.OrdinalIgnoreCase)) return path;
 
