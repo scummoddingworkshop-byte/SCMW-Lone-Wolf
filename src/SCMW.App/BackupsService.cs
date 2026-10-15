@@ -21,6 +21,10 @@ public interface IBackupsService
     /// <summary>The workspace's Backups folder, so it can be opened in Explorer.</summary>
     string Folder { get; }
 
+    /// <summary>
+    /// The kept backups, newest first. Listing also trims to the newest few copies of each mod or
+    /// project (see <see cref="BackupRetention"/>), so the folder can never grow into a pile.
+    /// </summary>
     IReadOnlyList<BackupEntry> List();
 
     /// <summary>Puts a backup back (into SCUM's mods folder, or the workspace's Projects). Null on success.</summary>
@@ -73,8 +77,9 @@ public sealed class BackupsService : IBackupsService
             foreach (var file in Directory.GetFiles(_modsBackups))
             {
                 var name = Path.GetFileName(file);
-                var original = StripStamp(Path.GetFileNameWithoutExtension(name)) + Path.GetExtension(name);
-                entries.Add(new BackupEntry(BackupKind.Mod, original, StampOf(name), file));
+                var stem = Path.GetFileNameWithoutExtension(name);   // the stamp sits before ".pak"
+                var original = StripStamp(stem) + Path.GetExtension(name);
+                entries.Add(new BackupEntry(BackupKind.Mod, original, StampOf(stem), file));
             }
         }
 
@@ -87,7 +92,14 @@ public sealed class BackupsService : IBackupsService
             }
         }
 
-        return entries.OrderByDescending(e => e.WhenUtc).ToList();
+        var newestFirst = entries.OrderByDescending(e => e.WhenUtc).ToList();
+
+        // Only the newest few copies of each mod or project are kept, so the folder cannot pile up.
+        var kept = new List<BackupEntry>();
+        foreach (var group in newestFirst.GroupBy(e => (e.Kind, e.DisplayName)))
+            kept.AddRange(BackupRetention.KeepNewest(group.ToList(), BackupRetention.Keep, e => e.Path));
+
+        return kept.OrderByDescending(e => e.WhenUtc).ToList();
     }
 
     public ModsResult Restore(BackupEntry entry)

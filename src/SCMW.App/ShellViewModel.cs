@@ -374,8 +374,9 @@ public partial class ShellViewModel : ObservableObject
         // re-read it every time the screen is opened.
         if (Current == ScreenKey.Mods) _mods.Refresh();
 
-        // Backups are made outside this screen (a mod removal, a project delete), so re-read them.
-        if (Current == ScreenKey.Backups) _backups.Refresh();
+        // Backups are made outside this screen (a mod removal, a project delete, a build's save copy),
+        // so re-read both areas every time it is opened.
+        if (Current == ScreenKey.Backups) { _backups.Refresh(); _backups.RefreshSaves(); }
 
         // Home's first-run card depends on whether SCUM is set up, which may have just changed.
         if (Current == ScreenKey.Home) _home.RefreshWelcome();

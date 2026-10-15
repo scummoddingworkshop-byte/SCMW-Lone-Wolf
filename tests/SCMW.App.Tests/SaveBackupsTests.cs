@@ -74,6 +74,21 @@ public class SaveBackupsServiceTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Only_the_newest_few_save_copies_are_kept()
+    {
+        Directory.CreateDirectory(SavesRoot);
+        for (var i = 1; i <= 5; i++)
+            File.WriteAllText(Path.Combine(SavesRoot, $"SCUM_2026100{i}-101112.db"), "x");
+
+        var saves = New().List();
+
+        Assert.Equal(3, saves.Count);                            // the newest three...
+        Assert.Equal(3, Directory.GetFiles(SavesRoot).Length);   // ...and the older two are gone
+        Assert.DoesNotContain(saves, s => s.Id.Contains("20261001"));
+        Assert.DoesNotContain(saves, s => s.Id.Contains("20261002"));
+    }
+
+    [AvaloniaFact]
     public void Deleting_a_kept_save_removes_it()
     {
         var service = New();

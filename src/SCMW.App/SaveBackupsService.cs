@@ -24,7 +24,10 @@ public interface ISaveBackupsService
     /// <summary>Where SCUM keeps its saves (shown to the player).</summary>
     string SaveFolder { get; }
 
-    /// <summary>Every kept save, newest first. Empty when none exist or the folder is missing.</summary>
+    /// <summary>
+    /// The kept saves, newest first. Listing also trims to the newest few (see
+    /// <see cref="BackupRetention"/>), so the folder can never grow into a pile.
+    /// </summary>
     IReadOnlyList<SaveSnapshot> List();
 
     /// <summary>Keep a copy of the current save now. Null on success, otherwise one plain message.</summary>
@@ -100,10 +103,13 @@ public sealed class SaveBackupsService : ISaveBackupsService
             return Array.Empty<SaveSnapshot>();
         }
 
-        return snapshots
+        var newestFirst = snapshots
             .OrderByDescending(s => s.WhenUtc)
             .ThenByDescending(s => s.Id, StringComparer.Ordinal)
             .ToList();
+
+        // Only the newest few are kept: the game keeps its own copies, so a deep stack is just clutter.
+        return BackupRetention.KeepNewest(newestFirst, BackupRetention.Keep, s => s.Path);
     }
 
     public string? BackUp()
