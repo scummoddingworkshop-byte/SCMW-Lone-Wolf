@@ -102,28 +102,6 @@ public class ContentClassificationTests
     }
 
     [AvaloniaFact]
-    public void An_es_items_fields_are_editable_and_a_plain_items_are_not()
-    {
-        var catalog = new ContentCatalog(NoSource);
-        var fields = new[] { new AssetField("Weight", "Weight", StatusKind.ReadOnly, "1.0", "FloatProperty") };
-
-        var esValues = catalog.MapFields(fields, editableItem: true);
-        Assert.True(Assert.Single(esValues).Editable);
-
-        var plainValues = catalog.MapFields(fields, editableItem: false);
-        Assert.False(Assert.Single(plainValues).Editable);
-    }
-
-    [AvaloniaFact]
-    public void A_structural_field_is_never_offered_even_on_an_es_item()
-    {
-        var catalog = new ContentCatalog(NoSource);
-        var fields = new[] { new AssetField("Components", "Components", StatusKind.ReadOnly, "x", "ArrayProperty") };
-
-        Assert.False(Assert.Single(catalog.MapFields(fields, editableItem: true)).Editable);
-    }
-
-    [AvaloniaFact]
     public void Only_es_items_are_listed()
     {
         var catalog = new ContentCatalog(NoSource);

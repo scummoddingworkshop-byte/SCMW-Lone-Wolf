@@ -394,6 +394,27 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // Seat B: "can we write it?" comes from the field library, never from the field name
+    public void Editability_comes_from_the_field_library_not_the_field_name()
+    {
+        // A library that describes a structural-looking field as writable. The old name-guessing
+        // rules would have locked this outright; Seat B lets the library decide.
+        var library = FieldLibraryLoader.Parse("""
+        [
+          { "kind": "Items", "name": "StaticMesh", "label": "Mesh", "type": "Text",
+            "unit": "", "risk": "Low", "writable": true, "meaning": "A value we decided we can write." }
+        ]
+        """);
+        var vm = new WorkspaceViewModel(library);
+
+        vm.Show("Items", "Odd thing",
+            new[] { new AssetField("StaticMesh", "StaticMesh", StatusKind.ReadOnly, "/Game/x", "ObjectProperty") });
+
+        var row = vm.Fields.Single();
+        Assert.True(row.Writable);           // the library says writable...
+        Assert.True(row.ShowValueButton);    // ...so it is editable (no name-guessing lock)
+    }
+
     [AvaloniaFact] // Review Focus 5: a string-table key is shown, but never as editable words
     public void A_string_table_key_field_is_shown_without_an_editor()
     {
