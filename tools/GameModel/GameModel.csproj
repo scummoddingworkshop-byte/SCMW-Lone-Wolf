@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Game Model reader — a NON-SHIPPED research tool. It is not part of the app
+    that gets published (the publish step wraps only SCMW.App). It borrows the app's
+    pak engine (SCMW.Backend.Pak) to read the installed game and writes a Markdown
+    notebook of SCUM's gameplay data. See docs/Design - Game Model (foundation).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SCMW.GameModel</AssemblyName>
+    <RootNamespace>SCMW.GameModel</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SCMW.Core\SCMW.Core.csproj" />
+    <ProjectReference Include="..\..\src\SCMW.Backend.Pak\SCMW.Backend.Pak.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GameModel.Tests" />
+  </ItemGroup>
+
+</Project>
