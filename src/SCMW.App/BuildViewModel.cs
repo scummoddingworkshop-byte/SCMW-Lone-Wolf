@@ -356,7 +356,8 @@ public partial class BuildViewModel : ObservableObject
 
     /// <summary>
     /// One item per recorded asset. A list change (add/remove an entry) is kept in the order it was
-    /// recorded; a value edit collapses to the latest value per field. List changes run first, so a
+    /// recorded; a value edit collapses to the latest value per field, and a multiply is worked out
+    /// to the number it produces (the same rule the preview shows). List changes run first, so a
     /// value edit on a slot that a change just added or shifted lands on the right entry.
     /// </summary>
     private static IReadOnlyList<BuildItem> BuildItemsFrom(IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
@@ -370,20 +371,36 @@ public partial class BuildViewModel : ObservableObject
     private static IReadOnlyList<FieldChange> ChangesFor(IEnumerable<SCMW.Core.Editing.ChangeRecord> records)
     {
         var listChanges = new List<FieldChange>();
-        var latestValue = new Dictionary<string, SCMW.Core.Editing.ChangeRecord>(StringComparer.OrdinalIgnoreCase);
+        var valueChanges = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var record in records)
         {
-            if (record.Operation == SCMW.Core.Editing.ChangeOperation.Set)
-                latestValue[record.FieldTechnicalName] = record;
-            else
-                listChanges.Add(new FieldChange(record.FieldTechnicalName, record.NewValue,
-                                                record.Operation, record.DonorPath));
+            switch (record.Operation)
+            {
+                case SCMW.Core.Editing.ChangeOperation.Set:
+                    valueChanges[record.FieldTechnicalName] = record.NewValue;
+                    break;
+
+                // A multiply records a factor, not a value: work it out against the game's own value —
+                // the same rule the preview shows — so what is written is the finished number.
+                case SCMW.Core.Editing.ChangeOperation.Multiply:
+                    if (SCMW.Core.Editing.Multiplier.TryParse(record.NewValue, out var factor))
+                    {
+                        valueChanges[record.FieldTechnicalName] =
+                            SCMW.Core.Editing.Multiplier.Apply(record.OldValue, factor) ?? record.NewValue;
+                    }
+                    break;
+
+                default:
+                    listChanges.Add(new FieldChange(record.FieldTechnicalName, record.NewValue,
+                                                    record.Operation, record.DonorPath));
+                    break;
+            }
         }
 
         var changes = new List<FieldChange>(listChanges);
-        foreach (var record in latestValue.Values)
-            changes.Add(new FieldChange(record.FieldTechnicalName, record.NewValue));
+        foreach (var value in valueChanges)
+            changes.Add(new FieldChange(value.Key, value.Value));
         return changes;
     }
 

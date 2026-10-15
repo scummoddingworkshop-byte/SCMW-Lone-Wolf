@@ -220,6 +220,26 @@ public class BuildRealServiceTests : IDisposable
         Assert.Equal("Ingredients[1].Amount.NoSkill", item.Changes[1].Field);
     }
 
+    [AvaloniaFact] // a multiply is sent as the finished number, never the factor itself
+    public async Task A_multiply_is_sent_as_the_finished_value_not_the_factor()
+    {
+        var (projects, root) = TestProjects.With("Making objects permanent");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        // The real case: the inventory height (a whole number, 6) scaled by half → 3.
+        changes.RecordMultiply("Watering Can ES", "GridInventoryRowSpan", "6", "0.5",
+                               projects.Current!.Id, assetPath: "SCMW/Items/Farming/Watering_Can_ES");
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects, service: service);
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        var item = Assert.Single(service.SentItems!);
+        var change = Assert.Single(item.Changes);
+        Assert.Equal("GridInventoryRowSpan", change.Field);
+        Assert.Equal("3", change.NewValue);      // 6 × 0.5, not the factor "0.5"
+    }
+
     private sealed class FakeElevation : IElevation
     {
         public bool IsElevated { get; set; }

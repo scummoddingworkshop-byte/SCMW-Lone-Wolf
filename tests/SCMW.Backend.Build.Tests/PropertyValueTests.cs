@@ -70,6 +70,27 @@ public class PropertyValueTests
         Assert.Equal("Wooden Crate", property.Value.ToString());
     }
 
+    [Fact]
+    public void A_whole_number_field_given_a_fraction_says_so_plainly()
+    {
+        // The reported case: half of an inventory height. "0.5" IS a number — the field just cannot
+        // hold a fraction, and the message should say that rather than call it "not a number".
+        var property = new IntPropertyData(new FName());
+
+        Assert.False(PropertyValue.TrySet(property, null, "0.5", out var error));
+        Assert.Contains("whole number", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("0.5", error);
+    }
+
+    [Fact]
+    public void A_whole_number_field_given_a_word_still_says_it_is_not_a_number()
+    {
+        var property = new IntPropertyData(new FName());
+
+        Assert.False(PropertyValue.TrySet(property, null, "abc", out var error));
+        Assert.Contains("not a number", error, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("Yes", true)]
     [InlineData("no", false)]

@@ -31,12 +31,12 @@ internal static class PropertyValue
 
                 case IntPropertyData i:
                     if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iv))
-                        return NotANumber(raw, out error);
+                        return NotWhole(raw, out error);
                     i.Value = iv; return true;
 
                 case Int64PropertyData l:
                     if (!long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv))
-                        return NotANumber(raw, out error);
+                        return NotWhole(raw, out error);
                     l.Value = lv; return true;
 
                 case BytePropertyData b:
@@ -48,7 +48,7 @@ internal static class PropertyValue
                         return true;
                     }
                     if (!byte.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bv))
-                        return NotANumber(raw, out error);
+                        return NotWhole(raw, out error);
                     b.Value = bv; return true;
 
                 // A full enum property (e.g. _baseElementType) keeps its choice as an FName; the
@@ -90,6 +90,18 @@ internal static class PropertyValue
     private static bool NotANumber(string raw, out string? error)
     {
         error = $"\"{raw}\" is not a number this value can take.";
+        return false;
+    }
+
+    /// <summary>
+    /// A whole-number field was given something it cannot hold. A fraction ("0.5") is a real number —
+    /// saying so plainly is friendlier than calling it "not a number".
+    /// </summary>
+    private static bool NotWhole(string raw, out string? error)
+    {
+        error = double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out _)
+            ? $"\"{raw}\" can't be used here — this value has to be a whole number."
+            : $"\"{raw}\" is not a number this value can take.";
         return false;
     }
 

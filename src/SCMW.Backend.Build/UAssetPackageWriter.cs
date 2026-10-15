@@ -1,3 +1,4 @@
+using SCMW.Core.Content;
 using SCMW.Core.Editing;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
@@ -41,6 +42,11 @@ public sealed class UAssetPackageWriter : IPackageWriter
         if (exports.Count == 0)
             return new WriteResult(false, "This item's editable data was not in the shape we expected.");
 
+        // Every failure names the item file and the value it was working on, so even a plain reason
+        // says where to look.
+        WriteResult Failed(string reason, string field) =>
+            new(false, $"{reason} (item \"{assetName}\", value \"{FieldNames.Friendly(field)}\")");
+
         foreach (var change in changes)
         {
             // A list change adds or removes an entry rather than setting a value.
@@ -56,11 +62,11 @@ public sealed class UAssetPackageWriter : IPackageWriter
                     }
 
                     if (found)
-                        return new WriteResult(false, listError);
+                        return Failed(listError ?? "That list could not be changed.", change.Field);
                 }
 
                 if (!applied)
-                    return new WriteResult(false, $"\"{change.Field}\" was not found in this item.");
+                    return Failed($"\"{change.Field}\" was not found in this item.", change.Field);
                 continue;
             }
 
@@ -68,7 +74,7 @@ public sealed class UAssetPackageWriter : IPackageWriter
             if (change.Operation == ChangeOperation.AddField)
             {
                 if (!TryApplyAddField(asset, exports, change, donorUassets, out var addError))
-                    return new WriteResult(false, addError);
+                    return Failed(addError ?? "That field could not be added.", change.Field);
                 continue;
             }
 
@@ -82,7 +88,7 @@ public sealed class UAssetPackageWriter : IPackageWriter
             }
 
             if (target is null)
-                return new WriteResult(false, $"The value \"{change.Field}\" was not found in this item.");
+                return Failed($"The value \"{change.Field}\" was not found in this item.", change.Field);
 
             string? error;
             var ok = target is ObjectPropertyData link
@@ -90,7 +96,7 @@ public sealed class UAssetPackageWriter : IPackageWriter
                 : PropertyValue.TrySet(target, asset, change.NewValue, out error);
 
             if (!ok)
-                return new WriteResult(false, error);
+                return Failed(error ?? "That value couldn't be set.", change.Field);
         }
 
         try
