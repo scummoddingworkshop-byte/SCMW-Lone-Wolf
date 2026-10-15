@@ -44,6 +44,8 @@ internal static class NotebookWriter
         sb.AppendLine("The field tables are written by the reading tool. Re-run it after a SCUM update and diff " +
                       "the notebook to see exactly what moved.");
         sb.AppendLine();
+        sb.AppendLine("The family-to-family **links** are in [`links.md`](links.md).");
+        sb.AppendLine();
         sb.AppendLine("| family | assets | fields |");
         sb.AppendLine("|---|---:|---:|");
         foreach (var family in families)
@@ -51,9 +53,26 @@ internal static class NotebookWriter
         return sb.ToString();
     }
 
+    internal static string LinksPage(IReadOnlyList<FamilyLink> links, string buildId, string readDate)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Links between families");
+        sb.AppendLine();
+        sb.AppendLine($"Read from the installed game: SCUM build **{buildId}** (read {readDate}).");
+        sb.AppendLine();
+        sb.AppendLine("An edge means: assets in the *source* family hold a value that points at an asset in the " +
+                      "*target* family. `refs` counts every reference seen; `assets` counts distinct source assets. " +
+                      "Links come from the values the reader collected (a first cut).");
+        sb.AppendLine();
+        sb.AppendLine("| source family | → target family | refs | assets | example field | example value |");
+        sb.AppendLine("|---|---|---:|---:|---|---|");
+        foreach (var link in links)
+            sb.AppendLine($"| `{link.From}` | `{link.To}` | {link.Refs} | {link.AssetCount} | `{Esc(link.ExampleField)}` | `{Esc(link.ExampleValue)}` |");
+        return sb.ToString();
+    }
+
     /// <summary>Keeps a value from breaking the Markdown table (pipes, newlines).</summary>
-    private static string Esc(string value) => value
-        .Replace("\\", "\\\\")
+    private static string Esc(string value) => value        .Replace("\\", "\\\\")
         .Replace("|", "\\|")
         .Replace("\r", " ")
         .Replace("\n", " ");

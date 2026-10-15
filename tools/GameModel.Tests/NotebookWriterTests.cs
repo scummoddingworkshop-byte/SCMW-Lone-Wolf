@@ -71,5 +71,18 @@ public class NotebookWriterTests
         Assert.Contains("[`items`](fields/items.md)", page);
         Assert.Contains("[`recipes`](fields/recipes.md)", page);
         Assert.Contains("| 3202 | 155 |", page);
+        Assert.Contains("[`links.md`](links.md)", page);
+    }
+
+    [Fact]
+    public void Links_page_states_the_method_and_renders_a_row_per_edge()
+    {
+        var page = NotebookWriter.LinksPage(
+            new[] { new FamilyLink("recipes", "crafting_tags", 136, 40, "Ingredients[0].AllowedTypes[0]", "CI_Metal_Scrap") },
+            buildId: "25804202", readDate: "2026-10-15");
+
+        Assert.Contains("# Links between families", page);
+        Assert.Contains("25804202", page);
+        Assert.Contains("| `recipes` | `crafting_tags` | 136 | 40 | `Ingredients[0].AllowedTypes[0]` | `CI_Metal_Scrap` |", page);
     }
 }

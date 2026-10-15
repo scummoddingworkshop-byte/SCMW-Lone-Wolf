@@ -97,6 +97,7 @@ internal static class Program
         Directory.CreateDirectory(fieldsDir);
 
         var summaries = new List<FamilySummary>();
+        var links = new LinkCollector();
         foreach (var family in FamilyRules.Families)
         {
             var paths = allPaths
@@ -116,6 +117,7 @@ internal static class Program
                 if (family == "string_tables")
                     fields = fields.Concat(ReadStringTable(mount, assetId)).ToArray();
                 perAsset.Add(fields);
+                links.Add(family, assetId, fields);
                 if ((i + 1) % 250 == 0)
                     Console.WriteLine($"  {i + 1:N0}/{paths.Length:N0}");
             }
@@ -133,6 +135,10 @@ internal static class Program
         File.WriteAllText(
             Path.Combine(options.OutDir, "index.md"),
             NotebookWriter.IndexPage(summaries, buildId, readDate));
+
+        File.WriteAllText(
+            Path.Combine(options.OutDir, "links.md"),
+            NotebookWriter.LinksPage(links.Rows(), buildId, readDate));
 
         Console.WriteLine();
         Console.WriteLine($"Notebook written to {options.OutDir}");
