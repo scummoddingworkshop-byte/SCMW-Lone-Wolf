@@ -573,7 +573,7 @@ public class WorkspaceViewTests
         Assert.NotNull(section);
         Assert.True(section!.IsVisible);
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
-        Assert.Contains(texts, t => t.Contains("Fields you could add", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(texts, t => t.Contains("Add a value this item doesn't have", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("Auto-destruct time", texts);
     }
 
