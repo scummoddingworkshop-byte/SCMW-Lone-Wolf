@@ -2,8 +2,8 @@
 
 ![SCMW — Lone Wolf](src/SCMW.App/Assets/scmw.png)
 
-An unofficial desktop tool for making **SCUM** mods on Windows: browse the game's items, change
-their values, build a mod `.pak`, install it, and manage your mods.
+An unofficial desktop tool for making **SCUM** mods on Windows: browse SCUM's items, base-building
+parts and recipes, change their values, build a mod `.pak`, put it into the game, and manage your mods.
 
 ## Unofficial
 
@@ -59,7 +59,7 @@ the server manually and share them with their players.
 
 Open the app and use the **Help** screen (bottom of the sidebar) for a plain-language walkthrough.
 In short: set your SCUM folder and unlock key in **Settings**, create a **project**, edit your
-items, then **Build** and **Install into SCUM**.
+items, then **Build** and switch your mod on in **Mods Management**.
 
 ## Windows may warn
 
@@ -84,8 +84,8 @@ To update: download the new version and **replace the app folder**. Nothing else
 
 Lone Wolf is **portable** — there's **no installer, no registry entries, and no services**. To remove it:
 
-1. **(Optional)** Take your mods out of the game first — **Build → Remove from SCUM**, or the **Mods**
-   screen — so SCUM is left clean.
+1. **(Optional)** Take your mods out of the game first — on the **Mods Management** screen — so SCUM
+   is left clean.
 2. **Close the app.**
 3. **Delete the app folder** (wherever you unzipped it).
 

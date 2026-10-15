@@ -4,8 +4,8 @@ An unofficial, fan-made tool for making SCUM mods on Windows.
 Not affiliated with, endorsed by, or supported by Gamepires or Steam.
 
 WHAT IT DOES
-- Browse SCUM's real items and change their values.
-- Build a mod .pak, install it into SCUM, and manage your mods.
+- Browse SCUM's real items, base-building parts and recipes, and change their values.
+- Build a mod .pak, put it into SCUM, and manage your mods.
 - Launch SCUM modded or vanilla.
 Your changes are saved per project, so you can work on several mods at once.
 
@@ -18,7 +18,7 @@ GETTING STARTED
 1. Run SCMW-Lone-Wolf.exe.
 2. Open Settings. Press "Detect" to find your SCUM folder.
 3. Paste your unlock key and press "Test".
-4. Create a project, edit some items, then Build and Install into SCUM.
+4. Create a project, edit some items, then Build and switch the mod on in Mods Management.
 
 THE UNLOCK KEY
 SCUM's files are encrypted. You need the shared unlock key to read them.
