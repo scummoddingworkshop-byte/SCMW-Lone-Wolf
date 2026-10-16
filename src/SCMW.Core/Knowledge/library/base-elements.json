@@ -318,5 +318,15 @@
     "risk": "Medium",
     "writable": true,
     "meaning": "The lowest skill level that can repair it (e.g. ESkillLevel::Medium)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_maxInstancesPerFlagArea",
+    "label": "Max instances per flag area",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many of this element may exist in one flag area. Tested in game."
   }
 ]

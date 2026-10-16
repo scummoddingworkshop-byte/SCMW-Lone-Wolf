@@ -248,5 +248,15 @@
     "risk": "Medium",
     "writable": true,
     "meaning": "A bitmask of what this recipe ignores when checking overlaps (BuildAnywhere sets it to 0)."
+  },
+  {
+    "kind": "Recipes",
+    "name": "MaxInstancesPerFlagArea",
+    "label": "Max instances per flag area",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many of the finished object may exist in one flag area. Tested in game."
   }
 ]
