@@ -108,5 +108,215 @@
     "risk": "High",
     "writable": false,
     "meaning": "A link to the structure's model (art)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBePlacedWithoutFlag",
+    "label": "Place without a flag",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can be placed outside a flag area."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBePlacedInBuilding",
+    "label": "Place inside a building",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can be placed inside a building."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBePlacedInRestrictedArea",
+    "label": "Place in a restricted area",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can be placed in a restricted area."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBePlacedOnOtherBaseElements",
+    "label": "Place on other elements",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can sit on top of other base elements."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canBeGroundedOnOtherElements",
+    "label": "Rest on other elements",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can rest on other elements."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_canEverBePlacedOnFoundation",
+    "label": "Place on a foundation",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can be placed on a foundation."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_checkOverlapsBelowOnUpgrade",
+    "label": "Check overlaps when upgrading",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether overlaps below are checked when it is upgraded."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_ignoreDisabledBaseBuildingFlag",
+    "label": "Place when building is off",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it can still be placed when base building is switched off (engine)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_isBlockingItemPlacement",
+    "label": "Blocks item placement",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether it blocks items being placed nearby."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_supportsPatterns",
+    "label": "Supports paint patterns",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether it supports paint patterns."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_disableBeingDestroyedByOtherElement",
+    "label": "Cannot be destroyed by other elements",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether other elements cannot destroy it."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_shouldDestroyElementWhenMovedOutOfFlag",
+    "label": "Destroyed when moved out of flag",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it is destroyed when taken out of the flag area."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_shouldDestroyAssociatedItemWhenMovedOutOfFlag",
+    "label": "Destroy item when moved out of flag",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether the matching item is destroyed when taken out of the flag area."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_isUsedForRespawn",
+    "label": "Used for respawn",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "High",
+    "writable": true,
+    "meaning": "Whether it acts as a respawn point."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_replenishableResourceDescription.PeriodicReplenishment.MaxAmount",
+    "label": "Reserve size",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The most resource a refilling element (like the well) can hold."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_replenishableResourceDescription.PeriodicReplenishment.ReplenishAmount",
+    "label": "Refill amount",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much is added each refill."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_replenishableResourceDescription.PeriodicReplenishment.ReplenishInterval",
+    "label": "Refill interval",
+    "type": "Number",
+    "unit": "seconds",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Seconds between refills."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_useSimpleCollisionForOverlaps",
+    "label": "Simple collision for overlaps",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether simple collision is used for overlap checks (engine)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_useBoxOverlapTypeWhitelist",
+    "label": "Use overlap whitelist",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether the overlap whitelist is used (engine)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_boxOverlapTypeWhitelist",
+    "label": "Overlap whitelist",
+    "type": "Number",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "The overlap whitelist value (a bitmask; engine)."
+  },
+  {
+    "kind": "BaseElements",
+    "name": "_repairableParams.MinSkillLevelRequired",
+    "label": "Repair skill needed",
+    "type": "Choice",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "The lowest skill level that can repair it (e.g. ESkillLevel::Medium)."
   }
 ]

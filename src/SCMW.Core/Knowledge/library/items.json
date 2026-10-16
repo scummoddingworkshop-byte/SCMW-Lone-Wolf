@@ -169,5 +169,75 @@
     "risk": "High",
     "writable": false,
     "meaning": "A link to the blueprint this item becomes in the world."
+  },
+  {
+    "kind": "Items",
+    "name": "NumRows",
+    "label": "Container height",
+    "type": "Number",
+    "unit": "rows",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many grid rows the item's own container has."
+  },
+  {
+    "kind": "Items",
+    "name": "NumColumns",
+    "label": "Container width",
+    "type": "Number",
+    "unit": "columns",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How many grid columns the item's own container has."
+  },
+  {
+    "kind": "Items",
+    "name": "CanContainNonEmptyEntries",
+    "label": "Hold non-empty items",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether the container may hold items that are not empty."
+  },
+  {
+    "kind": "Items",
+    "name": "HasContainedWeightLimit",
+    "label": "Has a weight limit",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Whether the contained-weight limit applies."
+  },
+  {
+    "kind": "Items",
+    "name": "MaxResourceAmount",
+    "label": "Resource capacity",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much of the resource the item can hold."
+  },
+  {
+    "kind": "Items",
+    "name": "ResourceAmount",
+    "label": "Resource it starts with",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How much of the resource the item holds to begin with."
+  },
+  {
+    "kind": "Items",
+    "name": "ExtendedBounds.SphereRadius",
+    "label": "Interaction radius",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The radius of the item's extra interaction bounds."
   }
 ]

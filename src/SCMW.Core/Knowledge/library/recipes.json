@@ -88,5 +88,165 @@
     "risk": "High",
     "writable": false,
     "meaning": "A link to the skill the recipe uses."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Duration.NoSkill",
+    "label": "Craft time (no skill)",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long this recipe takes to craft with no skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Duration.Basic",
+    "label": "Craft time (basic)",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Craft time at Basic skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Duration.Medium",
+    "label": "Craft time (medium)",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Craft time at Medium skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Duration.Advanced",
+    "label": "Craft time (advanced)",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Craft time at Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "Duration.AboveAdvanced",
+    "label": "Craft time (above advanced)",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Craft time above Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "FamePointReward.NoSkill",
+    "label": "Fame reward (no skill)",
+    "type": "Number",
+    "unit": "fame",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Fame given for crafting this with no skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "FamePointReward.Basic",
+    "label": "Fame reward (basic)",
+    "type": "Number",
+    "unit": "fame",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Fame given at Basic skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "FamePointReward.Medium",
+    "label": "Fame reward (medium)",
+    "type": "Number",
+    "unit": "fame",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Fame given at Medium skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "FamePointReward.Advanced",
+    "label": "Fame reward (advanced)",
+    "type": "Number",
+    "unit": "fame",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Fame given at Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "FamePointReward.AboveAdvanced",
+    "label": "Fame reward (above advanced)",
+    "type": "Number",
+    "unit": "fame",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Fame given above Advanced skill."
+  },
+  {
+    "kind": "Recipes",
+    "name": "DisplayPriority",
+    "label": "Menu order",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Where this recipe sits in the crafting menu (lower comes first)."
+  },
+  {
+    "kind": "Recipes",
+    "name": "CanPlaceOnWater",
+    "label": "Place on water",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether the finished object may be placed on water."
+  },
+  {
+    "kind": "Recipes",
+    "name": "CanPlaceOverItems",
+    "label": "Place over items",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether it may be placed overlapping items already on the ground."
+  },
+  {
+    "kind": "Recipes",
+    "name": "CheckBaseBuildingPlacementMask",
+    "label": "Check build placement mask",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether the normal base-building placement checks apply."
+  },
+  {
+    "kind": "Recipes",
+    "name": "UseNoTouchBox",
+    "label": "Use no-touch box",
+    "type": "Boolean",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "Whether a keep-out box stops things being placed through it."
+  },
+  {
+    "kind": "Recipes",
+    "name": "BoxOverlapFlags",
+    "label": "Overlap flags",
+    "type": "Number",
+    "unit": "",
+    "risk": "Medium",
+    "writable": true,
+    "meaning": "A bitmask of what this recipe ignores when checking overlaps (BuildAnywhere sets it to 0)."
   }
 ]
