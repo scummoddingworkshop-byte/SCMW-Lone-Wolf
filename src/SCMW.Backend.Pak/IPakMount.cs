@@ -51,4 +51,15 @@ public interface IPakMount : IDisposable
         files = null;
         return false;
     }
+
+    /// <summary>
+    /// Reads any mounted file's raw bytes by path, whether or not it is a package. Used for the
+    /// game's own asset index (<c>SCUM/AssetRegistry.bin</c>). Default returns false so simple fakes
+    /// need not implement it; the real <see cref="PakMount"/> overrides it.
+    /// </summary>
+    bool TryReadFile(string path, out byte[]? bytes)
+    {
+        bytes = null;
+        return false;
+    }
 }

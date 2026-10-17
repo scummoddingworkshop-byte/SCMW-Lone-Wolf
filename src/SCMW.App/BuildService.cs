@@ -15,7 +15,8 @@ namespace SCMW.App;
 public interface IBuildService
 {
     Task<BuildOutcome> BuildAsync(string projectName, string version,
-        IReadOnlyList<BuildItem> items, IProgress<int>? progress, CancellationToken ct);
+        IReadOnlyList<BuildItem> items, IReadOnlyList<NewBuildAsset> newAssets,
+        IProgress<int>? progress, CancellationToken ct);
 
     /// <summary>Copies a built pak into SCUM's mods folder. <paramref name="enabled"/> false puts it
     /// there switched off — which is how a build arrives; the player enables it in Mods Management.</summary>
@@ -59,6 +60,7 @@ public sealed class BuildService : IBuildService, IDisposable
             new RepakPacker(Path.Combine(AppContext.BaseDirectory, "tools", "repak", "repak.exe"),
                 new SystemProcessRunner()),
             new ContentSourceAssetResolver(source),
+            new UAssetCloner(),
             workspace.Builds);
 
         var installer = new ModInstaller(
@@ -69,8 +71,9 @@ public sealed class BuildService : IBuildService, IDisposable
     }
 
     public Task<BuildOutcome> BuildAsync(string projectName, string version,
-        IReadOnlyList<BuildItem> items, IProgress<int>? progress, CancellationToken ct)
-        => _builder.BuildAsync(new BuildRequest(projectName, version, items), progress, ct);
+        IReadOnlyList<BuildItem> items, IReadOnlyList<NewBuildAsset> newAssets,
+        IProgress<int>? progress, CancellationToken ct)
+        => _builder.BuildAsync(new BuildRequest(projectName, version, items, newAssets), progress, ct);
 
     public Task<InstallOutcome> InstallAsync(string projectId, string projectName, string version,
         string pakPath, bool enabled, CancellationToken ct)

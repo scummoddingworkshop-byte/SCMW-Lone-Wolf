@@ -44,7 +44,7 @@ public class RealBuildIntegrationTests
             var repak = Path.Combine(AppContext.BaseDirectory, "tools", "repak", "repak.exe");
             var builder = new ModBuilder(reader, new UAssetPackageWriter(),
                 new RepakPacker(repak, new SystemProcessRunner()),
-                new FixedResolver(package), Path.Combine(root, "Builds"));
+                new FixedResolver(package), new UAssetCloner(), Path.Combine(root, "Builds"));
 
             var request = new BuildRequest("RealProof", "1.0.0",
                 new[] { new BuildItem(package, new[] { new FieldChange(field.Field, field.NewValue) }) });
@@ -402,6 +402,66 @@ public class RealBuildIntegrationTests
             Assert.NotNull(source.Icons.GetIconPath(baseEl));
         }
         finally { Directory.Delete(work, true); }
+    }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public async Task A_real_donor_is_cloned_and_the_real_index_gains_the_new_asset()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        // The reader can pull the game's own index straight out of the paks (not a package).
+        var reader = new PakMountPackageReader(mount);
+        Assert.True(reader.TryReadAssetIndex(out var gameIndex));
+        Assert.NotNull(gameIndex);
+
+        // A real recipe to copy.
+        var donorFile = mount.FilePaths.First(p =>
+            p.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)
+            && p.Contains("/Items/Crafting/Recipes/", StringComparison.OrdinalIgnoreCase)
+            && Path.GetFileNameWithoutExtension(p).StartsWith("CR_", StringComparison.OrdinalIgnoreCase));
+        var donorPath = donorFile[..^".uasset".Length];
+        var donorName = Path.GetFileNameWithoutExtension(donorFile);
+
+        const string newName = "CR_SECMW_BuildTest";
+        var folder = donorPath[..donorPath.LastIndexOf('/')] + "/SCMWBuildTest";
+
+        var root = Path.Combine(Path.GetTempPath(), "scmw-realonew-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var repak = Path.Combine(AppContext.BaseDirectory, "tools", "repak", "repak.exe");
+            var builder = new ModBuilder(reader, new UAssetPackageWriter(),
+                new RepakPacker(repak, new SystemProcessRunner()),
+                new FixedResolver(donorPath), new UAssetCloner(), Path.Combine(root, "Builds"));
+
+            var asset = new NewBuildAsset(newName, donorName, donorPath, folder, Array.Empty<FieldChange>());
+            var request = new BuildRequest("RealNew", "1.0.0", Array.Empty<BuildItem>(), new[] { asset });
+
+            var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+            Assert.True(outcome.Ok, outcome.Error);
+            Assert.True(File.Exists(outcome.PakPath));
+
+            // The pak holds our renamed copy on the game tree, plus the augmented index.
+            var listed = await new SystemProcessRunner().RunAsync(repak,
+                new[] { "list", outcome.PakPath! }, CancellationToken.None);
+            var tree = listed.Output.Replace('\\', '/');
+            Assert.Contains($"{folder}/{newName}.uasset", tree);
+            Assert.Contains("SCUM/AssetRegistry.bin", tree);
+
+            // The shipped index re-reads clean and carries our asset under its own name.
+            var buildFolder = Path.GetDirectoryName(outcome.PakPath)!;
+            var shipped = Directory.GetFiles(buildFolder, "AssetRegistry.bin", SearchOption.AllDirectories).Single();
+            Assert.True(AssetRegistryReader.TryRead(File.ReadAllBytes(shipped), out var after, out _));
+            Assert.Equal(0, after!.HashMismatches);
+            Assert.Contains(after.Assets, a => a.AssetName == newName);
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static string ExtractOne(IReadOnlyDictionary<string, byte[]> files, string folder)

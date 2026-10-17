@@ -11,10 +11,28 @@ public class ModBuilderTests : IDisposable
     private sealed class FakeReader : IPackageReader
     {
         public readonly Dictionary<string, Dictionary<string, byte[]>> Packages = new();
+        public byte[]? Index;
         public bool TryReadPackage(string path, out IReadOnlyDictionary<string, byte[]>? files)
         {
             if (Packages.TryGetValue(path, out var f)) { files = f; return true; }
             files = null; return false;
+        }
+        public bool TryReadAssetIndex(out byte[]? bytes)
+        {
+            bytes = Index;
+            return Index is not null;
+        }
+    }
+
+    private sealed class FakeCloner : IAssetCloner
+    {
+        public bool Ok = true;
+        public readonly List<(string Uasset, string OldName, string NewName)> Calls = new();
+        public bool TryRenameObjects(string uassetFilePath, string oldName, string newName, out string? error)
+        {
+            Calls.Add((uassetFilePath, oldName, newName));
+            error = Ok ? null : "The copy could not be renamed.";
+            return Ok;
         }
     }
 
@@ -55,12 +73,14 @@ public class ModBuilderTests : IDisposable
         public void Report(int value) => Seen.Add(value);
     }
 
-    private (ModBuilder builder, FakeReader reader, FakeWriter writer, FakePacker packer, FakeResolver resolver) New()
+    private (ModBuilder builder, FakeReader reader, FakeWriter writer, FakePacker packer,
+             FakeResolver resolver, FakeCloner cloner) New()
     {
         var reader = new FakeReader(); var writer = new FakeWriter();
         var packer = new FakePacker(); var resolver = new FakeResolver();
-        return (new ModBuilder(reader, writer, packer, resolver, Path.Combine(_root, "Builds")),
-                reader, writer, packer, resolver);
+        var cloner = new FakeCloner();
+        return (new ModBuilder(reader, writer, packer, resolver, cloner, Path.Combine(_root, "Builds")),
+                reader, writer, packer, resolver, cloner);
     }
 
     private static void AddPackage(FakeReader reader, string path)
@@ -73,7 +93,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task Build_packs_the_changed_item_on_the_game_tree_and_returns_the_pak()
     {
-        var (builder, reader, writer, packer, resolver) = New();
+        var (builder, reader, writer, packer, resolver, _) = New();
         const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
         AddPackage(reader, pkg);
         resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
@@ -94,7 +114,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task A_writer_that_cannot_set_a_value_fails_the_whole_build_with_no_pak()
     {
-        var (builder, reader, writer, packer, resolver) = New();
+        var (builder, reader, writer, packer, resolver, _) = New();
         const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
         AddPackage(reader, pkg);
         resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
@@ -113,7 +133,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task A_packer_failure_is_reported_and_no_path_is_returned()
     {
-        var (builder, reader, _, packer, resolver) = New();
+        var (builder, reader, _, packer, resolver, _) = New();
         const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
         AddPackage(reader, pkg);
         resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
@@ -130,7 +150,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task An_empty_project_refuses_to_build()
     {
-        var (builder, _, _, _, _) = New();
+        var (builder, _, _, _, _, _) = New();
         var outcome = await builder.BuildAsync(
             new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>()), null, CancellationToken.None);
         Assert.False(outcome.Ok);
@@ -140,7 +160,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task Progress_reports_the_phases_in_order()
     {
-        var (builder, reader, _, _, resolver) = New();
+        var (builder, reader, _, _, resolver, _) = New();
         AddPackage(reader, "SCUM/Content/ConZ_Files/Items/X_ES");
         resolver.Map["X"] = new AssetResolution("SCUM/Content/ConZ_Files/Items/X_ES", null);
         var progress = new ListProgress();
@@ -155,7 +175,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task Two_edits_to_the_same_package_are_both_applied()
     {
-        var (builder, reader, writer, packer, resolver) = New();
+        var (builder, reader, writer, packer, resolver, _) = New();
         const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
         AddPackage(reader, pkg);
         resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
@@ -178,7 +198,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task An_added_field_hands_the_writer_the_donors_file()
     {
-        var (builder, reader, writer, _, resolver) = New();
+        var (builder, reader, writer, _, resolver, _) = New();
         const string target = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
         const string donor = "SCUM/Content/ConZ_Files/Items/Food/Stone_ES";
         AddPackage(reader, target);
@@ -200,7 +220,7 @@ public class ModBuilderTests : IDisposable
     [Fact]
     public async Task An_added_field_with_no_donor_leaves_the_writer_without_one()
     {
-        var (builder, reader, writer, _, resolver) = New();
+        var (builder, reader, writer, _, resolver, _) = New();
         const string target = "SCUM/Content/ConZ_Files/Items/Food/Tomato_ES";
         AddPackage(reader, target);
         resolver.Map[target] = new AssetResolution(target, null);
@@ -212,6 +232,136 @@ public class ModBuilderTests : IDisposable
         await builder.BuildAsync(request, null, CancellationToken.None);
 
         Assert.Null(writer.Donors);   // nothing to hand over; the writer will fail plainly
+    }
+
+    /// <summary>A tiny valid asset index carrying one recipe donor, so the writer can add to it.</summary>
+    private static byte[] DonorRegistry(string donorName = "CR_1H_Stone_Axe")
+    {
+        const string cls = "ItemCraftingRecipe";
+        const string pkg = "/Game/ConZ_Files/Items/Crafting/Recipes/Items";
+        var reg = new FakeAssetRegistry();
+        reg.Name("PrimaryAssetType");
+        reg.Name("PrimaryAssetName");
+        reg.Name("NativeClass");
+        reg.NumberlessNames.Add((uint)reg.Name(cls));
+        reg.Pairs.Add(((uint)reg.Name("PrimaryAssetType"), 2u));
+        reg.Pairs.Add(((uint)reg.Name("PrimaryAssetName"), 2u));
+        reg.Pairs.Add(((uint)reg.Name("NativeClass"), 2u));
+        reg.AddRecord(new FakeRecord(new[]
+        {
+            $"{pkg}/{donorName}.{donorName}", pkg, cls, $"{pkg}/{donorName}", donorName,
+        }, TagHandle: 0x8000000300000000UL, ChunkIds: new[] { 0 }));
+        return reg.Build();
+    }
+
+    private const string DonorPath =
+        "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe";
+    private const string NewFolder =
+        "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_Test";
+
+    private static NewBuildAsset NewRecipe(IReadOnlyList<FieldChange>? changes = null) =>
+        new("CR_New", "CR_1H_Stone_Axe", DonorPath, NewFolder,
+            changes ?? Array.Empty<FieldChange>());
+
+    [Fact]
+    public async Task A_new_asset_copies_the_donor_under_its_own_name_and_ships_the_index()
+    {
+        var (builder, reader, _, packer, _, cloner) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = DonorRegistry();
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Contains(cloner.Calls, c => c.OldName == "CR_1H_Stone_Axe" && c.NewName == "CR_New");
+
+        var staged = Path.Combine(packer.Staging!, NewFolder.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(Path.Combine(staged, "CR_New.uasset")));
+        Assert.True(File.Exists(Path.Combine(staged, "CR_New.uexp")));
+        Assert.False(File.Exists(Path.Combine(staged, "CR_1H_Stone_Axe.uasset")));
+
+        var index = Path.Combine(packer.Staging!, "SCUM", "AssetRegistry.bin");
+        Assert.True(File.Exists(index));
+        Assert.True(AssetRegistryReader.TryRead(File.ReadAllBytes(index), out var after, out _));
+        Assert.Contains(after!.Assets, a => a.AssetName == "CR_New");
+    }
+
+    [Fact]
+    public async Task A_new_assets_own_edits_are_written_onto_the_copy()
+    {
+        var (builder, reader, writer, _, _, _) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = DonorRegistry();
+        var changes = new[] { new FieldChange("CraftingTimeSeconds", "5") };
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(),
+            new[] { NewRecipe(changes) });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Contains(writer.Applied, c => c.Field == "CraftingTimeSeconds" && c.NewValue == "5");
+    }
+
+    [Fact]
+    public async Task A_new_asset_with_a_missing_donor_fails_the_build_with_no_pak()
+    {
+        var (builder, _, _, packer, _, _) = New();
+        // The donor package is never added, so it cannot be read.
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.False(outcome.Ok);
+        Assert.Null(packer.Pak);
+    }
+
+    [Fact]
+    public async Task A_cloner_that_cannot_rename_fails_the_build()
+    {
+        var (builder, reader, _, packer, _, cloner) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = DonorRegistry();
+        cloner.Ok = false;
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.False(outcome.Ok);
+        Assert.Null(packer.Pak);
+    }
+
+    [Fact]
+    public async Task A_build_that_cannot_read_the_index_fails_with_no_pak()
+    {
+        var (builder, reader, _, packer, _, _) = New();
+        AddPackage(reader, DonorPath);
+        // No Raw entry for the index -> it cannot be read.
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.False(outcome.Ok);
+        Assert.Null(packer.Pak);
+    }
+
+    [Fact]
+    public async Task An_index_that_cannot_take_the_entry_fails_the_build_with_no_pak()
+    {
+        var (builder, reader, _, packer, _, _) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = new byte[] { 1, 2, 3 };   // not an asset index
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.False(outcome.Ok);
+        Assert.Null(packer.Pak);
     }
 
     private sealed class ThrowingReader : IPackageReader
@@ -226,7 +376,7 @@ public class ModBuilderTests : IDisposable
         var resolver = new FakeResolver();
         resolver.Map["X"] = new AssetResolution("SCUM/Content/ConZ_Files/Items/X_ES", null);
         var builder = new ModBuilder(new ThrowingReader(), new FakeWriter(), new FakePacker(),
-            resolver, Path.Combine(_root, "Builds"));
+            resolver, new FakeCloner(), Path.Combine(_root, "Builds"));
         var request = new BuildRequest("M", "1.0.0",
             new[] { new BuildItem("X", new[] { new FieldChange("F", "1") }) });
 

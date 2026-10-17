@@ -94,7 +94,8 @@ public partial class ShellViewModel : ObservableObject
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, source: ContentSource,
-                                    elevation: WindowsElevation.Default, saves: _saves);
+                                    elevation: WindowsElevation.Default, saves: _saves,
+                                    newAssets: new NewAssetStore());
         _buildView = new BuildView { DataContext = _build };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };

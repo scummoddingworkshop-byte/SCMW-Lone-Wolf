@@ -26,18 +26,21 @@ public partial class BuildViewModel : ObservableObject
     private readonly TimeSpan? _stepInterval;
     private readonly ModList? _mods;
     private readonly ProjectStore? _projects;
+    private readonly SCMW.Core.Editing.INewAssetStore? _newAssets;
     private IBuildService? _service;
     private readonly IContentSource? _source;
     private readonly IElevation? _elevation;
     private readonly ISaveBackupsService? _saves;
     private DispatcherTimer? _timer;
     private int _stepIndex;
+    private bool _hasNewAssets;
 
     public BuildViewModel(ItemChangeStore? changes = null, INavigation? nav = null,
                           TimeSpan? stepInterval = null, ModList? mods = null,
                           ProjectStore? projects = null, IBuildService? service = null,
                           IContentSource? source = null,
-                          IElevation? elevation = null, ISaveBackupsService? saves = null)
+                          IElevation? elevation = null, ISaveBackupsService? saves = null,
+                          SCMW.Core.Editing.INewAssetStore? newAssets = null)
     {
         _changes = changes;
         _nav = nav ?? NavigationHost.Shared;
@@ -48,6 +51,7 @@ public partial class BuildViewModel : ObservableObject
         _source = source;
         _elevation = elevation;
         _saves = saves;
+        _newAssets = newAssets;
 
         // The preview/diff shown on this screen — the same records Build writes, one home for the diff.
         Preview = new PreviewViewModel(_changes, _projects, _source);
@@ -115,6 +119,7 @@ public partial class BuildViewModel : ObservableObject
     private void RefreshChanges()
     {
         Preview.Refresh();
+        _hasNewAssets = NewAssetsForChosenProject().Count > 0;
 
         OnPropertyChanged(nameof(Changes));
         OnPropertyChanged(nameof(HasChanges));
@@ -193,7 +198,7 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>What's in this mod: the current project's saved records, oldest first.</summary>
     public IReadOnlyList<BuildChange> Changes => Preview.Changes;
 
-    public bool HasChanges => Preview.HasChanges;
+    public bool HasChanges => Preview.HasChanges || _hasNewAssets;
     public bool ShowNudge => !HasChanges;
     public bool CanBuild => _projects?.Chosen is not null && HasChanges && State != BuildState.Running;
     public bool IsRunning => State == BuildState.Running;
@@ -237,7 +242,9 @@ public partial class BuildViewModel : ObservableObject
 
         var projectId = project.Id;
         var records = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
-        var token = RecordsToken(records);
+        var newAssets = NewAssetsForChosenProject();
+        var token = RecordsToken(records) + "|" + AssetsToken(newAssets);
+        var plan = PlanBuild(records, newAssets);
 
         State = BuildState.Running;
         _stepIndex = 0;
@@ -248,7 +255,7 @@ public partial class BuildViewModel : ObservableObject
         SCMW.Backend.Build.BuildOutcome outcome;
         try
         {
-            outcome = await _service.BuildAsync(project.Name, ModVersion, BuildItemsFrom(records), progress, CancellationToken.None);
+            outcome = await _service.BuildAsync(project.Name, ModVersion, plan.Items, plan.NewAssets, progress, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -262,7 +269,9 @@ public partial class BuildViewModel : ObservableObject
 
         // If the project or the changes moved while we were building, this outcome is stale.
         var currentRecords = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
-        if (_projects?.Chosen?.Id != projectId || RecordsToken(currentRecords) != token)
+        var currentAssets = NewAssetsForChosenProject();
+        if (_projects?.Chosen?.Id != projectId
+            || RecordsToken(currentRecords) + "|" + AssetsToken(currentAssets) != token)
         {
             ShowFailure("Your changes changed while the mod was being made.",
                 "That build was for an earlier set of changes, so it was set aside and not offered to install.",
@@ -304,6 +313,41 @@ public partial class BuildViewModel : ObservableObject
 
             ShowFailure("The mod could not be made.", error, next, "");
         }
+    }
+
+    /// <summary>The chosen project's recorded new assets (empty when there is none to read).</summary>
+    private IReadOnlyList<SCMW.Core.Editing.NewAsset> NewAssetsForChosenProject() =>
+        _projects?.Chosen is { } project && _newAssets is not null
+            ? _newAssets.Load(project.FolderPath)
+            : Array.Empty<SCMW.Core.Editing.NewAsset>();
+
+    /// <summary>
+    /// Splits a project's records into the ordinary items and the brand-new assets. A record aimed at
+    /// a new asset (its path is the new asset's package path) travels with that asset, never as an
+    /// ordinary item — the game has no such file to look up.
+    /// </summary>
+    private static (IReadOnlyList<BuildItem> Items, IReadOnlyList<NewBuildAsset> NewAssets) PlanBuild(
+        IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records,
+        IReadOnlyList<SCMW.Core.Editing.NewAsset> newAssets)
+    {
+        if (newAssets.Count == 0)
+            return (BuildItemsFrom(records), Array.Empty<NewBuildAsset>());
+
+        var targets = new HashSet<string>(
+            newAssets.Select(a => a.PackagePath), StringComparer.OrdinalIgnoreCase);
+
+        var plain = records
+            .Where(r => !targets.Contains(r.AssetPath ?? r.AssetId))
+            .ToList();
+
+        var built = newAssets
+            .Select(asset => new NewBuildAsset(
+                asset.Name, asset.DonorName, asset.DonorPath, asset.Folder,
+                ChangesFor(records.Where(r => string.Equals(r.AssetPath ?? r.AssetId, asset.PackagePath,
+                    StringComparison.OrdinalIgnoreCase)))))
+            .ToList();
+
+        return (BuildItemsFrom(plain), built);
     }
 
     /// <summary>
@@ -359,6 +403,10 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>A cheap fingerprint of the current project's changes, to detect edits mid-build.</summary>
     private static string RecordsToken(IReadOnlyList<SCMW.Core.Editing.ChangeRecord> records)
         => string.Join("|", records.Select(r => $"{r.AssetPath}\u001f{r.AssetId}\u001f{r.FieldTechnicalName}\u001f{r.Operation}\u001f{r.NewValue}"));
+
+    /// <summary>A cheap fingerprint of the project's new assets, so a change mid-build is detected too.</summary>
+    private static string AssetsToken(IReadOnlyList<SCMW.Core.Editing.NewAsset> assets)
+        => string.Join("|", assets.Select(a => $"{a.Id}\u001f{a.Name}\u001f{a.DonorPath}\u001f{a.Folder}"));
 
     /// <summary>Moves the build on by one step. Called by the timer (and directly by tests).</summary>
     public void Advance()

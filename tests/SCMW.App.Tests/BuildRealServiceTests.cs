@@ -21,14 +21,16 @@ public class BuildRealServiceTests : IDisposable
         public InstallResult_ Arg;
 
         public Task<BuildOutcome> BuildAsync(string name, string version, IReadOnlyList<BuildItem> items,
-            IProgress<int>? progress, CancellationToken ct)
+            IReadOnlyList<NewBuildAsset> newAssets, IProgress<int>? progress, CancellationToken ct)
         {
             SentItems = items;
+            SentNewAssets = newAssets;
             progress?.Report(0); progress?.Report(4);
             return Task.FromResult(BuildResult);
         }
 
         public IReadOnlyList<BuildItem>? SentItems;
+        public IReadOnlyList<NewBuildAsset>? SentNewAssets;
 
         public Task<InstallOutcome> InstallAsync(string id, string name, string version, string pak,
                                                  bool enabled, CancellationToken ct)
@@ -49,7 +51,8 @@ public class BuildRealServiceTests : IDisposable
     {
         private readonly TaskCompletionSource<BuildOutcome> _tcs = new();
         public void Complete(BuildOutcome outcome) => _tcs.TrySetResult(outcome);
-        public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i, IProgress<int>? p, CancellationToken ct)
+        public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i,
+            IReadOnlyList<NewBuildAsset> na, IProgress<int>? p, CancellationToken ct)
             => _tcs.Task;
         public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
                                                  bool enabled, CancellationToken ct)
@@ -245,6 +248,55 @@ public class BuildRealServiceTests : IDisposable
         var change = Assert.Single(item.Changes);
         Assert.Equal("GridInventoryRowSpan", change.Field);
         Assert.Equal("3", change.NewValue);      // 6 × 0.5, not the factor "0.5"
+    }
+
+    private static NewAsset Recipe(string name = "CR_New") =>
+        new(Guid.NewGuid(), name, NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_Test", DateTime.UtcNow);
+
+    [AvaloniaFact]
+    public async Task A_new_asset_is_sent_to_the_service_with_its_own_edits()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var folder = projects.Current!.FolderPath;
+        var changes = TestProjects.ChangeStore(projects);
+        var assets = new NewAssetStore();
+        var asset = Recipe();
+        assets.Add(folder, asset);
+        changes.RecordEdit("CR_New", "CraftingTimeSeconds", "10", "5", projects.Current!.Id,
+                           assetPath: asset.PackagePath);
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects, service: service, newAssets: assets);
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        var sent = Assert.Single(service.SentNewAssets!);
+        Assert.Equal("CR_New", sent.Name);
+        Assert.Equal("CR_1H_Stone_Axe", sent.DonorName);
+        Assert.Equal(asset.Folder, sent.Folder);
+        Assert.Contains(sent.Changes, c => c.Field == "CraftingTimeSeconds" && c.NewValue == "5");
+        Assert.Empty(service.SentItems!);   // its edit is not also sent as an ordinary item
+    }
+
+    [AvaloniaFact]
+    public async Task A_project_that_only_creates_a_new_asset_can_still_build()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        var assets = new NewAssetStore();
+        assets.Add(projects.Current!.FolderPath, Recipe());
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects, service: service, newAssets: assets);
+
+        Assert.True(vm.CanBuild);   // a brand-new asset is something to build, even with no value edits
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        Assert.Single(service.SentNewAssets!);
+        Assert.Empty(service.SentItems!);
     }
 
     private sealed class FakeElevation : IElevation

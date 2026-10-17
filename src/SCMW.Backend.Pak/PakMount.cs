@@ -181,9 +181,33 @@ public sealed class PakMount : IPakMount
         }
     }
 
+    /// <summary>
+    /// Reads any mounted file's raw bytes by path, package or not (used for the game's own asset
+    /// index). Never throws — an unmounted provider or a missing file is a plain false.
+    /// </summary>
+    public bool TryReadFile(string path, out byte[]? bytes)
+    {
+        bytes = null;
+        if (_provider == null || string.IsNullOrWhiteSpace(path)) return false;
+        try
+        {
+            if (_provider.TrySaveAsset(path, out var data))
+            {
+                bytes = data;
+                return true;
+            }
+
+            return false;
+        }
+        catch
+        {
+            bytes = null;
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         _provider?.Dispose();
         _provider = null;
-    }
-}
+    }}

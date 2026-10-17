@@ -13,22 +13,25 @@ public sealed class ModBuilder : IModBuilder
     private readonly IPackageWriter _writer;
     private readonly IPacker _packer;
     private readonly IAssetResolver _resolver;
+    private readonly IAssetCloner _cloner;
     private readonly string _buildsRoot;
 
     public ModBuilder(IPackageReader reader, IPackageWriter writer, IPacker packer,
-                      IAssetResolver resolver, string buildsRoot)
+                      IAssetResolver resolver, IAssetCloner cloner, string buildsRoot)
     {
         _reader = reader;
         _writer = writer;
         _packer = packer;
         _resolver = resolver;
+        _cloner = cloner;
         _buildsRoot = buildsRoot;
     }
 
     public async Task<BuildOutcome> BuildAsync(BuildRequest request, IProgress<int>? progress, CancellationToken ct)
     {
         progress?.Report(0);
-        if (request.Items.Count == 0)
+        var newAssets = request.NewAssets ?? Array.Empty<NewBuildAsset>();
+        if (request.Items.Count == 0 && newAssets.Count == 0)
             return new BuildOutcome(false, null, "There is nothing to build — change an item value first.");
 
         var buildFolder = BuildNames.BuildFolder(_buildsRoot, request.ProjectName);
@@ -111,6 +114,20 @@ public sealed class ModBuilder : IModBuilder
                     File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
             }
 
+            foreach (var asset in newAssets)
+            {
+                var (assetOk, assetError) = await StageNewAssetAsync(asset, staging, work, ct).ConfigureAwait(false);
+                if (!assetOk)
+                    return new BuildOutcome(false, null, assetError);
+            }
+
+            if (newAssets.Count > 0)
+            {
+                var (indexOk, indexError) = StageRegistry(newAssets, staging);
+                if (!indexOk)
+                    return new BuildOutcome(false, null, indexError);
+            }
+
             progress?.Report(3);
             var pakPath = Path.Combine(buildFolder, BuildNames.PakFileName(request.ProjectName, request.Version));
             if (File.Exists(pakPath)) File.Delete(pakPath);
@@ -149,6 +166,78 @@ public sealed class ModBuilder : IModBuilder
             return new BuildOutcome(false, null,
                 "The mod could not be made. Something went wrong while reading or writing the game files.");
         }
+    }
+
+    /// <summary>
+    /// Creates one brand-new asset: copies the donor's files under the new asset's own name, renames
+    /// the object(s) inside so the copy is a distinct asset, writes the asset's own edits onto the
+    /// copy, then lays it on the game tree in the asset's own folder. Returns one plain message on
+    /// any failure (the build then stops with nothing installed).
+    /// </summary>
+    private async Task<(bool Ok, string? Error)> StageNewAssetAsync(
+        NewBuildAsset asset, string staging, string work, CancellationToken ct)
+    {
+        if (!_reader.TryReadPackage(asset.DonorPath, out var donorFiles) || donorFiles is null || donorFiles.Count == 0)
+            return (false, $"\"{asset.Name}\" is copied from \"{asset.DonorName}\", but that game file could not be read.");
+
+        var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packageDir);
+        string? uassetPath = null;
+        foreach (var pair in donorFiles)
+        {
+            var stagedName = CloneLayout.StagedFileName(pair.Key, asset.DonorName, asset.Name);
+            var destination = Path.Combine(packageDir, stagedName);
+            File.WriteAllBytes(destination, pair.Value);
+            if (destination.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) uassetPath = destination;
+        }
+
+        if (uassetPath is null)
+            return (false, $"The game file \"{asset.DonorName}\" had no .uasset file to copy.");
+
+        if (!_cloner.TryRenameObjects(uassetPath, asset.DonorName, asset.Name, out var renameError))
+            return (false, renameError ?? $"The copy of \"{asset.DonorName}\" could not be renamed.");
+
+        if (asset.Changes.Count > 0)
+        {
+            var donors = await ExtractDonorsAsync(asset.Changes, work, ct).ConfigureAwait(false);
+            var written = _writer.Apply(uassetPath, asset.Changes, donors);
+            if (!written.Ok)
+                return (false, written.Error ?? $"\"{asset.Name}\" could not be changed.");
+        }
+
+        var targetDir = Path.Combine(staging, asset.Folder.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.GetFiles(packageDir))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Adds one entry per new asset to the game's own asset index (read straight from the paks) and
+    /// lays the augmented index on the game tree at <see cref="PakMountPackageReader.GameIndexPath"/>.
+    /// Returns one plain
+    /// message on any failure.
+    /// </summary>
+    private (bool Ok, string? Error) StageRegistry(IReadOnlyList<NewBuildAsset> assets, string staging)
+    {
+        if (!_reader.TryReadAssetIndex(out var index) || index is null)
+            return (false, "The game's asset index could not be read, so new content cannot be added.");
+
+        foreach (var asset in assets)
+        {
+            if (!AssetRegistryWriter.TryAddAsset(index!,
+                    new NewRegistryAsset(asset.Folder, asset.Name, asset.DonorName),
+                    out var updated, out var addError))
+                return (false, addError ?? $"\"{asset.Name}\" could not be added to the game's index.");
+
+            index = updated;
+        }
+
+        var target = Path.Combine(staging, "SCUM", "AssetRegistry.bin");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllBytes(target, index!);
+        return (true, null);
     }
 
     /// <summary>
