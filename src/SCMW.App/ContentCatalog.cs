@@ -8,7 +8,7 @@ using SCMW.Core.Knowledge;
 namespace SCMW.App;
 
 /// <summary>Which family of game objects a browser screen shows.</summary>
-public enum AssetFamily { Items, BaseElements, Recipes, LootAndSpawn }
+public enum AssetFamily { Items, BaseElements, Recipes, LootAndSpawn, Cooking }
 
 /// <summary>
 /// Turns the engine's real content shapes into the Items screen's shapes. Labels come from the
@@ -134,6 +134,22 @@ public sealed class ContentCatalog
             .ToList();
 
     /// <summary>
+    /// One screen row per cooking recipe (a <c>Cook_*</c> data asset under the game's
+    /// <c>Cooking/Recipes</c> folder). Like a crafting recipe, it has no default object, so its
+    /// values are read field by field.
+    /// </summary>
+    public IReadOnlyList<ItemSummary> MapCooking(IReadOnlyList<AssetSummary> assets) =>
+        assets
+            .Where(a => AssetNames.IsCookingName(AssetName(a.Id)))
+            .Select(a => new ItemSummary(
+                name: a.Name,
+                category: string.IsNullOrWhiteSpace(a.Category) ? "Cooking" : a.Category,
+                description: a.TechnicalPath,
+                editable: true,
+                assetId: a.Id))
+            .ToList();
+
+    /// <summary>
     /// One screen row per loot/spawn preset (spawner presets and container loot — Task 2.6). The
     /// reader gives these a friendly name and the game's own folder as a category; the per-value
     /// safety rule still decides what may actually be changed.
@@ -158,6 +174,7 @@ public sealed class ContentCatalog
         AssetFamily.BaseElements => MapBaseElements(assets),
         AssetFamily.Recipes => MapRecipes(assets),
         AssetFamily.LootAndSpawn => MapSpawnerPresets(assets),
+        AssetFamily.Cooking => MapCooking(assets),
         _ => MapItems(assets),
     };
 

@@ -2,6 +2,7 @@ using SCMW.Backend.Build;
 using SCMW.Core.Editing;
 using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.PropertyTypes.Structs;
+using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build.Tests;
 
@@ -23,6 +24,26 @@ public class UAssetPackageWriterListTests
     private ArrayPropertyData Ingredients(params PropertyData[] slots) =>
         new(_names.Name("Ingredients")) { Value = slots };
 
+    /// <summary>A slot that carries a nested list holding an object link (like a recipe ingredient).</summary>
+    private StructPropertyData TaggedSlot(int amount, int importIndex) =>
+        new(_names.Name("Ingredients"))
+        {
+            Value = new List<PropertyData>
+            {
+                new ArrayPropertyData(_names.Name("AllowedTypes"))
+                {
+                    Value = new PropertyData[]
+                    {
+                        new ObjectPropertyData(_names.Name("AllowedTypes"))
+                        {
+                            Value = FPackageIndex.FromImport(importIndex),
+                        },
+                    },
+                },
+                new IntPropertyData(_names.Name("NoSkill")) { Value = amount },
+            },
+        };
+
     private static int Amount(PropertyData slot) =>
         ((IntPropertyData)((StructPropertyData)slot).Value[0]).Value;
 
@@ -40,6 +61,28 @@ public class UAssetPackageWriterListTests
         Assert.Equal(3, array.Value.Length);
         Assert.Equal(5, Amount(array.Value[2]));
         Assert.NotSame(array.Value[1], array.Value[2]);   // a real copy, not an alias
+    }
+
+    [Fact]
+    public void Adding_an_entry_deep_clones_the_nested_fields()
+    {
+        var array = Ingredients(TaggedSlot(4, 2), TaggedSlot(5, 3));
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            new PropertyData[] { array }, new FieldChange("Ingredients", "", ChangeOperation.AddEntry),
+            out _, out _));
+
+        var source = (StructPropertyData)array.Value[1];
+        var clone = (StructPropertyData)array.Value[2];
+
+        var sourceLink = (ObjectPropertyData)((ArrayPropertyData)source.Value[0]).Value[0];
+        var cloneLink = (ObjectPropertyData)((ArrayPropertyData)clone.Value[0]).Value[0];
+
+        // The nested objects must be copies, or editing the new slot rewrites the slot it copied.
+        Assert.NotSame(sourceLink, cloneLink);
+
+        cloneLink.Value = FPackageIndex.FromImport(0);
+        Assert.NotEqual(sourceLink.Value.ToString(), cloneLink.Value.ToString());
     }
 
     [Fact]
@@ -96,5 +139,79 @@ public class UAssetPackageWriterListTests
         Assert.True(found);
         Assert.False(string.IsNullOrWhiteSpace(error));
         Assert.Equal(32, array.Value.Length);   // nothing was added
+    }
+
+    // --- A nested list (a dish ingredient's foods) ------------------------------------------------
+    // The cooking Ingredients card adds and removes foods on a list one level down
+    // (MainIngredients[0].PossibleIngredient); this proves the writer already resolves it.
+
+    private StructPropertyData Food(int usage) =>
+        new(_names.Name("PossibleIngredient"))
+        {
+            Value = new List<PropertyData>
+            {
+                new SoftObjectPropertyData(_names.Name("Item"))
+                {
+                    Value = new FSoftObjectPath(
+                        _names.Name("/Game"),
+                        _names.Name("/Game/ConZ_Files/Items/Food/Fruit/Apple.Apple_C"),
+                        FString.FromString(string.Empty)),
+                },
+                new IntPropertyData(_names.Name("Usage")) { Value = usage },
+            },
+        };
+
+    private StructPropertyData Ingredient(params PropertyData[] foods) =>
+        new(_names.Name("MainIngredients"))
+        {
+            Value = new List<PropertyData>
+            {
+                new ArrayPropertyData(_names.Name("PossibleIngredient")) { Value = foods },
+            },
+        };
+
+    private ArrayPropertyData MainIngredients(params PropertyData[] ingredients) =>
+        new(_names.Name("MainIngredients")) { Value = ingredients };
+
+    private static int Usage(PropertyData food) =>
+        ((IntPropertyData)((StructPropertyData)food).Value[1]).Value;
+
+    private static ArrayPropertyData Foods(ArrayPropertyData main) =>
+        (ArrayPropertyData)((StructPropertyData)main.Value[0]).Value[0];
+
+    [Fact]
+    public void Adding_a_food_clones_the_ingredients_last_food()
+    {
+        var main = MainIngredients(Ingredient(Food(1)));
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            new PropertyData[] { main },
+            new FieldChange("MainIngredients[0].PossibleIngredient", "", ChangeOperation.AddEntry),
+            out var found, out var error), error);
+
+        Assert.True(found);
+        var foods = Foods(main);
+        Assert.Equal(2, foods.Value.Length);
+        Assert.Equal(1, Usage(foods.Value[1]));
+        Assert.NotSame(foods.Value[0], foods.Value[1]);
+        // The nested soft link is copied too, or editing the new food rewrites the one it copied.
+        Assert.NotSame(((StructPropertyData)foods.Value[0]).Value[0],
+                       ((StructPropertyData)foods.Value[1]).Value[0]);
+    }
+
+    [Fact]
+    public void Removing_a_food_drops_the_named_one()
+    {
+        var main = MainIngredients(Ingredient(Food(1), Food(2)));
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            new PropertyData[] { main },
+            new FieldChange("MainIngredients[0].PossibleIngredient[0]", "", ChangeOperation.RemoveEntry),
+            out var found, out var error), error);
+
+        Assert.True(found);
+        var foods = Foods(main);
+        Assert.Single(foods.Value);
+        Assert.Equal(2, Usage(foods.Value[0]));
     }
 }

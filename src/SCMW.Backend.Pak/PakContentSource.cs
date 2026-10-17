@@ -33,6 +33,11 @@ public sealed class PakContentSource : IContentSource
     // blueprint's default object, so the same reading machinery serves them.
     private const string BaseElementsRoot = "SCUM/Content/ConZ_Files/BaseBuilding/BaseElements/";
 
+    // Cooking recipes (the dishes you make at an oven/campfire) live here, as Cook_* data assets.
+    // They are a family of their own: their shape (main/optional ingredients, cooking time, etc.)
+    // is unlike a crafting recipe.
+    private const string CookingRoot = "SCUM/Content/ConZ_Files/Cooking/Recipes/";
+
     // Loot & spawn (Task 2.6): the folders the item list deliberately skips (see
     // ExcludedSubfolders) are read here as their own family. Two live under Items/ and stay
     // skipped as items; the fish/animal presets live under Characters/. The reader's job is
@@ -706,7 +711,7 @@ public sealed class PakContentSource : IContentSource
             }
 
             if ((TryMapItem(path, out var summary) || TryMapBaseElement(path, out summary)
-                 || TryMapSpawnerPreset(path, out summary))
+                 || TryMapSpawnerPreset(path, out summary) || TryMapCooking(path, out summary))
                 && seenIds.Add(summary.Id))
                 items.Add(WithGameCategory(summary));
         }
@@ -871,6 +876,40 @@ public sealed class PakContentSource : IContentSource
         summary = new AssetSummary(
             Id: path[..^7],
             Name: assetName.Replace('_', ' ').Trim(),
+            Category: category,
+            Overall: StatusKind.Unknown,
+            EditableCount: 0,
+            TechnicalPath: path,
+            IconKey: null);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Maps a pak file key to an AssetSummary when it is a cooking recipe (a <c>Cook_*</c> data asset
+    /// under <see cref="CookingRoot"/>), otherwise returns false. Same shape as
+    /// <see cref="TryMapItem"/>, so cooking recipes flow through the app like items.
+    /// </summary>
+    internal static bool TryMapCooking(string path, out AssetSummary summary)
+    {
+        summary = null!;
+
+        if (!path.StartsWith(CookingRoot, StringComparison.OrdinalIgnoreCase) ||
+            !path.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var fileName = path[(path.LastIndexOf('/') + 1)..];
+        var assetName = fileName[..^7]; // strip ".uasset"
+        if (!AssetNames.IsCookingName(assetName))
+            return false;
+
+        var relative = path[CookingRoot.Length..];
+        var slash = relative.IndexOf('/');
+        var category = slash >= 0 ? relative[..slash] : "Cooking";
+
+        summary = new AssetSummary(
+            Id: path[..^7],
+            Name: AssetNames.CookingFriendly(assetName),
             Category: category,
             Overall: StatusKind.Unknown,
             EditableCount: 0,

@@ -3,6 +3,7 @@ using SCMW.Core.Editing;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build;
@@ -93,7 +94,9 @@ public sealed class UAssetPackageWriter : IPackageWriter
             string? error;
             var ok = target is ObjectPropertyData link
                 ? ObjectLink.TrySet(asset, link, change.NewValue, out error)
-                : PropertyValue.TrySet(target, asset, change.NewValue, out error);
+                : target is SoftObjectPropertyData soft
+                    ? ObjectLink.TrySetSoft(asset, soft, change.NewValue, out error)
+                    : PropertyValue.TrySet(target, asset, change.NewValue, out error);
 
             if (!ok)
                 return Failed(error ?? "That value couldn't be set.", change.Field);
@@ -140,7 +143,7 @@ public sealed class UAssetPackageWriter : IPackageWriter
             }
 
             var grown = array.Value.ToList();
-            grown.Add((PropertyData)array.Value[^1].Clone()!);
+            grown.Add(DeepClone(array.Value[^1]));
             array.Value = grown.ToArray();
             return true;
         }
@@ -156,6 +159,31 @@ public sealed class UAssetPackageWriter : IPackageWriter
         kept.RemoveAt(index);
         array.Value = kept.ToArray();
         return true;
+    }
+
+    /// <summary>
+    /// A deep copy of one list entry. UAssetAPI's <c>Clone()</c> gives a new entry but keeps the
+    /// <i>nested</i> property objects shared with the original, so an edit to the copy (say a new
+    /// slot's tag) would silently rewrite the entry it was copied from. This copies every level of a
+    /// struct or list, so the new entry stands on its own.
+    /// </summary>
+    private static PropertyData DeepClone(PropertyData property)
+    {
+        var copy = (PropertyData)property.Clone()!;
+        switch (copy)
+        {
+            case StructPropertyData structure:
+                for (var i = 0; i < structure.Value.Count; i++)
+                    structure.Value[i] = DeepClone(structure.Value[i]);
+                break;
+
+            case ArrayPropertyData array:
+                for (var i = 0; i < array.Value.Length; i++)
+                    array.Value[i] = DeepClone(array.Value[i]);
+                break;
+        }
+
+        return copy;
     }
 
     /// <summary>

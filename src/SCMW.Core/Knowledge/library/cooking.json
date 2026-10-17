@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "Cooking",
+    "name": "CookingTime",
+    "label": "Cooking time",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "How long the dish takes to cook, in the game's own time units."
+  },
+  {
+    "kind": "Cooking",
+    "name": "CookingTemperature",
+    "label": "Cooking temperature",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "The cooking temperature the dish needs."
+  },
+  {
+    "kind": "Cooking",
+    "name": "ExhaustionBonusPerMainIngredient",
+    "label": "Exhaustion bonus per main ingredient",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Extra exhaustion the dish removes for each main ingredient it contains."
+  },
+  {
+    "kind": "Cooking",
+    "name": "ExhaustionBonusPerOptionalIngredient",
+    "label": "Exhaustion bonus per optional ingredient",
+    "type": "Number",
+    "unit": "",
+    "risk": "Low",
+    "writable": true,
+    "meaning": "Extra exhaustion the dish removes for each optional ingredient it contains."
+  },
+  {
+    "kind": "Cooking",
+    "name": "MainIngredients",
+    "label": "Main ingredients",
+    "type": "Unknown",
+    "unit": "",
+    "risk": "Unknown",
+    "writable": false,
+    "meaning": "The ingredients a dish must have. Edited in the Ingredients card."
+  },
+  {
+    "kind": "Cooking",
+    "name": "OptionalIngredients",
+    "label": "Optional ingredients",
+    "type": "Unknown",
+    "unit": "",
+    "risk": "Unknown",
+    "writable": false,
+    "meaning": "The ingredients a dish may also take. Edited in the Ingredients card."
+  }
+]

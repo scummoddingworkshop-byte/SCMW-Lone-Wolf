@@ -41,6 +41,29 @@ public class ContentCatalogTests
         Assert.True(recipe.Editable);
     }
 
+    [AvaloniaFact]
+    public void A_cooking_recipe_becomes_a_row()
+    {
+        var catalog = new ContentCatalog(new NullSource());
+        var dishes = catalog.MapCooking(new[]
+        {
+            new AssetSummary(
+                "SCUM/Content/ConZ_Files/Cooking/Recipes/Cakes/Cook_Dish_Cake_ApplePie",
+                "Dish Cake ApplePie", "Cakes", StatusKind.Unknown, 0,
+                "SCUM/Content/ConZ_Files/Cooking/Recipes/Cakes/Cook_Dish_Cake_ApplePie.uasset", null),
+            // A crafting recipe must not leak into the cooking list.
+            new AssetSummary(
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Placeables/CR_Base_Garden",
+                "Base Garden", "Crafting", StatusKind.Unknown, 0,
+                "SCUM/.../CR_Base_Garden.uasset", null),
+        });
+
+        var dish = Assert.Single(dishes);
+        Assert.Equal("Dish Cake ApplePie", dish.Name);
+        Assert.Equal("Cakes", dish.Category);
+        Assert.True(dish.Editable);
+    }
+
     /// <summary>A do-nothing source for mapping tests; no game, no disk.</summary>
     private sealed class NullSource : IContentSource
     {

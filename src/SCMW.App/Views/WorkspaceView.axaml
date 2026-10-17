@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SCMW.App"
+             xmlns:content="clr-namespace:SCMW.Core.Content;assembly=SCMW.Core"
              xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
@@ -78,6 +79,195 @@
 
       <ScrollViewer Grid.Row="2" Margin="0,12,0,0" Padding="0,0,12,0">
         <StackPanel>
+          <!-- A recipe's ingredients: one row per slot, editable (its accepted tag + the five
+               per-skill amounts). Those values are owned here, so they leave the list below. -->
+          <Border Name="IngredientsCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding HasIngredients}">
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                <TextBlock Grid.Column="0" Classes="section" Text="Ingredients" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Name="AddIngredient" Classes="secondary" Content="＋ Add ingredient"
+                        ToolTip.Tip="Add another ingredient slot"
+                        Command="{Binding AddIngredientSlotCommand}"/>
+              </Grid>
+              <TextBlock Text="{Binding IngredientNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}" Margin="0,0,0,10"
+                         IsVisible="{Binding HasIngredientNotice}"/>
+              <ItemsControl Name="IngredientList" ItemsSource="{Binding IngredientSlots}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:IngredientSlotRow">
+                    <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6" Margin="0,0,12,0">
+                          <TextBlock Text="{Binding Header}" Foreground="{StaticResource TextDimBrush}"/>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Accepts" Classes="dim" VerticalAlignment="Center"/>
+                            <ComboBox Name="TagPicker" MinWidth="200"
+                                      ItemsSource="{Binding TagChoices}"
+                                      SelectedItem="{Binding SelectedTag, Mode=TwoWay}"
+                                      SelectionChanged="OnTagChanged">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="content:RecipeTag">
+                                  <TextBlock Text="{Binding Label}"/>
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                          </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Row="0" Grid.Column="1" Name="RemoveIngredient" Classes="secondary"
+                                Content="✕" VerticalAlignment="Top" ToolTip.Tip="Remove this ingredient"
+                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveIngredientSlotCommand}"
+                                CommandParameter="{Binding}"/>
+
+                        <!-- The five per-skill amounts: click a value to type a new one. -->
+                        <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                                      ItemsSource="{Binding Amounts}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel/>
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:WorkspaceField">
+                              <StackPanel Margin="0,0,14,8" Spacing="2">
+                                <TextBlock Text="{Binding Label}" Classes="dim"/>
+                                <Button Classes="valuefield" MinWidth="72" HorizontalContentAlignment="Left"
+                                        IsVisible="{Binding ShowValueButton}"
+                                        Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                                        CommandParameter="{Binding}">
+                                  <TextBlock Text="{Binding Value}" Classes.changed="{Binding IsChanged}"/>
+                                </Button>
+                                <TextBox Classes="field" MinWidth="72" MinHeight="28"
+                                         IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
+                                         KeyDown="OnAmountKeyDown" LostFocus="OnAmountLostFocus"/>
+                              </StackPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- A dish's ingredients: one row per ingredient, each with its title and the foods it may
+               take (a food points at an item and carries five values). Those values are owned here,
+               so they leave the list below. -->
+          <Border Name="CookingCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding HasCookingIngredients}">
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,10">
+                <TextBlock Grid.Column="0" Classes="section" Text="Ingredients" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Name="AddCookingMainIngredient" Classes="secondary" Content="＋ Main"
+                        ToolTip.Tip="Add a main ingredient" Margin="0,0,6,0"
+                        Command="{Binding AddCookingMainIngredientCommand}"/>
+                <Button Grid.Column="2" Name="AddCookingOptionalIngredient" Classes="secondary" Content="＋ Optional"
+                        ToolTip.Tip="Add an optional ingredient"
+                        Command="{Binding AddCookingOptionalIngredientCommand}"/>
+              </Grid>
+              <TextBlock Text="{Binding CookingNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}" Margin="0,0,0,10"
+                         IsVisible="{Binding HasCookingNotice}"/>
+              <ItemsControl Name="CookingIngredientList" ItemsSource="{Binding CookingSlots}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CookingIngredientRow">
+                    <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6" Margin="0,0,12,0">
+                          <TextBlock Text="{Binding Header}" Foreground="{StaticResource TextDimBrush}"/>
+                          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasTitle}">
+                            <TextBlock Text="Title" Classes="dim" VerticalAlignment="Center"/>
+                            <Button Classes="valuefield" MinWidth="120" HorizontalContentAlignment="Left"
+                                    IsVisible="{Binding Title.ShowValueButton}"
+                                    Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                                    CommandParameter="{Binding Title}">
+                              <TextBlock Text="{Binding Title.Value}" Classes.changed="{Binding Title.IsChanged}"/>
+                            </Button>
+                            <TextBox Classes="field" MinWidth="120" MinHeight="28"
+                                     IsVisible="{Binding Title.IsEditing}" Text="{Binding Title.Draft, Mode=TwoWay}"
+                                     KeyDown="OnAmountKeyDown" LostFocus="OnAmountLostFocus"/>
+                          </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Row="0" Grid.Column="1" Name="RemoveCookingIngredient" Classes="secondary"
+                                Content="✕" VerticalAlignment="Top" ToolTip.Tip="Remove this ingredient"
+                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveCookingIngredientCommand}"
+                                CommandParameter="{Binding}"/>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="8" Margin="0,10,0,0">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Foods" Classes="dim" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Name="AddCookingFood" Classes="secondary" Content="＋ Add food"
+                                    ToolTip.Tip="Add a food this ingredient may take"
+                                    Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCookingFoodCommand}"
+                                    CommandParameter="{Binding}"/>
+                          </Grid>
+                          <ItemsControl Name="CookingFoodList" ItemsSource="{Binding Foods}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:CookingFoodRow">
+                                <Border Classes="card" Margin="0,0,0,8" Padding="10">
+                                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6" Margin="0,0,12,0">
+                                      <TextBlock Text="{Binding Header}" Foreground="{StaticResource TextDimBrush}"/>
+                                      <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Item" Classes="dim" VerticalAlignment="Center"/>
+                                        <ComboBox Name="FoodPicker" MinWidth="200"
+                                                  ItemsSource="{Binding Choices}"
+                                                  SelectedItem="{Binding SelectedFood, Mode=TwoWay}"
+                                                  SelectionChanged="OnCookingFoodChanged">
+                                          <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="content:CookingFood">
+                                              <TextBlock Text="{Binding Label}"/>
+                                            </DataTemplate>
+                                          </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                      </StackPanel>
+                                    </StackPanel>
+                                    <Button Grid.Row="0" Grid.Column="1" Name="RemoveCookingFood" Classes="secondary"
+                                            Content="✕" VerticalAlignment="Top" ToolTip.Tip="Remove this food"
+                                            Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveCookingFoodCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                                                  ItemsSource="{Binding Values}">
+                                      <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                          <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                      </ItemsControl.ItemsPanel>
+                                      <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:WorkspaceField">
+                                          <StackPanel Margin="0,0,14,8" Spacing="2">
+                                            <TextBlock Text="{Binding Label}" Classes="dim"/>
+                                            <Button Classes="valuefield" MinWidth="72" HorizontalContentAlignment="Left"
+                                                    IsVisible="{Binding ShowValueButton}"
+                                                    Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                                                    CommandParameter="{Binding}">
+                                              <TextBlock Text="{Binding Value}" Classes.changed="{Binding IsChanged}"/>
+                                            </Button>
+                                            <TextBox Classes="field" MinWidth="72" MinHeight="28"
+                                                     IsVisible="{Binding IsEditing}" Text="{Binding Draft, Mode=TwoWay}"
+                                                     KeyDown="OnAmountKeyDown" LostFocus="OnAmountLostFocus"/>
+                                          </StackPanel>
+                                        </DataTemplate>
+                                      </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                  </Grid>
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
           <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:WorkspaceField">

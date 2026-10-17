@@ -51,6 +51,66 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when the open file has at least one field to show.</summary>
     [ObservableProperty] private bool _hasFields;
 
+    // --- A recipe's ingredients (the Ingredients card) -------------------------------------------
+    // A recipe stores one amount per ingredient slot per skill tier. That shape is shown as its own
+    // card, so the card owns those values and they leave the plain field list. The tag and the
+    // per-slot amount paths are the deliberate exception to the field-library rule — see
+    // RecipeIngredients, the one place those paths are built.
+
+    /// <summary>The skill tiers, lowest first — the order the card shows the amounts.</summary>
+    private static readonly SkillLevel[] SkillLevels =
+    {
+        SkillLevel.NoSkill, SkillLevel.Basic, SkillLevel.Medium, SkillLevel.Advanced, SkillLevel.AboveAdvanced,
+    };
+
+    /// <summary>The game's real ingredient tags (filled when the Recipes kind is loaded).</summary>
+    private IReadOnlyList<RecipeTag> _ingredientTags = Array.Empty<RecipeTag>();
+
+    /// <summary>One row per ingredient slot of the open recipe; empty for every other kind.</summary>
+    public ObservableCollection<IngredientSlotRow> IngredientSlots { get; } = new();
+
+    /// <summary>True when the open recipe shows an Ingredients card.</summary>
+    public bool HasIngredients => IngredientSlots.Count > 0;
+
+    /// <summary>A plain note shown under the card after an ingredient change (empty when none).</summary>
+    [ObservableProperty] private string _ingredientNotice = string.Empty;
+
+    /// <summary>True when the card should show its note.</summary>
+    public bool HasIngredientNotice => !string.IsNullOrWhiteSpace(IngredientNotice);
+
+    partial void OnIngredientNoticeChanged(string value) => OnPropertyChanged(nameof(HasIngredientNotice));
+
+    // --- A cooking dish's ingredients (the Ingredients card) -------------------------------------
+    // A dish stores main and optional ingredients, each with a title and a list of foods (a soft link
+    // to an item plus a few values). That shape is shown as its own card, so the card owns those
+    // values and they leave the plain field list. The per-slot paths are the deliberate exception to
+    // the field-library rule — see CookingIngredients, the one place those paths are built.
+
+    /// <summary>The game's real foods (filled when the Cooking kind is loaded).</summary>
+    private IReadOnlyList<CookingFood> _cookingFoods = Array.Empty<CookingFood>();
+
+    /// <summary>One row per ingredient of the open dish; empty for every other kind.</summary>
+    public ObservableCollection<CookingIngredientRow> CookingSlots { get; } = new();
+
+    /// <summary>True when the open dish shows an Ingredients card.</summary>
+    public bool HasCookingIngredients => CookingSlots.Count > 0;
+
+    /// <summary>A plain note shown under the card after a cooking change (empty when none).</summary>
+    [ObservableProperty] private string _cookingNotice = string.Empty;
+
+    /// <summary>True when the card should show its note.</summary>
+    public bool HasCookingNotice => !string.IsNullOrWhiteSpace(CookingNotice);
+
+    partial void OnCookingNoticeChanged(string value) => OnPropertyChanged(nameof(HasCookingNotice));
+
+    // The arguments of the last Show, so an ingredient change can redraw the card without re-reading
+    // the game file (the file itself never changes; only the project's records do).
+    private string _shownKind = string.Empty;
+    private string _shownTitle = string.Empty;
+    private IReadOnlyList<AssetField> _shownFields = Array.Empty<AssetField>();
+    private string? _shownAssetPath;
+    private IReadOnlyList<AddableField>? _shownAddable;
+
     // --- Which mod you are editing (Task 4.1) ----------------------------------------------------
     // "One project = one mod": an edit is saved into the project the player picked. With none
     // picked, the Workspace refuses (and says so) rather than quietly targeting the newest project.
@@ -69,7 +129,7 @@ public partial class WorkspaceViewModel : ObservableObject
     public const string DefaultKind = "Items";
 
     /// <summary>The kinds the picker offers, in the order they are shown.</summary>
-    public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes" };
+    public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes", "Cooking" };
 
     /// <summary>The kind being browsed (always one of <see cref="Kinds"/>).</summary>
     [ObservableProperty] private string _selectedKind = DefaultKind;
@@ -103,6 +163,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         "Base building" => AssetFamily.BaseElements,
         "Recipes" => AssetFamily.Recipes,
+        "Cooking" => AssetFamily.Cooking,
         _ => AssetFamily.Items,
     };
 
@@ -113,12 +174,18 @@ public partial class WorkspaceViewModel : ObservableObject
         var family = FamilyOf(kind);
 
         IReadOnlyList<ItemSummary> assets = Array.Empty<ItemSummary>();
+        _ingredientTags = Array.Empty<RecipeTag>();
+        _cookingFoods = Array.Empty<CookingFood>();
         if (_source is not null && _catalog is not null)
         {
             try
             {
                 var all = await AssetReader.ReadAllAsync(_source).ConfigureAwait(false);
                 assets = _catalog.Map(family, all);
+                if (family == AssetFamily.Recipes)
+                    _ingredientTags = RecipeTags.From(all);
+                else if (family == AssetFamily.Cooking)
+                    _cookingFoods = CookingFoods.From(all);
             }
             catch
             {
@@ -246,13 +313,40 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <paramref name="addable"/> lists the described fields the file lacks that we could add by
     /// borrowing a donor item's shape (Task 5.2); it is empty for a caller that has not looked.</summary>
     public void Show(string kind, string title, IReadOnlyList<AssetField> fields, string? assetPath = null,
-                     IReadOnlyList<AddableField>? addable = null)
+                     IReadOnlyList<AddableField>? addable = null, IReadOnlyList<RecipeTag>? ingredientTags = null,
+                     IReadOnlyList<CookingFood>? cookingFoods = null)
     {
+        if (ingredientTags is not null) _ingredientTags = ingredientTags;
+        if (cookingFoods is not null) _cookingFoods = cookingFoods;
+
+        var sameAsset = string.Equals(_shownAssetPath, assetPath, StringComparison.OrdinalIgnoreCase);
+        _shownKind = kind;
+        _shownTitle = title;
+        _shownFields = fields;
+        _shownAssetPath = assetPath;
+        _shownAddable = addable;
+        if (!sameAsset) { IngredientNotice = string.Empty; CookingNotice = string.Empty; }
+
         Title = title;
         Fields.Clear();
+        IngredientSlots.Clear();
+        CookingSlots.Clear();
+
+        // A recipe's ingredient slots own their tag and amounts, and a dish's own the title and the
+        // foods, so those move into the cards and stay out of the plain (locked) list. Every other
+        // field of the file shows exactly as before.
+        var fileSlots = string.Equals(kind, "Recipes", StringComparison.OrdinalIgnoreCase)
+            ? RecipeIngredients.From(fields)
+            : Array.Empty<IngredientSlot>();
+        var cookingSlots = string.Equals(kind, "Cooking", StringComparison.OrdinalIgnoreCase)
+            ? CookingIngredients.From(fields)
+            : Array.Empty<CookingIngredientSlot>();
+        var owned = OwnedIngredientPaths(fileSlots);
+        foreach (var path in OwnedCookingPaths(cookingSlots)) owned.Add(path);
 
         foreach (var field in fields)
         {
+            if (owned.Contains(field.TechnicalName)) continue;
             Fields.Add(Describe(kind, field));
         }
 
@@ -282,6 +376,24 @@ public partial class WorkspaceViewModel : ObservableObject
 
         HasFields = Fields.Count > 0;
 
+        // The Ingredients card (recipes only): the file's slots with the project's list changes played
+        // back, one row each, with recorded values applied.
+        var displayed = RecipeIngredients.WithListChanges(fileSlots, ListChanges(assetPath));
+        if (displayed.Count > 0)
+        {
+            BuildIngredientRows(displayed, assetPath, title);
+        }
+        OnPropertyChanged(nameof(HasIngredients));
+
+        // The Ingredients card (dishes only): the file's ingredients with the project's list changes
+        // played back, one row each, with recorded values applied.
+        var displayedCooking = CookingIngredients.WithListChanges(cookingSlots, CookingListChanges(assetPath));
+        if (displayedCooking.Count > 0)
+        {
+            BuildCookingRows(displayedCooking, assetPath, title);
+        }
+        OnPropertyChanged(nameof(HasCookingIngredients));
+
         AddableFields.Clear();
         if (addable is not null)
         {
@@ -289,6 +401,246 @@ public partial class WorkspaceViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(HasAddableFields));
     }
+
+    /// <summary>The field paths the Ingredients card owns (each slot's tag and amounts).</summary>
+    private static HashSet<string> OwnedIngredientPaths(IReadOnlyList<IngredientSlot> slots)
+    {
+        var owned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var slot in slots)
+        {
+            if (slot.Tag is not null) owned.Add(slot.Tag.TechnicalName);
+            foreach (var amount in slot.Amounts) owned.Add(amount.Field.TechnicalName);
+        }
+
+        return owned;
+    }
+
+    /// <summary>The project's recorded add/remove changes to this recipe's ingredient list, in order.</summary>
+    private IReadOnlyList<IngredientListChange> ListChanges(string? assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath)) return Array.Empty<IngredientListChange>();
+
+        var changes = new List<IngredientListChange>();
+        foreach (var record in Records())
+        {
+            if (!string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (record.Operation == ChangeOperation.AddEntry
+                && string.Equals(record.FieldTechnicalName, RecipeIngredients.ListName, StringComparison.OrdinalIgnoreCase))
+            {
+                changes.Add(new IngredientListChange(ChangeOperation.AddEntry, -1));
+            }
+            else if (record.Operation == ChangeOperation.RemoveEntry
+                     && RecipeIngredients.TrySlotIndex(record.FieldTechnicalName, out var index))
+            {
+                changes.Add(new IngredientListChange(ChangeOperation.RemoveEntry, index));
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>Redraw the open file from the records already known (no game-file read).</summary>
+    private void RefreshShown() =>
+        Show(_shownKind, _shownTitle, _shownFields, _shownAssetPath, _shownAddable);
+
+    /// <summary>Build one card row per slot, applying the project's recorded values by path.</summary>
+    private void BuildIngredientRows(IReadOnlyList<IngredientSlot> slots, string? assetPath, string title)
+    {
+        var records = Records();
+
+        foreach (var slot in slots)
+        {
+            var tagName = slot.TagValue;
+            var tagPath = RecipeIngredients.TagPath(slot.Index);
+            var originalTag = tagName is null || string.IsNullOrEmpty(assetPath)
+                ? tagName
+                : AppliedValue.OriginalForAsset(records, assetPath, title, tagPath) ?? tagName;
+
+            var amounts = new List<WorkspaceField>(SkillLevels.Length);
+            foreach (var level in SkillLevels)
+            {
+                var path = RecipeIngredients.AmountPath(slot.Index, level);
+                var gameValue = slot.AmountField(level)?.CurrentValue ?? string.Empty;
+                var applied = string.IsNullOrEmpty(assetPath)
+                    ? gameValue
+                    : AppliedValue.ResolveForAsset(records, assetPath, title, path, gameValue) ?? gameValue;
+                var original = string.IsNullOrEmpty(assetPath)
+                    ? gameValue
+                    : AppliedValue.OriginalForAsset(records, assetPath, title, path) ?? gameValue;
+
+                var field = new WorkspaceField(
+                    label: SkillLabel(level), unit: string.Empty, value: gameValue,
+                    risk: Risk.Unknown, writable: true, meaning: string.Empty,
+                    technicalName: path, described: false, type: FieldType.Number);
+                field.Load(applied, original);
+                amounts.Add(field);
+            }
+
+            IngredientSlots.Add(new IngredientSlotRow(slot.Index, TagChoice(tagName, _ingredientTags), originalTag,
+                                                      _ingredientTags, amounts));
+        }
+    }
+
+    /// <summary>The picker's entry for a tag name: the indexed tag, or a plainly-labelled stand-in.</summary>
+    private static RecipeTag? TagChoice(string? name, IReadOnlyList<RecipeTag> choices)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+
+        foreach (var choice in choices)
+        {
+            if (string.Equals(choice.Name, name, StringComparison.OrdinalIgnoreCase)) return choice;
+        }
+
+        return new RecipeTag(name, RecipeTags.Label(name));
+    }
+
+    /// <summary>The owner-facing label for a skill tier.</summary>
+    private static string SkillLabel(SkillLevel level) => level switch
+    {
+        SkillLevel.NoSkill => "No skill",
+        SkillLevel.AboveAdvanced => "Above advanced",
+        _ => RecipeIngredients.SkillName(level),
+    };
+
+    // --- A dish's ingredients (the Ingredients card) ---------------------------------------------
+
+    /// <summary>The field paths the cooking Ingredients card owns (each title, food item and value).</summary>
+    private static IEnumerable<string> OwnedCookingPaths(IReadOnlyList<CookingIngredientSlot> ingredients)
+    {
+        foreach (var ingredient in ingredients)
+        {
+            if (ingredient.Title is not null)
+                yield return CookingIngredients.TitlePath(ingredient.IsMain, ingredient.Index);
+
+            foreach (var food in ingredient.Foods)
+            {
+                if (food.Item is not null)
+                    yield return CookingIngredients.FoodItemPath(ingredient.IsMain, ingredient.Index, food.Index);
+
+                foreach (var value in food.Values)
+                    yield return CookingIngredients.FoodValuePath(ingredient.IsMain, ingredient.Index, food.Index, value.Name);
+            }
+        }
+    }
+
+    /// <summary>The project's recorded add/remove changes to this dish's ingredient and food lists, in order.</summary>
+    private IReadOnlyList<CookingListChange> CookingListChanges(string? assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath)) return Array.Empty<CookingListChange>();
+
+        var changes = new List<CookingListChange>();
+        foreach (var record in Records())
+        {
+            if (!string.Equals(record.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (record.Operation is not (ChangeOperation.AddEntry or ChangeOperation.RemoveEntry))
+                continue;
+
+            if (CookingIngredients.TryListPath(record.FieldTechnicalName, out var path))
+                changes.Add(new CookingListChange(record.Operation, path.IsMain, path.IngredientIndex,
+                                                  path.IsFood, path.FoodIndex));
+        }
+
+        return changes;
+    }
+
+    /// <summary>Build one card row per ingredient (and its foods), applying recorded values by path.</summary>
+    private void BuildCookingRows(IReadOnlyList<CookingIngredientSlot> ingredients, string? assetPath, string title)
+    {
+        var records = Records();
+
+        foreach (var ingredient in ingredients)
+        {
+            var isMain = ingredient.IsMain;
+            var index = ingredient.Index;
+
+            WorkspaceField? titleField = null;
+            if (ingredient.Title is not null)
+            {
+                var path = CookingIngredients.TitlePath(isMain, index);
+                var gameValue = ingredient.Title.CurrentValue;
+                var applied = string.IsNullOrEmpty(assetPath)
+                    ? gameValue
+                    : AppliedValue.ResolveForAsset(records, assetPath, title, path, gameValue) ?? gameValue;
+                var original = string.IsNullOrEmpty(assetPath)
+                    ? gameValue
+                    : AppliedValue.OriginalForAsset(records, assetPath, title, path) ?? gameValue;
+
+                titleField = new WorkspaceField(
+                    label: "Title", unit: string.Empty, value: gameValue,
+                    risk: Risk.Unknown, writable: true, meaning: string.Empty,
+                    technicalName: path, described: false, type: FieldType.Text);
+                titleField.Load(applied, original);
+            }
+
+            var foods = new List<CookingFoodRow>(ingredient.Foods.Count);
+            foreach (var food in ingredient.Foods)
+            {
+                var itemPath = CookingIngredients.FoodItemPath(isMain, index, food.Index);
+                var gameItem = food.ItemValue;
+                var appliedItem = gameItem is null || string.IsNullOrEmpty(assetPath)
+                    ? gameItem
+                    : AppliedValue.ResolveForAsset(records, assetPath, title, itemPath, gameItem) ?? gameItem;
+                var originalItem = gameItem is null || string.IsNullOrEmpty(assetPath)
+                    ? gameItem
+                    : AppliedValue.OriginalForAsset(records, assetPath, title, itemPath) ?? gameItem;
+
+                var values = new List<WorkspaceField>(food.Values.Count);
+                foreach (var value in food.Values)
+                {
+                    var path = CookingIngredients.FoodValuePath(isMain, index, food.Index, value.Name);
+                    var gameValue = value.Field.CurrentValue;
+                    var applied = string.IsNullOrEmpty(assetPath)
+                        ? gameValue
+                        : AppliedValue.ResolveForAsset(records, assetPath, title, path, gameValue) ?? gameValue;
+                    var original = string.IsNullOrEmpty(assetPath)
+                        ? gameValue
+                        : AppliedValue.OriginalForAsset(records, assetPath, title, path) ?? gameValue;
+
+                    var field = new WorkspaceField(
+                        label: FoodValueLabel(value.Name), unit: string.Empty, value: gameValue,
+                        risk: Risk.Unknown, writable: true, meaning: string.Empty,
+                        technicalName: path, described: false, type: FoodValueType(value.Name));
+                    field.Load(applied, original);
+                    values.Add(field);
+                }
+
+                foods.Add(new CookingFoodRow(isMain, index, food.Index, originalItem, appliedItem,
+                                             FoodChoice(appliedItem, _cookingFoods), _cookingFoods, values));
+            }
+
+            CookingSlots.Add(new CookingIngredientRow(isMain, index, titleField, foods));
+        }
+    }
+
+    /// <summary>The picker's entry for a soft path: the indexed food, or a plainly-labelled stand-in.</summary>
+    private static CookingFood? FoodChoice(string? softPath, IReadOnlyList<CookingFood> choices)
+    {
+        if (string.IsNullOrEmpty(softPath)) return null;
+
+        foreach (var choice in choices)
+        {
+            if (string.Equals(choice.SoftPath, softPath, StringComparison.OrdinalIgnoreCase)) return choice;
+        }
+
+        return new CookingFood(softPath, CookingFoods.Label(softPath));
+    }
+
+    /// <summary>The owner-facing label for a food value.</summary>
+    private static string FoodValueLabel(string name) => name switch
+    {
+        "NutrientInclusionFactor" => "Nutrient inclusion",
+        "ShouldConsumeWhole" => "Consume whole",
+        "IsResource" => "Is resource",
+        _ => name,
+    };
+
+    /// <summary>The kind of a food value, so its row edits and validates like any other value.</summary>
+    private static FieldType FoodValueType(string name) =>
+        name is "ShouldConsumeWhole" or "IsResource" ? FieldType.Boolean : FieldType.Number;
 
     /// <summary>The project's "add a field" records for this item (its own file or its class file).</summary>
     private IEnumerable<ChangeRecord> AddedRecordsFor(string assetPath) =>
@@ -656,6 +1008,180 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (field is null) return;
         field.IsEditing = false;
+    }
+
+    /// <summary>Change the tag an ingredient slot accepts. Recorded against the slot's own tag path
+    /// (a deliberate exception to the field-library rule — see <see cref="RecipeIngredients"/>).</summary>
+    [RelayCommand]
+    private void SetIngredientTag(IngredientSlotRow? slot)
+    {
+        if (slot?.SelectedTag is null) return;
+
+        var chosen = slot.SelectedTag.Name;
+        if (string.Equals(chosen, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase))
+            return;   // the file's own tag (or the picker settling on load): nothing to record
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path)) return;   // not wired to a project: show only
+        if (NeedsProject) return;   // no project chosen: refuse (the banner says why)
+
+        _changes.RecordEdit(path!, RecipeIngredients.TagPath(slot.Index), slot.OriginalTagName, chosen,
+                            _projects!.Chosen!.Id, assetPath: path);
+    }
+
+    /// <summary>Add an ingredient slot. Recorded as a list change; the build clones the last slot, so
+    /// the card shows the new (cloned) row at once.</summary>
+    [RelayCommand]
+    private void AddIngredientSlot()
+    {
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        _changes.RecordListChange(path!, RecipeIngredients.ListName, ChangeOperation.AddEntry,
+                                  _projects!.Chosen!.Id, assetPath: path);
+        IngredientNotice = string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>Remove an ingredient slot at its own index. Removing shifts the rest, so the recipe's
+    /// existing value changes are cleared first — the card says how many, so nothing is silent.</summary>
+    [RelayCommand]
+    private void RemoveIngredientSlot(IngredientSlotRow? slot)
+    {
+        if (slot is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        var dropped = _changes.RecordListChange(path!, RecipeIngredients.SlotPath(slot.Index),
+                                                ChangeOperation.RemoveEntry, _projects!.Chosen!.Id, assetPath: path);
+
+        IngredientNotice = dropped > 0
+            ? $"{dropped} other change(s) on this recipe were cleared, because removing an ingredient renumbers the rest — please re-check them."
+            : string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>Change the item a food points at. Recorded against the food's own item path (a
+    /// deliberate exception to the field-library rule — see <see cref="CookingIngredients"/>). Picking
+    /// the file's own item back is a revert, so the recorded change is dropped rather than left to build.</summary>
+    [RelayCommand]
+    private void SetCookingFood(CookingFoodRow? food)
+    {
+        if (food?.SelectedFood is null) return;
+
+        var chosen = food.SelectedFood.SoftPath;
+        if (string.Equals(chosen, food.CurrentItemPath, StringComparison.OrdinalIgnoreCase))
+            return;   // the picker settling on what is already shown: nothing to record
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path)) return;   // not wired to a project: show only
+        if (NeedsProject) return;   // no project chosen: refuse (the banner says why)
+
+        var fieldPath = CookingIngredients.FoodItemPath(food.IsMain, food.IngredientIndex, food.Index);
+
+        if (string.Equals(chosen, food.OriginalItemPath, StringComparison.OrdinalIgnoreCase))
+        {
+            UndoCookingSet(path!, fieldPath);   // back to the game's own item: drop the standing change
+            food.CurrentItemPath = food.OriginalItemPath;
+            return;
+        }
+
+        _changes.RecordEdit(path!, fieldPath, food.OriginalItemPath, chosen, _projects!.Chosen!.Id,
+                            assetPath: path);
+        food.CurrentItemPath = chosen;
+    }
+
+    /// <summary>Drop every recorded value change on one dish field (used when a picker returns to the
+    /// game's own value, so the change is truly gone rather than a no-op record the build would still write).</summary>
+    private void UndoCookingSet(string assetPath, string fieldPath)
+    {
+        var folder = _projects?.Chosen?.FolderPath;
+        if (_changes is null || string.IsNullOrEmpty(folder)) return;
+
+        var ids = _changes.For(folder)
+            .Where(r => r.Operation == ChangeOperation.Set
+                        && string.Equals(r.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(r.FieldTechnicalName, fieldPath, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var id in ids) _changes.Undo(folder, id);
+    }
+
+    /// <summary>Add a food to an ingredient. Recorded as a list change; the build clones the last food,
+    /// so the card shows the new (cloned) row at once.</summary>
+    [RelayCommand]
+    private void AddCookingFood(CookingIngredientRow? ingredient)
+    {
+        if (ingredient is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        _changes.RecordListChange(path!, CookingIngredients.FoodListPath(ingredient.IsMain, ingredient.Index),
+                                  ChangeOperation.AddEntry, _projects!.Chosen!.Id, assetPath: path);
+        CookingNotice = string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>Remove a food at its own index. Removing shifts the rest, so the dish's existing value
+    /// changes are cleared first — the card says how many, so nothing is silent.</summary>
+    [RelayCommand]
+    private void RemoveCookingFood(CookingFoodRow? food)
+    {
+        if (food is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        var dropped = _changes.RecordListChange(path!,
+            CookingIngredients.FoodPath(food.IsMain, food.IngredientIndex, food.Index),
+            ChangeOperation.RemoveEntry, _projects!.Chosen!.Id, assetPath: path);
+
+        CookingNotice = dropped > 0
+            ? $"{dropped} other change(s) on this dish were cleared, because removing a food renumbers the rest — please re-check them."
+            : string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>Add a main ingredient. Recorded as a list change; the build clones the last one.</summary>
+    [RelayCommand]
+    private void AddCookingMainIngredient() => AddCookingIngredient(isMain: true);
+
+    /// <summary>Add an optional ingredient. Recorded as a list change; the build clones the last one.</summary>
+    [RelayCommand]
+    private void AddCookingOptionalIngredient() => AddCookingIngredient(isMain: false);
+
+    private void AddCookingIngredient(bool isMain)
+    {
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        _changes.RecordListChange(path!, CookingIngredients.ListName(isMain), ChangeOperation.AddEntry,
+                                  _projects!.Chosen!.Id, assetPath: path);
+        CookingNotice = string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>Remove an ingredient at its own index. Removing shifts the rest, so the dish's existing
+    /// value changes are cleared first — the card says how many, so nothing is silent.</summary>
+    [RelayCommand]
+    private void RemoveCookingIngredient(CookingIngredientRow? ingredient)
+    {
+        if (ingredient is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        var dropped = _changes.RecordListChange(path!,
+            CookingIngredients.IngredientPath(ingredient.IsMain, ingredient.Index),
+            ChangeOperation.RemoveEntry, _projects!.Chosen!.Id, assetPath: path);
+
+        CookingNotice = dropped > 0
+            ? $"{dropped} other change(s) on this dish were cleared, because removing an ingredient renumbers the rest — please re-check them."
+            : string.Empty;
+        RefreshShown();
     }
 
     /// <summary>Open the factor editor on one field ("×2", "half", "+50%"); only one editor at a time.</summary>

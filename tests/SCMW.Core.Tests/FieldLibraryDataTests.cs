@@ -45,6 +45,27 @@ public class FieldLibraryDataTests
     }
 
     [Fact]
+    public void Cooking_numbers_are_described_and_writable()
+    {
+        foreach (var field in new[]
+                 {
+                     "CookingTime", "CookingTemperature",
+                     "ExhaustionBonusPerMainIngredient", "ExhaustionBonusPerOptionalIngredient",
+                 })
+        {
+            var def = Library.Lookup("Cooking", field);
+            Assert.NotNull(def);
+            Assert.True(def!.Writable);
+            Assert.False(string.IsNullOrWhiteSpace(def.Meaning));
+        }
+
+        // The ingredient arrays are owned by the Ingredients card, so they are described but not typed over.
+        var main = Library.Lookup("Cooking", "MainIngredients");
+        Assert.NotNull(main);
+        Assert.False(main!.Writable);
+    }
+
+    [Fact]
     public void Base_element_health_and_decay_are_described()
     {
         var health = Library.Lookup("BaseElements", "_healthPoints");
@@ -52,8 +73,7 @@ public class FieldLibraryDataTests
 
         Assert.NotNull(health);
         Assert.True(health!.Writable);
-        Assert.NotNull(decay);
-        Assert.Equal("hours", decay!.Unit);
+        Assert.NotNull(decay);        Assert.Equal("hours", decay!.Unit);
     }
 
     [Fact]

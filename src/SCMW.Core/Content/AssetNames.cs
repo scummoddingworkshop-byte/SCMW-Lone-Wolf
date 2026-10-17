@@ -61,4 +61,22 @@ public static class AssetNames
         var slash = rest.IndexOf('/');
         return slash > 0 ? rest[..slash] : "Recipes";
     }
+
+    private const string CookingPrefix = "Cook_";
+
+    /// <summary>True when a raw asset name is a cooking recipe (a <c>Cook_*</c> data asset).</summary>
+    public static bool IsCookingName(string assetName) =>
+        !string.IsNullOrEmpty(assetName)
+        && assetName.StartsWith(CookingPrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The friendly name for a cooking recipe: <c>Cook_Dish_Cake_ApplePie</c> →
+    /// <c>Dish Cake ApplePie</c>. (The dish's own display name, e.g. "Apple Pie", lives inside the
+    /// file and is shown once it is open.)
+    /// </summary>
+    public static string CookingFriendly(string assetName)
+    {
+        var name = IsCookingName(assetName) ? assetName[CookingPrefix.Length..] : assetName;
+        return name.Replace('_', ' ').Trim();
+    }
 }

@@ -243,7 +243,7 @@ public class WorkspaceViewTests
     {
         var vm = new WorkspaceViewModel();
 
-        Assert.Equal(new[] { "Items", "Base building", "Recipes" }, vm.Kinds);
+        Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" }, vm.Kinds);
         Assert.DoesNotContain("Loot & spawn", vm.Kinds);
     }
 

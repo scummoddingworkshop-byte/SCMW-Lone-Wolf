@@ -507,6 +507,29 @@ public class PakContentSourceTests
             out _));
     }
 
+    // --- Cooking recipes: a fourth "place to look" -----------------------------------------------
+
+    [Fact]
+    public void A_cooking_recipe_is_indexed_from_its_own_folder()
+    {
+        Assert.True(PakContentSource.TryMapCooking(
+            "SCUM/Content/ConZ_Files/Cooking/Recipes/Cakes/Cook_Dish_Cake_ApplePie.uasset",
+            out var pie));
+        Assert.Equal("Dish Cake ApplePie", pie.Name);
+        Assert.Equal("Cakes", pie.Category);
+
+        // A file directly under Recipes/ still maps, with the catch-all category.
+        Assert.True(PakContentSource.TryMapCooking(
+            "SCUM/Content/ConZ_Files/Cooking/Recipes/Cook_Dish_Stew.uasset", out var stew));
+        Assert.Equal("Cooking", stew.Category);
+
+        // A crafting recipe is not a cooking recipe; a cooking recipe is not an item.
+        Assert.False(PakContentSource.TryMapCooking(
+            Item("Crafting/Recipes/Placeables/CR_Base_Garden.uasset"), out _));
+        Assert.False(PakContentSource.TryMapItem(
+            "SCUM/Content/ConZ_Files/Cooking/Recipes/Cakes/Cook_Dish_Cake_ApplePie.uasset", out _));
+    }
+
     [Fact]
     public async Task A_scan_indexes_spawner_presets_alongside_items()
     {

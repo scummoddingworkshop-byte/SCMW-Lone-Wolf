@@ -17,6 +17,11 @@ public sealed class AssetIndex : IAssetIndex
     private const string BuildIdKey = "game_build_id";
     private const string LastScanKey = "last_scan_utc";
 
+    // Bumped whenever the set of things we index changes (a new folder, a new rule), so an
+    // up-to-date index from an older app version is rebuilt instead of silently missing them.
+    private const string IndexVersionKey = "index_version";
+    private const int CurrentIndexVersion = 2;
+
     // Idempotent by construction (IF NOT EXISTS): missing pieces heal on the
     // next call, repeated calls are cheap no-ops.
     private static readonly string[] SchemaDdl =
@@ -64,6 +69,19 @@ public sealed class AssetIndex : IAssetIndex
             setBuild.Parameters.Add("@key", SqliteType.Text).Value = BuildIdKey;
             setBuild.Parameters.Add("@value", SqliteType.Text).Value = gameBuildId;
             setBuild.ExecuteNonQuery();
+        }
+
+        using (var setVersion = conn.CreateCommand())
+        {
+            setVersion.Transaction = tx;
+            setVersion.CommandText = """
+                INSERT INTO meta(key, value) VALUES(@key, @value)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """;
+            setVersion.Parameters.Add("@key", SqliteType.Text).Value = IndexVersionKey;
+            setVersion.Parameters.Add("@value", SqliteType.Text).Value =
+                CurrentIndexVersion.ToString(CultureInfo.InvariantCulture);
+            setVersion.ExecuteNonQuery();
         }
 
         // Record when the scan completed so the Settings screen can show
@@ -230,7 +248,21 @@ public sealed class AssetIndex : IAssetIndex
     }
 
     public bool IsStale(string dbPath, string currentGameBuildId)
-        => ReadBuildId(dbPath) != currentGameBuildId;
+        => ReadBuildId(dbPath) != currentGameBuildId || ReadIndexVersion(dbPath) != CurrentIndexVersion;
+
+    /// <summary>The index-format version stored by the last scan (0 when it predates versioning).</summary>
+    public int ReadIndexVersion(string dbPath)
+    {
+        ValidatePath(dbPath);
+        if (!File.Exists(dbPath)) return 0;
+
+        using var conn = Open(dbPath);
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT value FROM meta WHERE key = @key";
+        cmd.Parameters.Add("@key", SqliteType.Text).Value = IndexVersionKey;
+        var value = cmd.ExecuteScalar() as string;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var version) ? version : 0;
+    }
 
     private static void ValidatePath(string dbPath)
     {
