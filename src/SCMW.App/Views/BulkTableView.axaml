@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SCMW.App"
              xmlns:knowledge="clr-namespace:SCMW.Core.Knowledge;assembly=SCMW.Core"
+             xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Views.BulkTableView"
              x:DataType="vm:BulkTableViewModel">
   <!-- The bulk table: pick a kind, narrow the list (e.g. the "Food" chip), tick many files —
@@ -74,14 +75,14 @@
         </StackPanel>
 
         <TextBlock Text="Which value?" Classes="dim"/>
-        <ComboBox Name="FieldPicker" HorizontalAlignment="Stretch"
-                  ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField, Mode=TwoWay}">
-          <ComboBox.ItemTemplate>
+        <controls:SearchPicker Name="FieldPicker" HorizontalAlignment="Stretch"
+                               ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField, Mode=TwoWay}">
+          <controls:SearchPicker.ItemTemplate>
             <DataTemplate x:DataType="knowledge:FieldDefinition">
               <TextBlock Text="{Binding Label}"/>
             </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
+          </controls:SearchPicker.ItemTemplate>
+        </controls:SearchPicker>
 
         <TextBlock Text="New value" Classes="dim"/>
         <TextBox Name="ValueBox" Classes="field" Text="{Binding Value, Mode=TwoWay}"/>

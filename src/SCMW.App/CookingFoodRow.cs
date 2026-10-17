@@ -12,7 +12,8 @@ namespace SCMW.App;
 public partial class CookingFoodRow : ObservableObject
 {
     public CookingFoodRow(bool isMain, int ingredientIndex, int index, string? originalItemPath,
-                          string? currentItemPath, CookingFood? selected, IReadOnlyList<CookingFood> choices,
+                          string? currentItemPath, bool hasItem, string? resourceLabel,
+                          CookingFood? selected, IReadOnlyList<CookingFood> choices,
                           IReadOnlyList<WorkspaceField> values)
     {
         IsMain = isMain;
@@ -20,6 +21,8 @@ public partial class CookingFoodRow : ObservableObject
         Index = index;
         OriginalItemPath = originalItemPath;
         _currentItemPath = currentItemPath;
+        HasItem = hasItem;
+        ResourceLabel = resourceLabel;
         Choices = choices;
         Values = values;
         _selectedFood = selected;
@@ -39,6 +42,15 @@ public partial class CookingFoodRow : ObservableObject
 
     /// <summary>The item's soft path before any change (the "was …" baseline for the picker).</summary>
     public string? OriginalItemPath { get; }
+
+    /// <summary>True when the food points at a real item (a normal food, not a resource).</summary>
+    public bool HasItem { get; }
+
+    /// <summary>True when the food is a resource (milk/water): shown as a plain name, not a picker.</summary>
+    public bool IsResource => !HasItem;
+
+    /// <summary>The resource's plain name (e.g. <c>Milk</c>), or null.</summary>
+    public string? ResourceLabel { get; }
 
     /// <summary>The item's soft path with the project's change applied — what the picker shows.</summary>
     [ObservableProperty] private string? _currentItemPath;

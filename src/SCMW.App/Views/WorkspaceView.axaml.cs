@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -14,14 +15,14 @@ public partial class WorkspaceView : UserControl
     public WorkspaceView() => AvaloniaXamlLoader.Load(this);
 
     /// <summary>A recipe's tag picker moved: offer the new tag to the view model to record.</summary>
-    private void OnTagChanged(object? sender, SelectionChangedEventArgs e)
+    private void OnTagChanged(object? sender, EventArgs e)
     {
         if (sender is Control { DataContext: IngredientSlotRow slot })
             (DataContext as WorkspaceViewModel)?.SetIngredientTagCommand.Execute(slot);
     }
 
     /// <summary>A dish's food picker moved: offer the new item to the view model to record.</summary>
-    private void OnCookingFoodChanged(object? sender, SelectionChangedEventArgs e)
+    private void OnCookingFoodChanged(object? sender, EventArgs e)
     {
         if (sender is Control { DataContext: CookingFoodRow food })
             (DataContext as WorkspaceViewModel)?.SetCookingFoodCommand.Execute(food);

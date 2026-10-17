@@ -9,7 +9,7 @@ namespace SCMW.Core.Content;
 /// One selectable food: <paramref name="SoftPath"/> is the game's own soft object path (what a dish
 /// stores and what the build writes); <paramref name="Label"/> is the plain words the owner reads.
 /// </summary>
-public sealed record CookingFood(string SoftPath, string Label);
+public sealed record CookingFood(string SoftPath, string Label) : IPickerItem;
 
 /// <summary>The game's real foods, gathered from the indexed items under the food folder.</summary>
 public static class CookingFoods

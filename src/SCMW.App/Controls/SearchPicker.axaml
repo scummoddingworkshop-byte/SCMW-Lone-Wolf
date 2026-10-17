@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SCMW.App.Controls.SearchPicker">
+  <!-- The one dropdown the whole app uses: a box that shows the chosen item, opens a fixed-width
+       list, and lets the owner type to narrow it. Its item template is supplied by the caller. -->
+  <UserControl.Styles>
+    <Style Selector="Button.toggle">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.toggle.open">
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+    </Style>
+    <Style Selector="ListBox.options ListBoxItem">
+      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <Button Name="Toggle" Classes="toggle" Click="OnToggleClick">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Name="ValueText" Grid.Column="0" TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="▾" Margin="8,0,0,0" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextDimBrush}"/>
+      </Grid>
+    </Button>
+
+    <Popup Name="Pop" Placement="Bottom" IsLightDismissEnabled="True">
+      <Border Background="{StaticResource BgCardBrush}" BorderBrush="{StaticResource BorderBrush}"
+              BorderThickness="1" CornerRadius="8" Padding="6">
+        <StackPanel Spacing="6">
+          <TextBox Name="Search" Classes="field" Watermark="Type to filter"/>
+          <ListBox Name="Options" Classes="options" MaxHeight="240" SelectionMode="Single"
+                   Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch"/>
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Panel>
+</UserControl>

@@ -95,6 +95,59 @@ public class CookingIngredientsTests
         Assert.Empty(food.Values);
     }
 
+    // --- Resources: the game keeps milk/water in ResourceType, not Item -------------------------
+
+    [Fact]
+    public void A_resource_food_has_no_item_but_a_readable_resource_name()
+    {
+        var ingredient = Assert.Single(CookingIngredients.From(new[]
+        {
+            F("MainIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+            F("MainIngredients[0].PossibleIngredient[0].ResourceType", "Milk_C", "ObjectProperty"),
+        }));
+
+        var food = Assert.Single(ingredient.Foods);
+        Assert.False(food.HasItem);
+        Assert.Equal("Milk", food.ResourceName);
+    }
+
+    [Fact]
+    public void A_normal_food_has_an_item()
+    {
+        var ingredient = Assert.Single(CookingIngredients.From(new[]
+        {
+            F("MainIngredients[0].PossibleIngredient[0].Item", "/Game/…/Apple.Apple_C", "SoftObjectProperty"),
+            F("MainIngredients[0].PossibleIngredient[0].ResourceType", "Cook_Dish_Cake_Bread", "ObjectProperty"),
+        }));
+
+        Assert.True(Assert.Single(ingredient.Foods).HasItem);
+    }
+
+    [Fact]
+    public void A_multi_word_resource_name_reads_as_words()
+    {
+        var ingredient = Assert.Single(CookingIngredients.From(new[]
+        {
+            F("MainIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+            F("MainIngredients[0].PossibleIngredient[0].ResourceType", "DrinkableWater_C", "ObjectProperty"),
+        }));
+
+        Assert.Equal("Drinkable Water", ingredient.Foods[0].ResourceName);
+    }
+
+    [Fact]
+    public void A_food_with_no_item_and_no_resource_has_no_name()
+    {
+        var ingredient = Assert.Single(CookingIngredients.From(new[]
+        {
+            F("MainIngredients[0].PossibleIngredient[0].Liters", "1", "FloatProperty"),
+        }));
+
+        var food = Assert.Single(ingredient.Foods);
+        Assert.False(food.HasItem);
+        Assert.Null(food.ResourceName);
+    }
+
     [Fact]
     public void Foods_come_back_in_their_own_order()
     {

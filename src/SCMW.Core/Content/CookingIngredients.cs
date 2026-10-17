@@ -26,10 +26,22 @@ public sealed record CookingFoodValue(string Name, AssetField Field);
 /// carries. <paramref name="Index"/> is its position in the ingredient's own <c>PossibleIngredient</c>
 /// list, so every field path can be rebuilt exactly.
 /// </summary>
-public sealed record CookingFoodSlot(int Index, AssetField? Item, IReadOnlyList<CookingFoodValue> Values)
+public sealed record CookingFoodSlot(int Index, AssetField? Item, AssetField? ResourceType,
+                                     IReadOnlyList<CookingFoodValue> Values)
 {
     /// <summary>The item's soft object path as the reader shows it, or null.</summary>
     public string? ItemValue => Item?.CurrentValue;
+
+    /// <summary>True when the food points at a real item (a normal food, not a resource).</summary>
+    public bool HasItem =>
+        Item is not null && ItemValue is { Length: > 0 } value
+        && !string.Equals(value, "None", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The resource's plain name (the game keeps milk/water in <c>ResourceType</c>, e.g.
+    /// <c>Milk_C</c> → <c>Milk</c>), or null when there is no resource.
+    /// </summary>
+    public string? ResourceName => PlainName(ResourceType?.CurrentValue);
 
     /// <summary>The value field named <paramref name="name"/> (e.g. <c>Liters</c>), or null.</summary>
     public AssetField? ValueField(string name)
@@ -40,6 +52,29 @@ public sealed record CookingFoodSlot(int Index, AssetField? Item, IReadOnlyList<
         }
 
         return null;
+    }
+
+    /// <summary>A resource link's plain words: drop the trailing <c>_C</c>, underscores and
+    /// camel-case joins become spaces (<c>DrinkableWater_C</c> → <c>Drinkable Water</c>).</summary>
+    private static string? PlainName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        var text = raw.Trim();
+        if (text.EndsWith("_C", StringComparison.OrdinalIgnoreCase)) text = text[..^2];
+        text = text.Replace('_', ' ');
+
+        // "DrinkableWater" reads as "Drinkable Water": a space before a capital that follows a small letter.
+        var words = new System.Text.StringBuilder(text.Length + 4);
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(text[i]) && char.IsLower(text[i - 1])) words.Append(' ');
+            words.Append(text[i]);
+        }
+
+        text = words.ToString().Trim();
+        while (text.Contains("  ", StringComparison.Ordinal)) text = text.Replace("  ", " ", StringComparison.Ordinal);
+        return text.Length == 0 ? null : text;
     }
 }
 
@@ -86,6 +121,9 @@ public static class CookingIngredients
 
     /// <summary>The soft-link sub-field of a food.</summary>
     public const string ItemName = "Item";
+
+    /// <summary>The resource-link sub-field of a food (where the game keeps milk/water).</summary>
+    public const string ResourceTypeName = "ResourceType";
 
     /// <summary>The food value sub-fields we own and show, in the order the card shows them.</summary>
     public static readonly string[] FoodValueNames =
@@ -176,7 +214,7 @@ public static class CookingIngredients
                     case ChangeOperation.AddEntry:
                         foods.Add(foods.Count > 0
                             ? foods[^1]
-                            : new CookingFoodSlot(0, null, Array.Empty<CookingFoodValue>()));
+                            : new CookingFoodSlot(0, null, null, Array.Empty<CookingFoodValue>()));
                         break;
 
                     case ChangeOperation.RemoveEntry when change.FoodIndex >= 0 && change.FoodIndex < foods.Count:
@@ -216,6 +254,10 @@ public static class CookingIngredients
     /// <summary>The path of one food's item, e.g. <c>MainIngredients[0].PossibleIngredient[1].Item</c>.</summary>
     public static string FoodItemPath(bool isMain, int index, int foodIndex) =>
         FoodPath(isMain, index, foodIndex) + "." + ItemName;
+
+    /// <summary>The path of one food's resource link, e.g. <c>…PossibleIngredient[1].ResourceType</c>.</summary>
+    public static string FoodResourcePath(bool isMain, int index, int foodIndex) =>
+        FoodPath(isMain, index, foodIndex) + "." + ResourceTypeName;
 
     /// <summary>The path of one food's value, e.g. <c>MainIngredients[0].PossibleIngredient[1].Liters</c>.</summary>
     public static string FoodValuePath(bool isMain, int index, int foodIndex, string valueName) =>
@@ -378,9 +420,11 @@ public static class CookingIngredients
 
             if (string.Equals(foodRest, ItemName, StringComparison.OrdinalIgnoreCase))
                 food.Item ??= field;
+            else if (string.Equals(foodRest, ResourceTypeName, StringComparison.OrdinalIgnoreCase))
+                food.ResourceType ??= field;
             else if (IsFoodValue(foodRest))
                 food.AddValue(foodRest, field);
-            // Any other food field (ResourceType) is left for the plain field list.
+            // Any other food field is left for the plain field list.
         }
 
         public CookingIngredientSlot Build()
@@ -395,6 +439,8 @@ public static class CookingIngredients
     private sealed class FoodBuilder
     {
         public AssetField? Item { get; set; }
+
+        public AssetField? ResourceType { get; set; }
 
         private readonly Dictionary<string, AssetField> _values = new(StringComparer.OrdinalIgnoreCase);
 
@@ -413,7 +459,7 @@ public static class CookingIngredients
                     values.Add(new CookingFoodValue(name, field));
             }
 
-            return new CookingFoodSlot(index, Item, values);
+            return new CookingFoodSlot(index, Item, ResourceType, values);
         }
     }
 }

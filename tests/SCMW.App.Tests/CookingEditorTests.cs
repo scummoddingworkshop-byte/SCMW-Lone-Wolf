@@ -67,8 +67,27 @@ public class CookingEditorTests
         Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "MainIngredients[0].PossibleIngredient[0].Item");
         Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "MainIngredients[0].PossibleIngredient[0].Liters");
         // ...but a field the card does not own stays, and the dish's own numbers stay.
-        Assert.Contains(vm.Fields, f => f.TechnicalName == "MainIngredients[0].PossibleIngredient[0].ResourceType");
+        Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "MainIngredients[0].PossibleIngredient[0].ResourceType");
         Assert.Contains(vm.Fields, f => f.TechnicalName == "CookingTime");
+    }
+
+    [Fact]
+    public void A_resource_food_shows_its_name_instead_of_a_picker()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Cooking", "Dish Cake Bread", new[]
+        {
+            Field("MainIngredients[0].IngredientTitle", "Milk"),
+            Field("MainIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+            Field("MainIngredients[0].PossibleIngredient[0].ResourceType", "Milk_C", "ObjectProperty"),
+            Field("MainIngredients[0].PossibleIngredient[0].Liters", "0.1", "FloatProperty"),
+        });
+
+        var food = Assert.Single(vm.CookingSlots[0].Foods);
+        Assert.False(food.HasItem);
+        Assert.True(food.IsResource);
+        Assert.Equal("Milk", food.ResourceLabel);
+        Assert.Null(food.SelectedFood);   // no dropdown: nothing to pick
     }
 
     [Fact]

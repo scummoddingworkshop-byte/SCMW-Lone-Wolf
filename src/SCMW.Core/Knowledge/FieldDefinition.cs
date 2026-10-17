@@ -23,4 +23,4 @@ public sealed record FieldDefinition(
     Risk Risk,
     bool Writable,
     string Meaning,
-    bool Addable = false);
+    bool Addable = false) : IPickerItem;

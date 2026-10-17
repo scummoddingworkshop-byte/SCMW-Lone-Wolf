@@ -102,16 +102,16 @@
                           <TextBlock Text="{Binding Header}" Foreground="{StaticResource TextDimBrush}"/>
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="Accepts" Classes="dim" VerticalAlignment="Center"/>
-                            <ComboBox Name="TagPicker" MinWidth="200"
-                                      ItemsSource="{Binding TagChoices}"
-                                      SelectedItem="{Binding SelectedTag, Mode=TwoWay}"
-                                      SelectionChanged="OnTagChanged">
-                              <ComboBox.ItemTemplate>
+                            <controls:SearchPicker Name="TagPicker" Width="260"
+                                                   ItemsSource="{Binding TagChoices}"
+                                                   SelectedItem="{Binding SelectedTag, Mode=TwoWay}"
+                                                   SelectionChanged="OnTagChanged">
+                              <controls:SearchPicker.ItemTemplate>
                                 <DataTemplate x:DataType="content:RecipeTag">
                                   <TextBlock Text="{Binding Label}"/>
                                 </DataTemplate>
-                              </ComboBox.ItemTemplate>
-                            </ComboBox>
+                              </controls:SearchPicker.ItemTemplate>
+                            </controls:SearchPicker>
                           </StackPanel>
                         </StackPanel>
 
@@ -214,16 +214,20 @@
                                       <TextBlock Text="{Binding Header}" Foreground="{StaticResource TextDimBrush}"/>
                                       <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock Text="Item" Classes="dim" VerticalAlignment="Center"/>
-                                        <ComboBox Name="FoodPicker" MinWidth="200"
-                                                  ItemsSource="{Binding Choices}"
-                                                  SelectedItem="{Binding SelectedFood, Mode=TwoWay}"
-                                                  SelectionChanged="OnCookingFoodChanged">
-                                          <ComboBox.ItemTemplate>
+                                        <controls:SearchPicker Name="FoodPicker" Width="260"
+                                                               IsVisible="{Binding HasItem}"
+                                                               ItemsSource="{Binding Choices}"
+                                                               SelectedItem="{Binding SelectedFood, Mode=TwoWay}"
+                                                               SelectionChanged="OnCookingFoodChanged">
+                                          <controls:SearchPicker.ItemTemplate>
                                             <DataTemplate x:DataType="content:CookingFood">
                                               <TextBlock Text="{Binding Label}"/>
                                             </DataTemplate>
-                                          </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                          </controls:SearchPicker.ItemTemplate>
+                                        </controls:SearchPicker>
+                                        <TextBlock Text="{Binding ResourceLabel}" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsResource}"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
                                       </StackPanel>
                                     </StackPanel>
                                     <Button Grid.Row="0" Grid.Column="1" Name="RemoveCookingFood" Classes="secondary"

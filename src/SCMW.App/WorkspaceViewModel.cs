@@ -519,6 +519,9 @@ public partial class WorkspaceViewModel : ObservableObject
                 if (food.Item is not null)
                     yield return CookingIngredients.FoodItemPath(ingredient.IsMain, ingredient.Index, food.Index);
 
+                if (food.ResourceType is not null)
+                    yield return CookingIngredients.FoodResourcePath(ingredient.IsMain, ingredient.Index, food.Index);
+
                 foreach (var value in food.Values)
                     yield return CookingIngredients.FoodValuePath(ingredient.IsMain, ingredient.Index, food.Index, value.Name);
             }
@@ -609,7 +612,9 @@ public partial class WorkspaceViewModel : ObservableObject
                 }
 
                 foods.Add(new CookingFoodRow(isMain, index, food.Index, originalItem, appliedItem,
-                                             FoodChoice(appliedItem, _cookingFoods), _cookingFoods, values));
+                                             food.HasItem, food.ResourceName,
+                                             food.HasItem ? FoodChoice(appliedItem, _cookingFoods) : null,
+                                             _cookingFoods, values));
             }
 
             CookingSlots.Add(new CookingIngredientRow(isMain, index, titleField, foods));

@@ -8,7 +8,7 @@ namespace SCMW.Core.Content;
 /// One selectable ingredient tag: <paramref name="Name"/> is the raw value a recipe stores
 /// (e.g. <c>CI_Metal_Scrap</c>); <paramref name="Label"/> is the plain words the owner reads.
 /// </summary>
-public sealed record RecipeTag(string Name, string Label);
+public sealed record RecipeTag(string Name, string Label) : IPickerItem;
 
 /// <summary>The game's real ingredient tags, gathered from the indexed <c>CI_*</c> assets.</summary>
 public static class RecipeTags

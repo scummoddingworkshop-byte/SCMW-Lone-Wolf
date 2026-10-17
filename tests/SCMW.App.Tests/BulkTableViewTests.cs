@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
+using SCMW.App.Controls;
 using SCMW.App.Views;
 
 namespace SCMW.App.Tests;
@@ -53,7 +54,7 @@ public class BulkTableViewTests
     {
         var view = Shown(out var vm);
 
-        var picker = view.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "FieldPicker");
+        var picker = view.GetVisualDescendants().OfType<SearchPicker>().Single(c => c.Name == "FieldPicker");
 
         Assert.Same(vm.Fields, picker.ItemsSource);
         Assert.Contains(vm.Fields, f => f.Name == "MaxQuantity");   // a described, writable value
