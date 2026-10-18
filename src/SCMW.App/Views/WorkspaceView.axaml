@@ -18,6 +18,18 @@
         </controls:SearchPicker.ItemTemplate>
       </controls:SearchPicker>
     </DataTemplate>
+    <!-- The "Makes" dropdown, also built fresh for each open (same dropdown quirk). -->
+    <DataTemplate x:Key="ProductPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="NewRecipeProductPicker" Width="300"
+                             ItemsSource="{Binding ProductChoices}"
+                             SelectedItem="{Binding NewRecipeProduct, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProductChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
   </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
@@ -118,6 +130,14 @@
                 <!-- Filled in code each time the panel opens: a fresh dropdown is built per open,
                      because the app's dropdown stops opening once its card has been hidden and shown. -->
                 <ContentControl Name="NewRecipeDonorHost"/>
+              </StackPanel>
+              <!-- What the new recipe makes (Phase 8.2): point it at any item — the game's own or one
+                   of your new ones. Left alone, it keeps whatever the recipe you started from makes. -->
+              <StackPanel Spacing="4" IsVisible="{Binding ShowProductPicker}">
+                <TextBlock Text="Makes" Classes="dim"/>
+                <ContentControl Name="NewRecipeProductHost"/>
+                <TextBlock Classes="dim" TextWrapping="Wrap"
+                           Text="Optional — pick what the recipe produces. Leave it to keep the recipe you started from."/>
               </StackPanel>
               <TextBlock Text="{Binding NewRecipeNotice}" TextWrapping="Wrap" Classes="dim"
                          Foreground="{StaticResource WarningBrush}"

@@ -64,7 +64,11 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnHasFieldsChanged(bool value) => RefreshFileHeader();
 
-    partial void OnShowNewRecipeChanged(bool value) => RefreshFileHeader();
+    partial void OnShowNewRecipeChanged(bool value)
+    {
+        RefreshFileHeader();
+        OnPropertyChanged(nameof(ShowProductPicker));
+    }
 
     private void RefreshFileHeader()
     {
@@ -233,6 +237,7 @@ public partial class WorkspaceViewModel : ObservableObject
                 if (family == AssetFamily.Recipes)
                 {
                     _ingredientTags = RecipeTags.From(all);
+                    _gameItemChoices = ItemChoices(_catalog.Map(AssetFamily.Items, all));
                     assets = WithNewAssetRows(assets);   // this project's own new recipes go on top
                 }
                 else if (family == AssetFamily.Cooking)
@@ -410,6 +415,28 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnNewRecipeNoticeChanged(string value) => OnPropertyChanged(nameof(HasNewRecipeNotice));
 
+    // --- What a new recipe makes (Phase 8.2) ----------------------------------------------------
+    // A recipe carries a "Product" soft link naming the item it produces. A brand-new recipe copies
+    // the donor whole, so it would still make the donor's item; the owner can point it at any item
+    // (the game's own, or one of the project's new items) from the panel. The one place that link's
+    // path is built lives in ItemSoftPaths.
+
+    /// <summary>A recipe's "Product" field name — the soft link to the item it produces.</summary>
+    private const string ProductField = "Product";
+
+    /// <summary>The game's own items as "Makes" choices (filled when the Recipes kind loads).</summary>
+    private IReadOnlyList<ProductChoice> _gameItemChoices = Array.Empty<ProductChoice>();
+
+    /// <summary>The items a new recipe may make: the game's own plus this project's own new items.</summary>
+    public ObservableCollection<ProductChoice> ProductChoices { get; } = new();
+
+    /// <summary>The item the new recipe will make, or null to keep the donor's own product.</summary>
+    [ObservableProperty] private ProductChoice? _newRecipeProduct;
+
+    /// <summary>True when the "Makes" picker should show: making a recipe, with items to choose from.</summary>
+    public bool ShowProductPicker =>
+        ShowNewRecipe && CurrentNewKind == NewAssetKind.Recipe && ProductChoices.Count > 0;
+
     /// <summary>Open the "New" panel: fill the "start from" list from the open kind's files.</summary>
     [RelayCommand]
     private void OpenNewRecipe()
@@ -417,6 +444,7 @@ public partial class WorkspaceViewModel : ObservableObject
         if (!ShowNewRecipeButton) return;   // the list must be loaded before it can be used
 
         FillRecipeDonors();
+        FillProductChoices();
         var what = CurrentNewKind == NewAssetKind.Item ? "items" : "recipes";
         NewRecipeNotice = RecipeDonors.Count == 0
             ? $"No {what} were found to start from. Check your SCUM folder in Settings."
@@ -489,6 +517,14 @@ public partial class WorkspaceViewModel : ObservableObject
             return;
         }
 
+        // Point a new recipe at the item the owner chose to make. Not recorded for a plain item, and
+        // not recorded at all when the owner kept the donor's own product (so nothing is written).
+        if (kind == NewAssetKind.Recipe && NewRecipeProduct is { } made && _changes is not null)
+        {
+            _changes.RecordEdit(asset.PackagePath, ProductField, null, made.SoftPath,
+                                chosen.Id, assetPath: asset.PackagePath);
+        }
+
         var row = NewRecipeRow(asset);
         _allAssets = new[] { row }.Concat(_allAssets).ToList();
         ShowNewRecipe = false;
@@ -518,6 +554,41 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (CurrentNewKind != NewAssetKind.Item) return asset.AssetId;
         return ClassFileOf(asset.AssetId) ?? asset.AssetId;
+    }
+
+    /// <summary>The "Makes" choices for the panel: the game's own items, then this project's own new
+    /// items (so a recipe can be pointed at a new item like our OliveOil). Reset on every open, so a
+    /// choice from a previous recipe never carries over.</summary>
+    private void FillProductChoices()
+    {
+        ProductChoices.Clear();
+        NewRecipeProduct = null;
+        if (CurrentNewKind != NewAssetKind.Recipe) return;
+
+        foreach (var choice in _gameItemChoices) ProductChoices.Add(choice);
+
+        var folder = _projects?.Chosen?.FolderPath;
+        if (folder is null || _newAssets is null) return;
+
+        foreach (var asset in _newAssets.Load(folder).Where(a => a.Kind == NewAssetKind.Item))
+        {
+            var soft = ItemSoftPaths.FromItemPackage(asset.PackagePath);
+            if (soft.Length > 0) ProductChoices.Add(new ProductChoice(soft, asset.Name));
+        }
+    }
+
+    /// <summary>The game's own items as "Makes" choices: each item's soft object path and its plain
+    /// name, in the order the item list already gives them.</summary>
+    private static IReadOnlyList<ProductChoice> ItemChoices(IReadOnlyList<ItemSummary> items)
+    {
+        var choices = new List<ProductChoice>(items.Count);
+        foreach (var item in items)
+        {
+            var soft = ItemSoftPaths.FromItemFile(item.AssetId);
+            if (soft.Length > 0) choices.Add(new ProductChoice(soft, ItemSoftPaths.Label(soft)));
+        }
+
+        return choices;
     }
 
     /// <summary>True when the choice is one of the game's own files in the loaded list — never a

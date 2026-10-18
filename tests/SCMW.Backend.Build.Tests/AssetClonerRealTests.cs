@@ -138,4 +138,59 @@ public class AssetClonerRealTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real writer test.")]
+    public void A_real_recipes_product_can_be_re_pointed_at_another_item()
+    {
+        // Making a recipe that produces a NEW item (Phase 8.2) relies on this: the writer must find a
+        // real recipe's "Product" soft link and re-point it. Proven on the game's own files.
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string donor = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe";
+        Assert.True(mount.TryReadPackage(donor, out var files));
+
+        var dir = Path.Combine(Path.GetTempPath(), "scmw-product-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (var pair in files!)
+                File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "CR_1H_Stone_Axe", "CR_SECMW_Test")), pair.Value);
+
+            var uasset = Directory.GetFiles(dir, "*.uasset").Single();
+            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "CR_1H_Stone_Axe", "CR_SECMW_Test",
+                Array.Empty<AssetReferenceRemap>(), out var renameError), renameError);
+
+            var before = ProductOf(uasset);
+            Assert.False(string.IsNullOrEmpty(before));   // a real recipe really does carry a "Product"
+
+            const string target = "/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C";
+            var written = new UAssetPackageWriter().Apply(uasset, new[] { new FieldChange("Product", target) });
+            Assert.True(written.Ok, written.Error);
+
+            Assert.Equal(target, ProductOf(uasset));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    /// <summary>A recipe's "Product" value — the item it makes — as the writer stores it, or null.</summary>
+    private static string? ProductOf(string uasset)
+    {
+        var package = new UAsset(uasset, EngineVersion.VER_UE4_27);
+        foreach (var export in package.Exports.OfType<NormalExport>())
+        {
+            foreach (var prop in export.Data ?? new List<PropertyData>())
+            {
+                if (prop.Name.ToString() != "Product") continue;
+                return prop is SoftObjectPropertyData soft ? soft.Value.AssetPath.AssetName?.ToString() : null;
+            }
+        }
+
+        return null;
+    }
 }

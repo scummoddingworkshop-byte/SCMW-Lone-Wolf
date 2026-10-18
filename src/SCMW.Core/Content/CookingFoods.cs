@@ -14,10 +14,7 @@ public sealed record CookingFood(string SoftPath, string Label) : IPickerItem;
 /// <summary>The game's real foods, gathered from the indexed items under the food folder.</summary>
 public static class CookingFoods
 {
-    /// <summary>The item file prefix, and the game folder the cookable foods live under.</summary>
-    private const string ItemSuffix = "_ES";
-    private const string ContentRoot = "SCUM/Content";
-    private const string GameRoot = "/Game";
+    /// <summary>The game folder the cookable foods live under.</summary>
     private const string FoodRoot = "SCUM/Content/ConZ_Files/Items/Food/";
 
     /// <summary>The foods in <paramref name="assets"/>, plain-label order, each once. Never null.</summary>
@@ -52,35 +49,11 @@ public static class CookingFoods
 
     /// <summary>
     /// The game's soft object path for an item id, or empty when the id is not an editable item.
-    /// The game keeps the whole path in the soft link, so <c>SCUM/Content/…/Apple_ES</c> becomes
-    /// <c>/Game/…/Apple.Apple_C</c> (drop the <c>_ES</c>, then <c>"{path}.{name}_C"</c>).
+    /// The one conversion lives in <see cref="ItemSoftPaths.FromItemFile"/> so a recipe's "Product"
+    /// and a dish's food can never drift apart.
     /// </summary>
-    public static string SoftPath(string? itemId)
-    {
-        if (string.IsNullOrEmpty(itemId) || !itemId.StartsWith(ContentRoot, StringComparison.OrdinalIgnoreCase))
-            return string.Empty;
-
-        var path = GameRoot + itemId[ContentRoot.Length..];
-        var slash = path.LastIndexOf('/');
-        var name = slash >= 0 ? path[(slash + 1)..] : path;
-        if (!name.EndsWith(ItemSuffix, StringComparison.OrdinalIgnoreCase))
-            return string.Empty;
-
-        var stem = name[..^ItemSuffix.Length];
-        var folder = slash >= 0 ? path[..(slash + 1)] : string.Empty;
-        return folder + stem + "." + stem + "_C";
-    }
+    public static string SoftPath(string? itemId) => ItemSoftPaths.FromItemFile(itemId);
 
     /// <summary>The plain words for a soft path: <c>…/Apple.Apple_C</c> → <c>Apple</c>.</summary>
-    public static string Label(string? softPath)
-    {
-        if (string.IsNullOrEmpty(softPath)) return string.Empty;
-
-        var slash = softPath.LastIndexOf('/');
-        var last = slash >= 0 ? softPath[(slash + 1)..] : softPath;
-        var dot = last.LastIndexOf('.');
-        var name = dot >= 0 ? last[..dot] : last;
-        name = name.Replace('_', ' ').Trim();
-        return name.Length == 0 ? last : name;
-    }
+    public static string Label(string? softPath) => ItemSoftPaths.Label(softPath);
 }

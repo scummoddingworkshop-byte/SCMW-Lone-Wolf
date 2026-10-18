@@ -34,18 +34,25 @@ public partial class WorkspaceView : UserControl
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewRecipe) && _vm?.ShowNewRecipe == true)
-            BuildDonorPicker();
+            BuildNewRecipePickers();
     }
 
     /// <summary>
-    /// Builds a fresh "start from" dropdown for the newly opened panel. It is rebuilt rather than
-    /// reused because the app's dropdown stops opening once its card has been hidden and shown again.
+    /// Builds fresh "start from" and "Makes" dropdowns for the newly opened panel. They are rebuilt
+    /// rather than reused because the app's dropdown stops opening once its card has been hidden and
+    /// shown again.
     /// </summary>
-    private void BuildDonorPicker()
+    private void BuildNewRecipePickers()
+    {
+        BuildPicker("NewRecipeDonorHost", "DonorPickerTemplate");
+        if (_vm?.ShowProductPicker == true) BuildPicker("NewRecipeProductHost", "ProductPickerTemplate");
+    }
+
+    private void BuildPicker(string hostName, string templateKey)
     {
         if (_vm is null) return;
-        if (this.FindControl<ContentControl>("NewRecipeDonorHost") is not { } host) return;
-        if (Resources["DonorPickerTemplate"] is not IDataTemplate template) return;
+        if (this.FindControl<ContentControl>(hostName) is not { } host) return;
+        if (Resources[templateKey] is not IDataTemplate template) return;
 
         host.Content = template.Build(_vm);
     }

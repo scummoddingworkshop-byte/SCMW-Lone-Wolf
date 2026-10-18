@@ -504,6 +504,101 @@ public class NewRecipeTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    // --- What a new recipe makes (Phase 8.2) ----------------------------------------------------
+
+    [AvaloniaFact] // the "Makes" picker offers the game's items, and the pick is recorded on the new recipe
+    public async Task A_new_recipe_can_be_pointed_at_the_item_it_makes()
+    {
+        var (vm, _, changes, projects, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+
+            var item = vm.ProductChoices.Single(c => c.Label == "VegetableOil");
+            Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C", item.SoftPath);
+
+            Make(vm, "Olive Press");
+            vm.NewRecipeProduct = item;
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath),
+                                       r => r.FieldTechnicalName == "Product");
+            Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C", record.NewValue);
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_OlivePressMod/CR_OlivePress",
+                         record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // leaving "Makes" alone keeps the donor's own product — nothing is recorded
+    public async Task A_new_recipe_left_as_is_records_no_product()
+    {
+        var (vm, _, changes, projects, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+            Make(vm, "Olive Press");
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the project's own new item is offered as a "Makes" choice too
+    public async Task A_projects_own_new_item_is_offered_as_a_makes_choice()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            // Make a new item of our own first (Olive Oil, from the game's vegetable oil).
+            await vm.OpenKindAsync("Items");
+            vm.OpenNewRecipeCommand.Execute(null);
+            vm.NewRecipeName = "Olive Oil";
+            vm.NewRecipeDonor = vm.RecipeDonors.Single(d => d.Name == "VegetableOil");
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            // Its own item now shows in the recipe panel's "Makes" list.
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+
+            var choice = vm.ProductChoices
+                .Single(c => c.SoftPath == "/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePressMod/OliveOil.OliveOil_C");
+            Assert.Equal("OliveOil", choice.Label);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the "Makes" picker shows for a new recipe and its list opens with the game's items
+    public async Task The_makes_picker_shows_for_a_new_recipe()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            var view = new WorkspaceView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1000, Height = 700 };
+            window.Show();
+
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+            window.UpdateLayout();
+
+            var host = view.FindControl<ContentControl>("NewRecipeProductHost");
+            Assert.NotNull(host);
+            Assert.NotNull(host!.Content);
+
+            var picker = host.GetVisualDescendants().OfType<SearchPicker>()
+                .Single(c => c.Name == "NewRecipeProductPicker");
+            picker.FindControl<Button>("Toggle")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.UpdateLayout();
+
+            Assert.True(picker.FindControl<Popup>("Pop")!.IsOpen);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public async Task The_remove_button_shows_when_a_new_recipe_is_open()
     {
