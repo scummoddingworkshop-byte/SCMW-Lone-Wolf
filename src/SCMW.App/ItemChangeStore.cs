@@ -131,11 +131,18 @@ public sealed class ItemChangeStore
         var dropped = 0;
         if (operation == ChangeOperation.RemoveEntry)
         {
-            var staleEdits = _store.Load(folder)
-                .Where(r => r.Operation == ChangeOperation.Set
-                            && string.Equals(r.AssetId, assetId, StringComparison.OrdinalIgnoreCase))
-                .Select(r => r.Id)
-                .ToList();
+            // Only edits on the list being changed go stale when an entry is removed (their slots
+            // shift). The recipe's OWN values — what it makes (Product), its number, its skill — do
+            // not move, so they must never be cleared with them.
+            var root = ListRoot(field);
+            var staleEdits = root is null
+                ? new List<Guid>()
+                : _store.Load(folder)
+                    .Where(r => r.Operation == ChangeOperation.Set
+                                && string.Equals(r.AssetId, assetId, StringComparison.OrdinalIgnoreCase)
+                                && IsInList(r.FieldTechnicalName, root))
+                    .Select(r => r.Id)
+                    .ToList();
 
             dropped = staleEdits.Count;
             foreach (var id in staleEdits) _store.Undo(folder, id);
@@ -187,4 +194,27 @@ public sealed class ItemChangeStore
 
     private string? FolderFor(string projectId) =>
         _projects.All().FirstOrDefault(p => p.Id == projectId)?.FolderPath;
+
+    /// <summary>The list a slot path belongs to — the leading name before the first <c>[</c> or
+    /// <c>.</c> (e.g. <c>Ingredients[0].Amount.NoSkill</c> → <c>Ingredients</c>; <c>Product</c> →
+    /// <c>Product</c>). Null when there is nothing to read.</summary>
+    private static string? ListRoot(string? field)
+    {
+        if (string.IsNullOrEmpty(field)) return null;
+
+        var end = field.IndexOfAny(BracketOrDot);
+        var root = end < 0 ? field : field[..end];
+        return root.Length == 0 ? null : root;
+    }
+
+    /// <summary>True when <paramref name="field"/> lives in the list <paramref name="root"/> — the
+    /// list itself, one of its entries, or a value inside one.</summary>
+    private static bool IsInList(string? field, string root)
+    {
+        if (string.IsNullOrEmpty(field)) return false;
+        if (!field.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return false;
+        return field.Length == root.Length || field[root.Length] is '[' or '.';
+    }
+
+    private static readonly char[] BracketOrDot = { '[', '.' };
 }

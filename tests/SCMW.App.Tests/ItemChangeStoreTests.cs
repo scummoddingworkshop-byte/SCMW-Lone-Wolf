@@ -150,4 +150,28 @@ public class ItemChangeStoreTests
         }
         finally { TestProjects.Cleanup(root); }
     }
+
+    [AvaloniaFact] // removing an ingredient must not erase the recipe's OWN values (e.g. what it makes)
+    public void Removing_an_ingredient_keeps_the_recipes_own_values()
+    {
+        var (projects, root) = TestProjects.With("Recipe mod");
+        try
+        {
+            var store = new ItemChangeStore(new ProjectChangeStore(), projects);
+            var project = projects.Current!;
+            const string recipe = "/a/CR_OliveOil";
+
+            // The recipe's own "what it makes", and one ingredient-slot value that will misalign.
+            store.RecordEdit(recipe, "Product", null, "/Game/X.X_C", project.Id, assetPath: recipe);
+            store.RecordEdit(recipe, "Ingredients[0].Amount.NoSkill", "1", "9", project.Id, assetPath: recipe);
+
+            store.RecordListChange(recipe, "Ingredients[0]", ChangeOperation.RemoveEntry,
+                                   project.Id, assetPath: recipe);
+
+            var kept = store.For(project.FolderPath);
+            Assert.Contains(kept, r => r.FieldTechnicalName == "Product");                       // stays
+            Assert.DoesNotContain(kept, r => r.FieldTechnicalName == "Ingredients[0].Amount.NoSkill"); // dropped
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
 }
