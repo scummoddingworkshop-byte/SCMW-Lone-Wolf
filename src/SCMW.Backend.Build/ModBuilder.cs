@@ -182,9 +182,10 @@ public sealed class ModBuilder : IModBuilder
 
         // The asset's own file. For a recipe this is the whole thing; for an item it is the item file,
         // which carries no edits (its editable values live on its "_ES" twin).
+        var remaps = ReferenceRemapsFor(asset);
         var mainChanges = asset.TwinName is null ? asset.Changes : Array.Empty<FieldChange>();
         var (mainPath, mainError) = await CloneIntoAsync(packageDir, asset.DonorPath, asset.DonorName,
-            asset.Name, mainChanges, work, ct).ConfigureAwait(false);
+            asset.Name, mainChanges, remaps, work, ct).ConfigureAwait(false);
         if (mainPath is null)
             return (false, mainError);
 
@@ -192,7 +193,7 @@ public sealed class ModBuilder : IModBuilder
         if (asset.TwinName is not null && asset.TwinDonorPath is not null)
         {
             var (twinPath, twinError) = await CloneIntoAsync(packageDir, asset.TwinDonorPath,
-                asset.DonorName + "_ES", asset.TwinName, asset.Changes, work, ct).ConfigureAwait(false);
+                asset.DonorName + "_ES", asset.TwinName, asset.Changes, remaps, work, ct).ConfigureAwait(false);
             if (twinPath is null)
                 return (false, twinError);
         }
@@ -211,7 +212,8 @@ public sealed class ModBuilder : IModBuilder
     /// </summary>
     private async Task<(string? Uasset, string? Error)> CloneIntoAsync(
         string packageDir, string donorPath, string donorLabel, string newName,
-        IReadOnlyList<FieldChange> changes, string work, CancellationToken ct)
+        IReadOnlyList<FieldChange> changes, IReadOnlyList<AssetReferenceRemap> remaps, string work,
+        CancellationToken ct)
     {
         if (!_reader.TryReadPackage(donorPath, out var donorFiles) || donorFiles is null || donorFiles.Count == 0)
             return (null, $"\"{newName}\" is copied from \"{donorLabel}\", but that game file could not be read.");
@@ -236,7 +238,7 @@ public sealed class ModBuilder : IModBuilder
         if (uassetPath is null)
             return (null, $"The game file \"{donorLabel}\" had no .uasset file to copy.");
 
-        if (!_cloner.TryRenameObjects(uassetPath, donorName, newName, out var renameError))
+        if (!_cloner.TryRenameObjects(uassetPath, donorName, newName, remaps, out var renameError))
             return (null, renameError ?? $"The copy of \"{donorLabel}\" could not be renamed.");
 
         if (changes.Count > 0)
@@ -256,6 +258,29 @@ public sealed class ModBuilder : IModBuilder
     {
         var slash = donorPath.LastIndexOf('/');
         return slash >= 0 && slash < donorPath.Length - 1 ? donorPath[(slash + 1)..] : donorPath;
+    }
+
+    /// <summary>
+    /// Each of a new asset's files, where it came from and where its copy goes, in the <c>/Game/…</c>
+    /// form the soft references inside a package use. A cloned item's "_ES" companion names its item
+    /// this way (its "Actor" property); without a remap the copy would still point at the donor item,
+    /// so the game would bind the copy's setup to the donor and the new item would get none.
+    /// </summary>
+    private static IReadOnlyList<AssetReferenceRemap> ReferenceRemapsFor(NewBuildAsset asset)
+    {
+        var remaps = new List<AssetReferenceRemap>
+        {
+            new(RegistryPackagePath(asset.DonorPath),
+                RegistryPackagePath($"{asset.Folder}/{asset.Name}"),
+                DonorTechnicalName(asset.DonorPath), asset.Name),
+        };
+
+        if (asset.TwinName is not null && asset.TwinDonorPath is not null)
+            remaps.Add(new AssetReferenceRemap(RegistryPackagePath(asset.TwinDonorPath),
+                RegistryPackagePath($"{asset.Folder}/{asset.TwinName}"),
+                DonorTechnicalName(asset.TwinDonorPath), asset.TwinName));
+
+        return remaps;
     }
 
     /// <summary>

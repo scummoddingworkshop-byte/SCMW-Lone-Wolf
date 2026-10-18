@@ -464,6 +464,55 @@ public class RealBuildIntegrationTests
         finally { Directory.Delete(root, true); }
     }
 
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real build test.")]
+    public async Task A_real_item_build_re_points_its_ES_twin_at_the_copy()
+    {
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+        var reader = new PakMountPackageReader(mount);
+
+        const string donorPath = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil";
+        const string folder = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMWBuildItemTest";
+        const string newName = "SCMWOliveOilTest";
+
+        var root = Path.Combine(Path.GetTempPath(), "scmw-realitem-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var repak = Path.Combine(AppContext.BaseDirectory, "tools", "repak", "repak.exe");
+            var builder = new ModBuilder(reader, new UAssetPackageWriter(),
+                new RepakPacker(repak, new SystemProcessRunner()),
+                new FixedResolver(donorPath), new UAssetCloner(), Path.Combine(root, "Builds"));
+
+            var asset = new NewBuildAsset(newName, "VegetableOil", donorPath, folder,
+                Array.Empty<FieldChange>(), TwinName: newName + "_ES", TwinDonorPath: donorPath + "_ES");
+            var request = new BuildRequest("RealItem", "1.0.0", Array.Empty<BuildItem>(), new[] { asset });
+
+            var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+            Assert.True(outcome.Ok, outcome.Error);
+
+            // The staged "_ES" companion must name the copy, never the donor item.
+            var staged = Directory.GetFiles(root, newName + "_ES.uasset", SearchOption.AllDirectories)
+                .Single(f => f.Replace('\\', '/').Contains("/staging/"));
+            var es = new UAsset(staged, EngineVersion.VER_UE4_27);
+            var referenced = es.Exports.OfType<NormalExport>()
+                .SelectMany(e => e.Data ?? new List<PropertyData>())
+                .OfType<SoftObjectPropertyData>()
+                .Select(p => p.Value.AssetPath.AssetName?.ToString())
+                .ToList();
+
+            Assert.Contains("/Game/ConZ_Files/Items/Food/MiscFood/SCMWBuildItemTest/" +
+                            newName + "." + newName + "_C", referenced);
+            Assert.DoesNotContain("/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C", referenced);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static string ExtractOne(IReadOnlyDictionary<string, byte[]> files, string folder)
     {
         Directory.CreateDirectory(folder);

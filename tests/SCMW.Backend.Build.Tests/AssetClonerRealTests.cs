@@ -3,6 +3,7 @@ using SCMW.Backend.Pak;
 using SCMW.Testing;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
+using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build.Tests;
@@ -37,8 +38,8 @@ public class AssetClonerRealTests
                 File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "CR_1H_Stone_Axe", "CR_SECMW_Test")), pair.Value);
 
             var uasset = Directory.GetFiles(dir, "*.uasset").Single();
-            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "CR_1H_Stone_Axe", "CR_SECMW_Test", out var renameError),
-                renameError);
+            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "CR_1H_Stone_Axe", "CR_SECMW_Test",
+                Array.Empty<AssetReferenceRemap>(), out var renameError), renameError);
 
             // The copy loads and its own object is the new name — nothing still claims the donor's.
             var reloaded = new UAsset(uasset, EngineVersion.VER_UE4_27);
@@ -73,8 +74,8 @@ public class AssetClonerRealTests
                 File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "VegetableOil", "OliveOilTEST")), pair.Value);
 
             var uasset = Directory.GetFiles(dir, "*.uasset").Single();
-            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "VegetableOil", "OliveOilTEST", out var renameError),
-                renameError);
+            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "VegetableOil", "OliveOilTEST",
+                Array.Empty<AssetReferenceRemap>(), out var renameError), renameError);
 
             var names = new UAsset(uasset, EngineVersion.VER_UE4_27).Exports
                 .Select(e => e.ObjectName.ToString()).ToList();
@@ -84,6 +85,56 @@ public class AssetClonerRealTests
             Assert.Contains("Default__OliveOilTEST_C", names);         // that class's default object
             Assert.DoesNotContain("VegetableOil_C", names);
             Assert.DoesNotContain("Default__VegetableOil_C", names);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real clone test.")]
+    public void A_real_item_ES_is_re_pointed_from_the_donor_item_to_the_copy()
+    {
+        // The "_ES" companion names its item in a soft reference (its "Actor" property). A copy that
+        // keeps the donor's name makes the game bind the setup to the donor item, so the new item is
+        // left with no setup at all: empty Examine, components that never attach, refused pickup.
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string donorFolder = "/Game/ConZ_Files/Items/Food/MiscFood";
+        const string donorItem = donorFolder + "/VegetableOil";
+        const string donorPakEs = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil_ES";
+
+        Assert.True(mount.TryReadPackage(donorPakEs, out var files));
+
+        var dir = Path.Combine(Path.GetTempPath(), "scmw-clone-es-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (var pair in files!)
+                File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "VegetableOil_ES", "OliveOilTEST_ES")), pair.Value);
+
+            var uasset = Directory.GetFiles(dir, "*.uasset").Single();
+            var remaps = new[]
+            {
+                new AssetReferenceRemap(donorItem, donorFolder + "/SCMW_MyStoneAxeTEST/OliveOilTEST",
+                    "VegetableOil", "OliveOilTEST"),
+            };
+
+            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "VegetableOil_ES", "OliveOilTEST_ES",
+                remaps, out var renameError), renameError);
+
+            var reloaded = new UAsset(uasset, EngineVersion.VER_UE4_27);
+            var actor = reloaded.Exports.OfType<NormalExport>()
+                .SelectMany(e => e.Data ?? new List<PropertyData>())
+                .OfType<SoftObjectPropertyData>()
+                .Select(p => p.Value.AssetPath.AssetName?.ToString())
+                .ToList();
+
+            Assert.DoesNotContain(donorItem + ".VegetableOil_C", actor);
+            Assert.Contains(donorFolder + "/SCMW_MyStoneAxeTEST/OliveOilTEST.OliveOilTEST_C", actor);
         }
         finally { Directory.Delete(dir, true); }
     }

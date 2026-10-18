@@ -1,4 +1,7 @@
 using UAssetAPI;
+using UAssetAPI.ExportTypes;
+using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build;
@@ -8,12 +11,19 @@ namespace SCMW.Backend.Build;
 /// new asset rather than a second copy of the donor. A Blueprint asset carries three names that must
 /// move together: the object itself (<c>Name</c>), its generated class (<c>Name_C</c>) and that
 /// class's default object (<c>Default__Name_C</c>). Renaming only some of them leaves the game with a
-/// half-renamed asset that crashes on load. Never throws; a package with no object of that name is a
-/// plain failure.
+/// half-renamed asset that crashes on load.
+/// <para>
+/// A rename alone is not enough: a copy can still <i>point at</i> the donor through a soft reference.
+/// An item's "_ES" companion names its item that way (its "Actor" property), so a copy that keeps it
+/// stays the donor's setup and the new item gets none. The caller passes the remaps (each asset the
+/// copy might name, and where its copy lives) and every soft reference is re-pointed.
+/// </para>
+/// Never throws; a package with no object of that name is a plain failure.
 /// </summary>
 public sealed class UAssetCloner : IAssetCloner
 {
-    public bool TryRenameObjects(string uassetFilePath, string oldName, string newName, out string? error)
+    public bool TryRenameObjects(string uassetFilePath, string oldName, string newName,
+                                 IReadOnlyList<AssetReferenceRemap> references, out string? error)
     {
         error = null;
         try
@@ -44,6 +54,11 @@ public sealed class UAssetCloner : IAssetCloner
                 return false;
             }
 
+            if (references.Count > 0)
+                foreach (var export in asset.Exports.OfType<NormalExport>())
+                    if (export.Data is not null)
+                        RemapReferences(asset, export.Data, references);
+
             asset.Write(uassetFilePath);
             return true;
         }
@@ -52,6 +67,48 @@ public sealed class UAssetCloner : IAssetCloner
             SCMW.Core.Logging.Log.Warn($"Cloning a game file failed while renaming ({ex.GetType().Name}).");
             error = $"The copy of '{oldName}' could not be renamed.";
             return false;
+        }
+    }
+
+    /// <summary>Re-points every soft reference in a property list (and inside its arrays and structs)
+    /// that still names a donor asset.</summary>
+    private static void RemapReferences(UAsset asset, IEnumerable<PropertyData> properties,
+                                        IReadOnlyList<AssetReferenceRemap> references)
+    {
+        foreach (var property in properties)
+        {
+            switch (property)
+            {
+                case SoftObjectPropertyData soft:
+                    RemapSoft(asset, soft, references);
+                    break;
+                case ArrayPropertyData array when array.Value is not null:
+                    RemapReferences(asset, array.Value, references);
+                    break;
+                case StructPropertyData str when str.Value is not null:
+                    RemapReferences(asset, str.Value, references);
+                    break;
+            }
+        }
+    }
+
+    private static void RemapSoft(UAsset asset, SoftObjectPropertyData soft,
+                                  IReadOnlyList<AssetReferenceRemap> references)
+    {
+        // The whole object path lives in the path's asset name.
+        var current = soft.Value.AssetPath.AssetName?.ToString();
+        if (string.IsNullOrEmpty(current))
+            return;
+
+        foreach (var reference in references)
+        {
+            if (reference.RemapPath(current) is not string rewritten)
+                continue;
+
+            var value = soft.Value;                                  // FSoftObjectPath is a struct: change a copy
+            value.AssetPath.AssetName = FName.FromString(asset, rewritten);
+            soft.Value = value;
+            return;
         }
     }
 }

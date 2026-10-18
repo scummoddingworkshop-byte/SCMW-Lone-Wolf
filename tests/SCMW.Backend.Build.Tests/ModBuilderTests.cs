@@ -28,9 +28,12 @@ public class ModBuilderTests : IDisposable
     {
         public bool Ok = true;
         public readonly List<(string Uasset, string OldName, string NewName)> Calls = new();
-        public bool TryRenameObjects(string uassetFilePath, string oldName, string newName, out string? error)
+        public readonly List<IReadOnlyList<AssetReferenceRemap>> Remaps = new();
+        public bool TryRenameObjects(string uassetFilePath, string oldName, string newName,
+                                     IReadOnlyList<AssetReferenceRemap> references, out string? error)
         {
             Calls.Add((uassetFilePath, oldName, newName));
+            Remaps.Add(references);
             error = Ok ? null : "The copy could not be renamed.";
             return Ok;
         }
@@ -331,6 +334,15 @@ public class ModBuilderTests : IDisposable
             after!.Assets.Single(a => a.AssetName == "OliveOil").PackageName);
         Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil_ES",
             after.Assets.Single(a => a.AssetName == "OliveOil_ES").PackageName);
+
+        // the twin's soft reference to its item ("Actor") is re-pointed at the copy — otherwise the
+        // copy still names the donor item, so the game binds the setup to the donor and the new item
+        // gets none (empty Examine, components that never attach)
+        var twinRemaps = cloner.Remaps[cloner.Calls.FindIndex(c => c.NewName == "OliveOil_ES")];
+        var actor = twinRemaps
+            .Select(r => r.RemapPath("/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C"))
+            .Single(p => p is not null);
+        Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil.OliveOil_C", actor);
     }
 
     [Fact]
