@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SCMW.Core.Editing;
 
 /// <summary>
@@ -8,6 +10,9 @@ public enum NewAssetKind
 {
     /// <summary>A brand-new crafting recipe.</summary>
     Recipe,
+
+    /// <summary>A brand-new item: the item file plus its <c>_ES</c> twin.</summary>
+    Item,
 }
 
 /// <summary>
@@ -37,7 +42,27 @@ public sealed record NewAsset(
     /// The new asset's package path (its folder plus its name) — what the build clones the donor into
     /// and what the asset's own field edits are recorded against.
     /// </summary>
+    [JsonIgnore]
     public string PackagePath => Folder + "/" + Name;
+
+    /// <summary>
+    /// An ITEM is two files — the item and its <c>_ES</c> twin — so the owner's edits are recorded
+    /// against the twin's path. A recipe is one file, so its edit path is its own package path.
+    /// </summary>
+    [JsonIgnore]
+    public string EditPath => Kind == NewAssetKind.Item ? TwinPackagePath! : PackagePath;
+
+    /// <summary>The item's twin is the donor's <c>_ES</c> sibling; null for a recipe (a single file).</summary>
+    [JsonIgnore]
+    public string? TwinDonorPath => Kind == NewAssetKind.Item ? DonorPath + "_ES" : null;
+
+    /// <summary>The new item's twin name (its name plus <c>_ES</c>); null for a recipe.</summary>
+    [JsonIgnore]
+    public string? TwinName => Kind == NewAssetKind.Item ? Name + "_ES" : null;
+
+    /// <summary>The new item's twin package path (its folder plus its twin name); null for a recipe.</summary>
+    [JsonIgnore]
+    public string? TwinPackagePath => Kind == NewAssetKind.Item ? Folder + "/" + TwinName : null;
 }
 
 /// <summary>
@@ -95,5 +120,15 @@ public static class NewAssetNaming
 
         var kept = new string(text.Where(char.IsLetterOrDigit).ToArray());
         return kept.Length > 0 ? "CR_" + kept : null;
+    }
+
+    /// <summary>
+    /// An item's own name from the plain name the owner typed: the name's letters and digits (SCUM's
+    /// item names carry no prefix, so neither does ours). Null when there is nothing usable.
+    /// </summary>
+    public static string? ItemName(string? plainName)
+    {
+        var kept = new string((plainName ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+        return kept.Length > 0 ? kept : null;
     }
 }

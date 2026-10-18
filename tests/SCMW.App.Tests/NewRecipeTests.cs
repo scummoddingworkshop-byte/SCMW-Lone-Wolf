@@ -24,12 +24,15 @@ public class NewRecipeTests
     {
         public const string Recipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_Wooden_Arrow";
         public const string OtherRecipe = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_Stone_Axe";
+        public const string Item = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil_ES";
 
         private static readonly IReadOnlyList<AssetSummary> Rows = new[]
         {
             // A recipe's friendly "Name" differs from its real object name (the path's last part).
             new AssetSummary(Recipe, "Wooden Arrow", "Items", StatusKind.Editable, 1, Recipe + ".uasset", null),
             new AssetSummary(OtherRecipe, "Stone Axe", "Items", StatusKind.Editable, 1, OtherRecipe + ".uasset", null),
+            // An item: the list shows the "_ES" file; the item package is its class file.
+            new AssetSummary(Item, "Vegetable Oil", "Food", StatusKind.Editable, 1, Item + ".uasset", null),
         };
 
         public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
@@ -68,17 +71,52 @@ public class NewRecipeTests
         (vm.NewRecipeName, vm.NewRecipeDonor) =
             (name, vm.RecipeDonors.Single(d => d.Name == "Wooden Arrow"));
 
-    [AvaloniaFact]
-    public async Task The_new_recipe_panel_is_offered_for_recipes_only()
+    [AvaloniaFact] // the "New" panel is offered for recipes and items, and nowhere else
+    public async Task The_new_panel_is_offered_for_recipes_and_items_only()
     {
         var (vm, _, _, _, root) = Ready(new RecipeSource());
         try
         {
             await vm.OpenKindAsync("Recipes");
             Assert.True(vm.ShowNewRecipeButton);
+            Assert.Equal("＋ New recipe", vm.NewButtonText);
 
             await vm.OpenKindAsync("Items");
+            Assert.True(vm.ShowNewRecipeButton);
+            Assert.Equal("＋ New item", vm.NewButtonText);
+
+            await vm.OpenKindAsync("Base building");
             Assert.False(vm.ShowNewRecipeButton);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // an item comes from the Items list: its donor is the ITEM, and it records both files
+    public async Task A_new_item_is_recorded_from_the_items_list()
+    {
+        var (vm, assets, _, projects, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Items");
+            vm.OpenNewRecipeCommand.Execute(null);
+
+            var donor = vm.RecipeDonors.Single(d => d.Name == "VegetableOil");
+            // The donor is the item package behind the "_ES" file the list shows (the twin is derived).
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil", donor.Path);
+
+            vm.NewRecipeName = "Olive Oil";
+            vm.NewRecipeDonor = donor;
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            var saved = Assert.Single(assets.Load(projects.Current!.FolderPath));
+            Assert.Equal("OliveOil", saved.Name);
+            Assert.Equal(NewAssetKind.Item, saved.Kind);
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePressMod/OliveOil", saved.PackagePath);
+            // The owner's edits aim at the item's "_ES" twin, which is also what the row reads from.
+            Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePressMod/OliveOil_ES", saved.EditPath);
+
+            var row = vm.VisibleAssets.Single(a => a.Name == "OliveOil");
+            Assert.Equal(saved.EditPath, row.AssetId);
         }
         finally { TestProjects.Cleanup(root); }
     }

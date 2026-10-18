@@ -11,10 +11,16 @@ namespace SCMW.Backend.Build;
 /// <param name="DonorPath">The donor's exact game path — the donor's identity, and where the build
 /// reads the file and derives the name to rename the copy from.</param>
 /// <param name="Folder">The folder the clone is laid down in (the mod's own namespace).</param>
-/// <param name="Changes">The asset's own field edits, applied to the clone after it is renamed.</param>
+/// <param name="Changes">The asset's own field edits: written onto its twin when it has one (an item's
+/// editable file is its <c>_ES</c> twin), else onto the asset itself.</param>
+/// <param name="TwinName">For an item, the name of its <c>_ES</c> twin (a second file to clone);
+/// null for a recipe (a single file).</param>
+/// <param name="TwinDonorPath">For an item, the twin's donor path; null for a recipe.</param>
 public sealed record NewBuildAsset(
     string Name,
     string DonorName,
     string DonorPath,
     string Folder,
-    IReadOnlyList<FieldChange> Changes);
+    IReadOnlyList<FieldChange> Changes,
+    string? TwinName = null,
+    string? TwinDonorPath = null);

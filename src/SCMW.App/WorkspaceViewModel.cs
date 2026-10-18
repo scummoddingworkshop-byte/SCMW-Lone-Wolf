@@ -180,7 +180,9 @@ public partial class WorkspaceViewModel : ObservableObject
     partial void OnSelectedKindChanged(string value)
     {
         OnPropertyChanged(nameof(ShowNewRecipeButton));
-        if (!ShowNewRecipeButton) ShowNewRecipe = false;   // the panel belongs to Recipes only
+        OnPropertyChanged(nameof(NewButtonText));
+        OnPropertyChanged(nameof(NewPanelTitle));
+        if (!ShowNewRecipeButton) ShowNewRecipe = false;   // the panel belongs to recipes and items
 
         if (!_loadingKind && !string.IsNullOrEmpty(value))
         {
@@ -327,6 +329,8 @@ public partial class WorkspaceViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Categories));
         OnPropertyChanged(nameof(ShowNewRecipeButton));   // the "New" button needs the kind actually loaded
+        OnPropertyChanged(nameof(NewButtonText));
+        OnPropertyChanged(nameof(NewPanelTitle));
         RefreshAssets();
     }
 
@@ -359,48 +363,63 @@ public partial class WorkspaceViewModel : ObservableObject
     [RelayCommand]
     private void SelectCategory(string? category) => SelectedCategory = category ?? "All";
 
-    // --- Creating a new recipe (Task 7.5) --------------------------------------------------------
-    // The one place a project gains a brand-new recipe: the owner types a plain name, picks a game
-    // recipe to start from, and the app records it. The new recipe then shows in the list like any
+    // --- Creating a new asset (Task 7.5, extended in Phase 8) -------------------------------------
+    // The one place a project gains a brand-new recipe or item: the owner types a plain name, picks a
+    // game file to start from, and the app records it. The new asset then shows in the list like any
     // other and is edited the same way — its values are read from the donor but saved against its own
-    // package path, so the build writes them onto the clone (7.4).
+    // path, so the build writes them onto the clone.
 
-    /// <summary>True when the open kind can create new content — for now, recipes only. It also
-    /// requires the Recipes list to actually be loaded, so a quick kind switch never leaves the panel
-    /// offering the previous kind's files as donors.</summary>
-    public bool ShowNewRecipeButton =>
-        string.Equals(SelectedKind, "Recipes", StringComparison.Ordinal)
-        && string.Equals(_kind, "Recipes", StringComparison.Ordinal);
+    /// <summary>The kind of new asset the open list creates: items from the Items list, recipes from
+    /// the Recipes list.</summary>
+    public NewAssetKind CurrentNewKind =>
+        IsLoadedKind("Items") ? NewAssetKind.Item : NewAssetKind.Recipe;
 
-    /// <summary>True while the "New recipe" panel is showing in place of a file's values.</summary>
+    /// <summary>True when the open kind can create new content (recipes or items) AND that kind's list
+    /// has actually loaded — so a quick kind switch never leaves the panel offering the previous kind's
+    /// files as donors.</summary>
+    public bool ShowNewRecipeButton => IsLoadedKind("Recipes") || IsLoadedKind("Items");
+
+    /// <summary>True when the owner is browsing <paramref name="kind"/> and it has finished loading.</summary>
+    private bool IsLoadedKind(string kind) =>
+        string.Equals(SelectedKind, kind, StringComparison.Ordinal)
+        && string.Equals(_kind, kind, StringComparison.Ordinal);
+
+    /// <summary>The "New" button's words, for the open kind.</summary>
+    public string NewButtonText => CurrentNewKind == NewAssetKind.Item ? "＋ New item" : "＋ New recipe";
+
+    /// <summary>The panel's heading, for the open kind.</summary>
+    public string NewPanelTitle => CurrentNewKind == NewAssetKind.Item ? "New item" : "New recipe";
+
+    /// <summary>True while the "New" panel is showing in place of a file's values.</summary>
     [ObservableProperty] private bool _showNewRecipe;
 
-    /// <summary>The plain name the owner typed for the new recipe (e.g. "Olive Press").</summary>
+    /// <summary>The plain name the owner typed for the new asset (e.g. "Olive Press").</summary>
     [ObservableProperty] private string _newRecipeName = string.Empty;
 
-    /// <summary>The game recipe the new one is copied from, or null.</summary>
+    /// <summary>The game file the new one is copied from, or null.</summary>
     [ObservableProperty] private DonorChoice? _newRecipeDonor;
 
-    /// <summary>The recipes the owner can start from (the game's own recipes, never a new asset).</summary>
+    /// <summary>The files the owner can start from (the game's own, never a new asset).</summary>
     public ObservableCollection<DonorChoice> RecipeDonors { get; } = new();
 
-    /// <summary>A plain line telling the owner what needs fixing before a recipe can be made.</summary>
+    /// <summary>A plain line telling the owner what needs fixing before the asset can be made.</summary>
     [ObservableProperty] private string _newRecipeNotice = string.Empty;
 
-    /// <summary>True when there is something to say about making the recipe.</summary>
+    /// <summary>True when there is something to say about making the asset.</summary>
     public bool HasNewRecipeNotice => !string.IsNullOrWhiteSpace(NewRecipeNotice);
 
     partial void OnNewRecipeNoticeChanged(string value) => OnPropertyChanged(nameof(HasNewRecipeNotice));
 
-    /// <summary>Open the "New recipe" panel: fill the "start from" list from the game's recipes.</summary>
+    /// <summary>Open the "New" panel: fill the "start from" list from the open kind's files.</summary>
     [RelayCommand]
     private void OpenNewRecipe()
     {
-        if (!ShowNewRecipeButton) return;   // the Recipes list must be loaded before it can be used
+        if (!ShowNewRecipeButton) return;   // the list must be loaded before it can be used
 
         FillRecipeDonors();
+        var what = CurrentNewKind == NewAssetKind.Item ? "items" : "recipes";
         NewRecipeNotice = RecipeDonors.Count == 0
-            ? "No recipes were found to start from. Check your SCUM folder in Settings."
+            ? $"No {what} were found to start from. Check your SCUM folder in Settings."
             : string.Empty;
         ShowNewRecipe = true;
     }
@@ -414,13 +433,16 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Record one brand-new recipe from the typed name and the picked donor, then open it for editing.
+    /// Record one brand-new asset from the typed name and the picked donor, then open it for editing.
     /// Refused (nothing recorded) with a plain reason when there is no project, no donor, no usable
     /// name, or the name is already taken.
     /// </summary>
     [RelayCommand]
     private void CreateNewRecipe()
     {
+        var kind = CurrentNewKind;
+        var word = kind == NewAssetKind.Item ? "item" : "recipe";
+
         if (NeedsProject)
         {
             NewRecipeNotice = ProjectWarning;
@@ -430,37 +452,40 @@ public partial class WorkspaceViewModel : ObservableObject
         var chosen = _projects?.Chosen;
         if (_newAssets is null || chosen is null) return;
 
-        if (NewRecipeDonor is not { } donor || !IsKnownRecipe(donor))
+        if (NewRecipeDonor is not { } donor || !IsKnownDonor(donor))
         {
-            NewRecipeNotice = "Pick a recipe to start from.";
+            NewRecipeNotice = $"Pick a {word} to start from.";
             return;
         }
 
-        var name = NewAssetNaming.RecipeName(NewRecipeName);
+        var name = kind == NewAssetKind.Item
+            ? NewAssetNaming.ItemName(NewRecipeName)
+            : NewAssetNaming.RecipeName(NewRecipeName);
         if (name is null)
         {
-            NewRecipeNotice = "Type a name for the new recipe.";
+            NewRecipeNotice = $"Type a name for the new {word}.";
             return;
         }
 
         // The name must be free on the loaded list AND in the project's own record — a project switch
-        // leaves the list stale, so the record is the truth.
-        var taken = _allAssets.Any(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase))
-                    || _newAssets.Load(chosen.FolderPath)
-                        .Any(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+        // leaves the list stale, so the record is the truth. Names are compared loosely, so "Olive Oil",
+        // "OliveOil" and "olive_oil" all count as the same name.
+        var key = NormalisedName(name);
+        var taken = _allAssets.Any(a => NormalisedName(a.Name) == key)
+                    || _newAssets.Load(chosen.FolderPath).Any(a => NormalisedName(a.Name) == key);
         if (taken)
         {
-            NewRecipeNotice = $"There's already a recipe called {name} — try another name.";
+            NewRecipeNotice = $"There's already a {word} called {name} — try another name.";
             return;
         }
 
         var asset = new NewAsset(
-            Guid.NewGuid(), name, NewAssetKind.Recipe, donor.Name, donor.Path,
+            Guid.NewGuid(), name, kind, donor.Name, donor.Path,
             NewAssetNaming.FolderFor(FolderOf(donor.Path), chosen.Name), DateTime.UtcNow);
 
         if (!_newAssets.Add(chosen.FolderPath, asset))
         {
-            NewRecipeNotice = "The new recipe could not be saved. Please try again.";
+            NewRecipeNotice = $"The new {word} could not be saved. Please try again.";
             return;
         }
 
@@ -474,19 +499,37 @@ public partial class WorkspaceViewModel : ObservableObject
         _ = OpenAsync(row);
     }
 
-    /// <summary>The picker's choices: the game's own recipes (a new asset is never offered as a donor).</summary>
+    /// <summary>The picker's choices: the game's own files of the open kind (a new asset is never
+    /// offered as a donor). An item's donor is the item package; the build derives its "_ES" twin.</summary>
     private void FillRecipeDonors()
     {
         RecipeDonors.Clear();
         foreach (var asset in _allAssets.Where(a => a.ReadPath is null))
-            RecipeDonors.Add(new DonorChoice(asset.Name, asset.AssetId ?? asset.Description));
+        {
+            var path = DonorPathOf(asset);
+            if (!string.IsNullOrEmpty(path))
+                RecipeDonors.Add(new DonorChoice(asset.Name, path!));
+        }
     }
 
-    /// <summary>True when the choice is one of the game's own recipes in the loaded list — never a
-    /// brand-new asset, and never an item from a stale list.</summary>
-    private bool IsKnownRecipe(DonorChoice donor) =>
+    /// <summary>The path a donor is cloned from: an ordinary file itself; for an item, the item package
+    /// behind the "_ES" file the list shows (the build derives the twin from it).</summary>
+    private string? DonorPathOf(ItemSummary asset)
+    {
+        if (CurrentNewKind != NewAssetKind.Item) return asset.AssetId;
+        return ClassFileOf(asset.AssetId) ?? asset.AssetId;
+    }
+
+    /// <summary>True when the choice is one of the game's own files in the loaded list — never a
+    /// brand-new asset, and never a file from a stale list.</summary>
+    private bool IsKnownDonor(DonorChoice donor) =>
         _allAssets.Any(a => a.ReadPath is null
-                            && string.Equals(a.AssetId, donor.Path, StringComparison.OrdinalIgnoreCase));
+                            && string.Equals(DonorPathOf(a), donor.Path, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>A name with only its letters and digits, lower-cased — so "Olive Oil", "OliveOil" and
+    /// "olive_oil" count as the same name when checking for a clash.</summary>
+    private static string NormalisedName(string name) =>
+        new string(name.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
 
     /// <summary>This project's recorded new recipes as list rows, on top of the game's own recipes.</summary>
     private IReadOnlyList<ItemSummary> WithNewAssetRows(IReadOnlyList<ItemSummary> recipes)
@@ -498,10 +541,15 @@ public partial class WorkspaceViewModel : ObservableObject
         return rows.Count == 0 ? recipes : rows.Concat(recipes).ToList();
     }
 
-    /// <summary>A list row for a new recipe: it reads the donor's values but is saved against its own path.</summary>
+    /// <summary>A list row for a new asset: it reads the donor's values but is saved against its own
+    /// path (an item's editable file is its <c>_ES</c> twin, so both read and write use the twin).</summary>
     private static ItemSummary NewRecipeRow(NewAsset asset) =>
-        new(asset.Name, "New", $"New recipe — copied from {asset.DonorName}", editable: true,
-            assetId: asset.PackagePath, readPath: asset.DonorPath);
+        new(asset.Name, "New",
+            $"New {KindWord(asset.Kind)} — copied from {asset.DonorName}", editable: true,
+            assetId: asset.EditPath, readPath: asset.TwinDonorPath ?? asset.DonorPath);
+
+    /// <summary>The plain word for a new asset's kind.</summary>
+    private static string KindWord(NewAssetKind kind) => kind == NewAssetKind.Item ? "item" : "recipe";
 
     /// <summary>The folder a path lives in (everything before the last slash).</summary>
     private static string FolderOf(string path)

@@ -335,7 +335,7 @@ public partial class BuildViewModel : ObservableObject
             return (BuildItemsFrom(records), Array.Empty<NewBuildAsset>());
 
         var targets = new HashSet<string>(
-            newAssets.Select(a => a.PackagePath), StringComparer.OrdinalIgnoreCase);
+            newAssets.Select(a => a.EditPath), StringComparer.OrdinalIgnoreCase);
 
         var plain = records
             .Where(r => !targets.Contains(r.AssetPath ?? r.AssetId))
@@ -344,8 +344,9 @@ public partial class BuildViewModel : ObservableObject
         var built = newAssets
             .Select(asset => new NewBuildAsset(
                 asset.Name, asset.DonorName, asset.DonorPath, asset.Folder,
-                ChangesFor(records.Where(r => string.Equals(r.AssetPath ?? r.AssetId, asset.PackagePath,
-                    StringComparison.OrdinalIgnoreCase)))))
+                ChangesFor(records.Where(r => string.Equals(r.AssetPath ?? r.AssetId, asset.EditPath,
+                    StringComparison.OrdinalIgnoreCase))),
+                asset.TwinName, asset.TwinDonorPath))
             .ToList();
 
         return (BuildItemsFrom(plain), built);

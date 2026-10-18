@@ -65,11 +65,11 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <!-- The Recipes list's "New" button (the list's own start point for Task 7.5). -->
-      <Button Grid.Row="3" Name="NewRecipeButton" Classes="secondary" Content="＋ New recipe"
+      <!-- The list's "New" button: makes a new item from the Items list, a new recipe from Recipes. -->
+      <Button Grid.Row="3" Name="NewRecipeButton" Classes="secondary" Content="{Binding NewButtonText}"
               HorizontalAlignment="Left" Margin="0,12,0,0"
               IsVisible="{Binding ShowNewRecipeButton}"
-              ToolTip.Tip="Make a brand-new recipe"
+              ToolTip.Tip="Make a brand-new recipe or item"
               Command="{Binding OpenNewRecipeCommand}"/>
 
       <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
@@ -104,9 +104,9 @@
           <Border Name="NewRecipeCard" Classes="card" Margin="0,0,0,14"
                   IsVisible="{Binding ShowNewRecipe}">
             <StackPanel Spacing="10">
-              <TextBlock Classes="section" Text="New recipe"/>
+              <TextBlock Classes="section" Text="{Binding NewPanelTitle}"/>
               <TextBlock Classes="dim" TextWrapping="Wrap"
-                         Text="Give the new recipe a name and pick one to copy. Your project keeps the new recipe; the game's own copy is left untouched."/>
+                         Text="Give it a name and pick one to copy. Your project keeps the new one; the game's own file is left untouched."/>
               <StackPanel Spacing="4">
                 <TextBlock Text="Name" Classes="dim"/>
                 <TextBox Name="NewRecipeNameBox" Classes="field" MinWidth="200"

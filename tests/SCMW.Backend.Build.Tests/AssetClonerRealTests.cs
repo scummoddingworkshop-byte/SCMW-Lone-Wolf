@@ -48,4 +48,43 @@ public class AssetClonerRealTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real clone test.")]
+    public void A_real_item_renames_its_object_class_and_default_object()
+    {
+        // An item is a Blueprint: its object, its generated class and that class's default object must
+        // all move together, or the game loads a half-renamed asset and crashes.
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string donor = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil";
+        Assert.True(mount.TryReadPackage(donor, out var files));
+
+        var dir = Path.Combine(Path.GetTempPath(), "scmw-clone-item-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (var pair in files!)
+                File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "VegetableOil", "OliveOilTEST")), pair.Value);
+
+            var uasset = Directory.GetFiles(dir, "*.uasset").Single();
+            Assert.True(new UAssetCloner().TryRenameObjects(uasset, "VegetableOil", "OliveOilTEST", out var renameError),
+                renameError);
+
+            var names = new UAsset(uasset, EngineVersion.VER_UE4_27).Exports
+                .Select(e => e.ObjectName.ToString()).ToList();
+
+            // An item package's top object IS its generated class; there is no plain-named export.
+            Assert.Contains("OliveOilTEST_C", names);                  // its generated class
+            Assert.Contains("Default__OliveOilTEST_C", names);         // that class's default object
+            Assert.DoesNotContain("VegetableOil_C", names);
+            Assert.DoesNotContain("Default__VegetableOil_C", names);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

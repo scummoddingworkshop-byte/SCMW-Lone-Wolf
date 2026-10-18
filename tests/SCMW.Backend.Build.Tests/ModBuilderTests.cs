@@ -40,12 +40,14 @@ public class ModBuilderTests : IDisposable
     {
         public WriteResult Next = new(true, null);
         public readonly List<FieldChange> Applied = new();
+        public readonly List<string> AppliedPaths = new();
         public IReadOnlyDictionary<string, string>? Donors;
         public WriteResult Apply(string uasset, IReadOnlyList<FieldChange> changes,
                                  IReadOnlyDictionary<string, string>? donors = null)
         {
             if (!Next.Ok) return Next;
             Applied.AddRange(changes);
+            AppliedPaths.Add(uasset);
             Donors = donors;
             File.WriteAllText(uasset, "edited");            // stand in for the real rewrite
             File.WriteAllText(Path.ChangeExtension(uasset, ".uexp"), "edited");
@@ -262,6 +264,74 @@ public class ModBuilderTests : IDisposable
     private static NewBuildAsset NewRecipe(IReadOnlyList<FieldChange>? changes = null) =>
         new("CR_New", "CR_1H_Stone_Axe", DonorPath, NewFolder,
             changes ?? Array.Empty<FieldChange>());
+
+    private const string ItemDonorPath = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil";
+    private const string ItemFolder = "SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress";
+
+    private static NewBuildAsset NewItem(IReadOnlyList<FieldChange>? changes = null) =>
+        new("OliveOil", "VegetableOil", ItemDonorPath, ItemFolder,
+            changes ?? Array.Empty<FieldChange>(), TwinName: "OliveOil_ES", TwinDonorPath: ItemDonorPath + "_ES");
+
+    /// <summary>A tiny index carrying an item donor: the item and its _ES twin.</summary>
+    private static byte[] ItemDonorRegistry()
+    {
+        var reg = new FakeAssetRegistry();
+        reg.Name("PrimaryAssetType");
+        reg.Name("PrimaryAssetName");
+        reg.Name("NativeClass");
+        reg.NumberlessNames.Add((uint)reg.Name("Item"));
+        reg.Pairs.Add(((uint)reg.Name("PrimaryAssetType"), 2u));
+        reg.Pairs.Add(((uint)reg.Name("PrimaryAssetName"), 2u));
+        reg.Pairs.Add(((uint)reg.Name("NativeClass"), 2u));
+
+        const string pkg = "/Game/ConZ_Files/Items/Food/MiscFood";
+        reg.AddRecord(new FakeRecord(new[]
+        {
+            $"{pkg}/VegetableOil.VegetableOil", pkg, "Item", $"{pkg}/VegetableOil", "VegetableOil",
+        }, TagHandle: 0x8000000300000000UL, ChunkIds: new[] { 0 }));
+        reg.AddRecord(new FakeRecord(new[]
+        {
+            $"{pkg}/VegetableOil_ES.VegetableOil_ES", pkg, "LWObjectSetup",
+            $"{pkg}/VegetableOil_ES", "VegetableOil_ES",
+        }, TagHandle: 0x8000000300000000UL, ChunkIds: new[] { 0 }));
+        return reg.Build();
+    }
+
+    [Fact] // an ITEM is two files: the build clones both, edits the twin, and adds both to the index
+    public async Task A_new_item_clones_the_item_and_its_es_twin_and_ships_both()
+    {
+        var (builder, reader, writer, packer, _, cloner) = New();
+        AddPackage(reader, ItemDonorPath);
+        AddPackage(reader, ItemDonorPath + "_ES");
+        reader.Index = ItemDonorRegistry();
+
+        var changes = new[] { new FieldChange("Calories", "100") };
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewItem(changes) });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+        Assert.True(outcome.Ok, outcome.Error);
+
+        // both objects renamed
+        Assert.Contains(cloner.Calls, c => c.OldName == "VegetableOil" && c.NewName == "OliveOil");
+        Assert.Contains(cloner.Calls, c => c.OldName == "VegetableOil_ES" && c.NewName == "OliveOil_ES");
+
+        // both files staged flat in the item's own folder
+        var staged = Path.Combine(packer.Staging!, ItemFolder.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(Path.Combine(staged, "OliveOil.uasset")));
+        Assert.True(File.Exists(Path.Combine(staged, "OliveOil_ES.uasset")));
+
+        // the owner's edits land on the twin (the item's editable file), never the item itself
+        Assert.Contains(writer.Applied, c => c.Field == "Calories" && c.NewValue == "100");
+        Assert.Equal("OliveOil_ES.uasset", Path.GetFileName(Assert.Single(writer.AppliedPaths)));
+
+        // both index entries, each named in the game's /Game/ namespace
+        var index = Path.Combine(packer.Staging!, "SCUM", "AssetRegistry.bin");
+        Assert.True(AssetRegistryReader.TryRead(File.ReadAllBytes(index), out var after, out _));
+        Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil",
+            after!.Assets.Single(a => a.AssetName == "OliveOil").PackageName);
+        Assert.Equal("/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil_ES",
+            after.Assets.Single(a => a.AssetName == "OliveOil_ES").PackageName);
+    }
 
     [Fact]
     public async Task A_new_asset_copies_the_donor_under_its_own_name_and_ships_the_index()

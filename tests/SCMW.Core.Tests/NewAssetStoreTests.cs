@@ -307,6 +307,71 @@ public class NewAssetNamingTests
         Assert.Null(NewAssetNaming.RecipeName("cr "));
     }
 
+    [Fact] // a plain name the owner typed becomes an item's name (letters and digits only)
+    public void A_plain_name_becomes_an_item_name()
+    {
+        Assert.Equal("OliveOil", NewAssetNaming.ItemName("Olive Oil"));
+        Assert.Equal("CrudeOil2", NewAssetNaming.ItemName("Crude Oil 2"));
+    }
+
+    [Fact] // nothing usable to name with means no item name at all
+    public void A_name_with_nothing_usable_has_no_item_name()
+    {
+        Assert.Null(NewAssetNaming.ItemName(null));
+        Assert.Null(NewAssetNaming.ItemName("***"));
+    }
+
+    [Fact] // an ITEM is two files: the item and its "_ES" twin. The twin is what the owner's edits
+           // are recorded against, so the record points its edit path at it.
+    public void An_item_records_its_edit_path_at_its_es_twin()
+    {
+        var item = new NewAsset(Guid.NewGuid(), "OliveOil", NewAssetKind.Item, "VegetableOil",
+            "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil",
+            "SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress",
+            new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil_ES",
+            item.EditPath);
+    }
+
+    [Fact] // a recipe is one file, so its edit path is its own package path
+    public void A_recipe_records_its_edit_path_at_its_own_package()
+    {
+        var recipe = new NewAsset(Guid.NewGuid(), "CR_OlivePress", NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_OlivePress",
+            new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal(recipe.PackagePath, recipe.EditPath);
+    }
+
+    [Fact] // the twin is the donor's "_ES" sibling, and the new twin is the new name's "_ES" sibling
+    public void The_twin_is_the_donors_es_sibling()
+    {
+        var item = new NewAsset(Guid.NewGuid(), "OliveOil", NewAssetKind.Item, "VegetableOil",
+            "SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil",
+            "SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress",
+            new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/VegetableOil_ES", item.TwinDonorPath);
+        Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePress/OliveOil_ES",
+            item.TwinPackagePath);
+        Assert.Equal("OliveOil_ES", item.TwinName);
+    }
+
+    [Fact] // a recipe has no twin (a recipe is a single file)
+    public void A_recipe_has_no_twin()
+    {
+        var recipe = new NewAsset(Guid.NewGuid(), "CR_OlivePress", NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_OlivePress",
+            new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Null(recipe.TwinDonorPath);
+        Assert.Null(recipe.TwinPackagePath);
+        Assert.Null(recipe.TwinName);
+    }
+
     [Fact] // the package path the build and the field edits aim at is the folder plus the name
     public void Package_path_is_the_folder_plus_the_name()
     {

@@ -79,7 +79,7 @@ public partial class PreviewViewModel : ObservableObject
             var byPath = lines.ToDictionary(l => l.Path, StringComparer.OrdinalIgnoreCase);
             foreach (var asset in _newAssets.Load(folder))
             {
-                var key = ChangeDiff.ItemKey(asset.PackagePath);
+                var key = ChangeDiff.ItemKey(asset.EditPath);
                 if (byPath.TryGetValue(key, out var existing))
                 {
                     existing.IsNewAsset = true;

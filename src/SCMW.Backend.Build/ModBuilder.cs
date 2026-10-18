@@ -177,45 +177,77 @@ public sealed class ModBuilder : IModBuilder
     private async Task<(bool Ok, string? Error)> StageNewAssetAsync(
         NewBuildAsset asset, string staging, string work, CancellationToken ct)
     {
-        if (!_reader.TryReadPackage(asset.DonorPath, out var donorFiles) || donorFiles is null || donorFiles.Count == 0)
-            return (false, $"\"{asset.Name}\" is copied from \"{asset.DonorName}\", but that game file could not be read.");
+        var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packageDir);
+
+        // The asset's own file. For a recipe this is the whole thing; for an item it is the item file,
+        // which carries no edits (its editable values live on its "_ES" twin).
+        var mainChanges = asset.TwinName is null ? asset.Changes : Array.Empty<FieldChange>();
+        var (mainPath, mainError) = await CloneIntoAsync(packageDir, asset.DonorPath, asset.DonorName,
+            asset.Name, mainChanges, work, ct).ConfigureAwait(false);
+        if (mainPath is null)
+            return (false, mainError);
+
+        // An item is two files: clone its "_ES" twin too, and write the owner's edits onto it.
+        if (asset.TwinName is not null && asset.TwinDonorPath is not null)
+        {
+            var (twinPath, twinError) = await CloneIntoAsync(packageDir, asset.TwinDonorPath,
+                asset.DonorName + "_ES", asset.TwinName, asset.Changes, work, ct).ConfigureAwait(false);
+            if (twinPath is null)
+                return (false, twinError);
+        }
+
+        var targetDir = Path.Combine(staging, asset.Folder.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.GetFiles(packageDir, "*", SearchOption.AllDirectories))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Copies one donor package under a new name: its files, renamed so the copy is a distinct asset,
+    /// then any of the asset's own edits. Returns the written <c>.uasset</c> path, or one plain reason.
+    /// </summary>
+    private async Task<(string? Uasset, string? Error)> CloneIntoAsync(
+        string packageDir, string donorPath, string donorLabel, string newName,
+        IReadOnlyList<FieldChange> changes, string work, CancellationToken ct)
+    {
+        if (!_reader.TryReadPackage(donorPath, out var donorFiles) || donorFiles is null || donorFiles.Count == 0)
+            return (null, $"\"{newName}\" is copied from \"{donorLabel}\", but that game file could not be read.");
 
         // The donor's real name is the last part of its exact path — the identity the game names the
         // copied object and files by. Never the shown name: that can differ (e.g. "Cabinet Small Wood"
         // versus "CR_Cabinet_Small_Wood"), and renaming by it would find nothing to rename.
-        var donorName = DonorTechnicalName(asset.DonorPath);
+        var donorName = DonorTechnicalName(donorPath);
 
-        var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(packageDir);
+        // Each package gets its own folder so two clones' companion files can never collide.
+        var dir = Path.Combine(packageDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
         string? uassetPath = null;
         foreach (var pair in donorFiles)
         {
-            var stagedName = CloneLayout.StagedFileName(pair.Key, donorName, asset.Name);
-            var destination = Path.Combine(packageDir, stagedName);
+            var stagedName = CloneLayout.StagedFileName(pair.Key, donorName, newName);
+            var destination = Path.Combine(dir, stagedName);
             File.WriteAllBytes(destination, pair.Value);
             if (destination.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) uassetPath = destination;
         }
 
         if (uassetPath is null)
-            return (false, $"The game file \"{asset.DonorName}\" had no .uasset file to copy.");
+            return (null, $"The game file \"{donorLabel}\" had no .uasset file to copy.");
 
-        if (!_cloner.TryRenameObjects(uassetPath, donorName, asset.Name, out var renameError))
-            return (false, renameError ?? $"The copy of \"{asset.DonorName}\" could not be renamed.");
+        if (!_cloner.TryRenameObjects(uassetPath, donorName, newName, out var renameError))
+            return (null, renameError ?? $"The copy of \"{donorLabel}\" could not be renamed.");
 
-        if (asset.Changes.Count > 0)
+        if (changes.Count > 0)
         {
-            var donors = await ExtractDonorsAsync(asset.Changes, work, ct).ConfigureAwait(false);
-            var written = _writer.Apply(uassetPath, asset.Changes, donors);
+            var donors = await ExtractDonorsAsync(changes, work, ct).ConfigureAwait(false);
+            var written = _writer.Apply(uassetPath, changes, donors);
             if (!written.Ok)
-                return (false, written.Error ?? $"\"{asset.Name}\" could not be changed.");
+                return (null, written.Error ?? $"\"{newName}\" could not be changed.");
         }
 
-        var targetDir = Path.Combine(staging, asset.Folder.Replace('/', Path.DirectorySeparatorChar));
-        Directory.CreateDirectory(targetDir);
-        foreach (var file in Directory.GetFiles(packageDir))
-            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
-
-        return (true, null);
+        return (uassetPath, null);
     }
 
     /// <summary>The donor's real asset name: the last part of its exact path (e.g.
@@ -253,19 +285,31 @@ public sealed class ModBuilder : IModBuilder
 
         foreach (var asset in assets)
         {
-            if (!AssetRegistryWriter.TryAddAsset(index!,
-                    new NewRegistryAsset(RegistryPackagePath(asset.Folder), asset.Name,
-                                         DonorTechnicalName(asset.DonorPath)),
-                    out var updated, out var addError))
+            if (!TryAddEntry(index, asset.Folder, asset.Name, DonorTechnicalName(asset.DonorPath),
+                    out index, out var addError))
                 return (false, addError ?? $"\"{asset.Name}\" could not be added to the game's index.");
 
-            index = updated;
+            // An item is two files, so it needs two index entries — the item and its "_ES" twin.
+            if (asset.TwinName is not null && asset.TwinDonorPath is not null
+                && !TryAddEntry(index, asset.Folder, asset.TwinName, DonorTechnicalName(asset.TwinDonorPath),
+                    out index, out addError))
+                return (false, addError ?? $"\"{asset.TwinName}\" could not be added to the game's index.");
         }
 
         var target = Path.Combine(staging, "SCUM", "AssetRegistry.bin");
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.WriteAllBytes(target, index!);
         return (true, null);
+
+        // Adds one entry to the index (the folder is a pak path; the index names it "/Game/…").
+        bool TryAddEntry(byte[]? current, string folder, string name, string donorName,
+                         out byte[]? updated, out string? error)
+        {
+            updated = current;
+            return AssetRegistryWriter.TryAddAsset(current!,
+                new NewRegistryAsset(RegistryPackagePath(folder), name, donorName),
+                out updated, out error);
+        }
     }
 
     /// <summary>
