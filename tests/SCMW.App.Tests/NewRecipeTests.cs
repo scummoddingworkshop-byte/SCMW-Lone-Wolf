@@ -48,6 +48,9 @@ public class NewRecipeTests
             Task.FromResult<IReadOnlyList<AssetField>>(new[]
             {
                 new AssetField("ProductQuantity", "ProductQuantity", StatusKind.Editable, "1"),
+                // What the donor recipe makes — the value a new recipe inherits until it is re-pointed.
+                new AssetField("Product", "Product", StatusKind.ReadOnly,
+                    "/Game/ConZ_Files/Items/Food/MiscFood/VegetableOil.VegetableOil_C"),
             });
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));
@@ -567,6 +570,76 @@ public class NewRecipeTests
             var choice = vm.ProductChoices
                 .Single(c => c.SoftPath == "/Game/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePressMod/OliveOil.OliveOil_C");
             Assert.Equal("OliveOil", choice.Label);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // an open new recipe can change what it makes, and revert to the donor's own product
+    public async Task An_open_new_recipe_can_change_what_it_makes()
+    {
+        var (vm, _, changes, projects, root) = Ready(new RecipeSource());
+        try
+        {
+            // A new item of our own, so there are two products to choose between.
+            await vm.OpenKindAsync("Items");
+            vm.OpenNewRecipeCommand.Execute(null);
+            vm.NewRecipeName = "Olive Oil";
+            vm.NewRecipeDonor = vm.RecipeDonors.Single(d => d.Name == "VegetableOil");
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            // A new recipe made WITHOUT picking "Makes" — it starts on the donor's own product.
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+            Make(vm, "Oil");
+            vm.CreateNewRecipeCommand.Execute(null);
+            var row = vm.VisibleAssets.Single(a => a.Name == "CR_Oil");
+            await vm.OpenAsync(row);
+
+            Assert.True(vm.ShowOpenMakes);
+            var donorProduct = vm.OpenProductChoices.Single(c => c.Label == "VegetableOil");
+            Assert.Equal(donorProduct, vm.OpenRecipeProduct);   // what the donor makes, shown
+
+            var oliveOil = vm.OpenProductChoices.Single(c => c.Label == "OliveOil");
+            vm.OpenRecipeProduct = oliveOil;
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath),
+                                       r => r.FieldTechnicalName == "Product");
+            Assert.Equal(oliveOil.SoftPath, record.NewValue);
+
+            // Back to the donor's own product: the change is dropped, never left as a no-op.
+            vm.OpenRecipeProduct = donorProduct;
+            Assert.DoesNotContain(changes.For(projects.Current!.FolderPath),
+                                  r => r.FieldTechnicalName == "Product");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the open recipe shows a working "Makes" box
+    public async Task The_makes_box_shows_on_an_open_new_recipe()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            var view = new WorkspaceView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1000, Height = 700 };
+            window.Show();
+
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+            Make(vm, "Oil");
+            vm.CreateNewRecipeCommand.Execute(null);
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "CR_Oil"));
+            window.UpdateLayout();
+
+            var card = view.FindControl<Border>("OpenMakesCard");
+            Assert.NotNull(card);
+            Assert.True(card!.IsVisible);
+
+            var picker = view.GetVisualDescendants().OfType<SearchPicker>()
+                .Single(c => c.Name == "OpenMakesPicker");
+            picker.FindControl<Button>("Toggle")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.UpdateLayout();
+            Assert.True(picker.FindControl<Popup>("Pop")!.IsOpen);
         }
         finally { TestProjects.Cleanup(root); }
     }

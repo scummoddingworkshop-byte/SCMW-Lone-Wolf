@@ -28,13 +28,21 @@ public partial class WorkspaceView : UserControl
         if (_vm is not null) _vm.PropertyChanged -= OnViewModelPropertyChanged;
 
         _vm = DataContext as WorkspaceViewModel;
-        if (_vm is not null) _vm.PropertyChanged += OnViewModelPropertyChanged;
+        if (_vm is not null)
+        {
+            _vm.PropertyChanged += OnViewModelPropertyChanged;
+
+            // A recipe may already be open when this screen is shown (e.g. after a screen change).
+            if (_vm.ShowOpenMakes) BuildPicker("OpenMakesHost", "OpenProductPickerTemplate");
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewRecipe) && _vm?.ShowNewRecipe == true)
             BuildNewRecipePickers();
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowOpenMakes) && _vm?.ShowOpenMakes == true)
+            BuildPicker("OpenMakesHost", "OpenProductPickerTemplate");
     }
 
     /// <summary>

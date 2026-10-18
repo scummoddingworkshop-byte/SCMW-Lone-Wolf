@@ -437,6 +437,30 @@ public partial class WorkspaceViewModel : ObservableObject
     public bool ShowProductPicker =>
         ShowNewRecipe && CurrentNewKind == NewAssetKind.Recipe && ProductChoices.Count > 0;
 
+    // --- What an OPEN new recipe makes (Phase 8.2 follow-up) -------------------------------------
+    // The same choice as the New-recipe panel, but for a recipe that already exists: set or change
+    // what it produces at any time, and see it plainly instead of hunting for it in the field list.
+
+    /// <summary>The items the open recipe may make (the game's own plus this project's own new items).</summary>
+    public ObservableCollection<ProductChoice> OpenProductChoices { get; } = new();
+
+    /// <summary>The item the open new recipe makes, as picked; null when it is not an item.</summary>
+    [ObservableProperty] private ProductChoice? _openRecipeProduct;
+
+    /// <summary>True while the open file is a brand-new recipe whose product is an item we can offer.
+    /// A placeable recipe's product is not an item, so the card stays away from it.</summary>
+    private bool _showOpenMakes;
+    public bool ShowOpenMakes => _showOpenMakes;
+
+    /// <summary>True while the card is being filled from the recipe, so the picker cannot record itself.</summary>
+    private bool _fillingOpenProduct;
+
+    partial void OnOpenRecipeProductChanged(ProductChoice? value)
+    {
+        if (_fillingOpenProduct) return;
+        SetOpenRecipeProduct(value);
+    }
+
     /// <summary>Open the "New" panel: fill the "start from" list from the open kind's files.</summary>
     [RelayCommand]
     private void OpenNewRecipe()
@@ -565,7 +589,14 @@ public partial class WorkspaceViewModel : ObservableObject
         NewRecipeProduct = null;
         if (CurrentNewKind != NewAssetKind.Recipe) return;
 
-        foreach (var choice in _gameItemChoices) ProductChoices.Add(choice);
+        AddProductChoices(ProductChoices);
+    }
+
+    /// <summary>Add every item a recipe could make to a "Makes" list: the game's own first, then this
+    /// project's own new items.</summary>
+    private void AddProductChoices(ObservableCollection<ProductChoice> choices)
+    {
+        foreach (var choice in _gameItemChoices) choices.Add(choice);
 
         var folder = _projects?.Chosen?.FolderPath;
         if (folder is null || _newAssets is null) return;
@@ -573,8 +604,103 @@ public partial class WorkspaceViewModel : ObservableObject
         foreach (var asset in _newAssets.Load(folder).Where(a => a.Kind == NewAssetKind.Item))
         {
             var soft = ItemSoftPaths.FromItemPackage(asset.PackagePath);
-            if (soft.Length > 0) ProductChoices.Add(new ProductChoice(soft, asset.Name));
+            if (soft.Length > 0) choices.Add(new ProductChoice(soft, asset.Name));
         }
+    }
+
+    /// <summary>
+    /// Fill the open recipe's "Makes" card from the file just shown: the product it has now, and the
+    /// items it may be pointed at. Shown only for a brand-new recipe whose product is an item, so a
+    /// placeable recipe (whose product is not an item) is never offered one.
+    /// </summary>
+    private void RefreshOpenMake(string kind, string? assetPath)
+    {
+        var isNewRecipe = string.Equals(kind, "Recipes", StringComparison.Ordinal)
+                          && SelectedAsset?.ReadPath is not null;
+
+        _fillingOpenProduct = true;
+        OpenProductChoices.Clear();
+        OpenRecipeProduct = null;
+        _showOpenMakes = false;
+
+        if (isNewRecipe)
+        {
+            AddProductChoices(OpenProductChoices);
+
+            var current = RawProduct(assetPath, out _);
+            var pick = OpenProductChoices.FirstOrDefault(c =>
+                string.Equals(c.SoftPath, current, StringComparison.OrdinalIgnoreCase));
+
+            if (pick is not null)
+            {
+                _showOpenMakes = true;
+                OpenRecipeProduct = pick;
+            }
+        }
+
+        _fillingOpenProduct = false;
+        OnPropertyChanged(nameof(ShowOpenMakes));
+    }
+
+    /// <summary>
+    /// The open recipe's "Product" value as the game stores it (the whole <c>/Game/…</c> link) — the
+    /// project's own change when there is one, else the donor's — plus the donor's original. Read from
+    /// the file's raw fields, never the explained rows (which show a friendly, shortened value).
+    /// </summary>
+    private string? RawProduct(string? assetPath, out string? original)
+    {
+        original = null;
+
+        var field = _shownFields.FirstOrDefault(f =>
+            string.Equals(f.TechnicalName, ProductField, StringComparison.OrdinalIgnoreCase));
+        if (field is null) return null;
+
+        original = field.CurrentValue;
+        if (string.IsNullOrEmpty(assetPath)) return original;
+
+        return AppliedValue.ResolveForAsset(Records(), assetPath, _shownTitle, ProductField, original)
+               ?? original;
+    }
+
+    /// <summary>Point the open recipe at the item the owner picked. Recorded against the recipe's own
+    /// path; picking the donor's own product back drops the change instead of leaving a no-op.</summary>
+    private void SetOpenRecipeProduct(ProductChoice? choice)
+    {
+        if (!_showOpenMakes || choice is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (string.IsNullOrEmpty(path) || _changes is null || NeedsProject) return;
+
+        var current = RawProduct(path, out var original);
+        if (current is null) return;
+
+        if (string.Equals(choice.SoftPath, current, StringComparison.OrdinalIgnoreCase))
+            return;   // the picker settling on what is already shown: nothing to record
+
+        if (string.Equals(choice.SoftPath, original, StringComparison.OrdinalIgnoreCase))
+            UndoProductSet(path!);
+        else
+            _changes.RecordEdit(path!, ProductField, original, choice.SoftPath,
+                                _projects!.Chosen!.Id, assetPath: path);
+
+        RefreshShown();   // the "Produces" row and this card follow the pick
+    }
+
+    /// <summary>Drop every recorded "Makes" change on one recipe (used when the pick returns to the
+    /// donor's own product, so the change is truly gone rather than a no-op the build would still write).</summary>
+    private void UndoProductSet(string assetPath)
+    {
+        var folder = _projects?.Chosen?.FolderPath;
+        if (_changes is null || string.IsNullOrEmpty(folder)) return;
+
+        var ids = _changes.For(folder)
+            .Where(r => r.Operation == ChangeOperation.Set
+                        && string.Equals(r.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(r.FieldTechnicalName, ProductField, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var id in ids) _changes.Undo(folder, id);
     }
 
     /// <summary>The game's own items as "Makes" choices: each item's soft object path and its plain
@@ -744,6 +870,10 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         HasFields = Fields.Count > 0;
+
+        // The open recipe's "Makes" card (a brand-new recipe only): its own product and the items
+        // it may be pointed at.
+        RefreshOpenMake(kind, assetPath);
 
         // The Ingredients card (recipes only): the file's slots with the project's list changes played
         // back, one row each, with recorded values applied.

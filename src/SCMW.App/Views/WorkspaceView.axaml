@@ -30,6 +30,18 @@
         </controls:SearchPicker.ItemTemplate>
       </controls:SearchPicker>
     </DataTemplate>
+    <!-- The open recipe's "Makes" dropdown, built fresh per recipe open (same dropdown quirk). -->
+    <DataTemplate x:Key="OpenProductPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="OpenMakesPicker" Width="300"
+                             ItemsSource="{Binding OpenProductChoices}"
+                             SelectedItem="{Binding OpenRecipeProduct, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProductChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
   </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
@@ -182,6 +194,18 @@
                         Command="{Binding CancelRemoveNewRecipeCommand}"/>
               </StackPanel>
             </Grid>
+          </Border>
+
+          <!-- What an existing NEW recipe makes (Phase 8.2 follow-up): set or change its product at
+               any time. The dropdown is built fresh per recipe open, like the New panel's ones. -->
+          <Border Name="OpenMakesCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowOpenMakes}">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="section" Text="Makes"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="What this recipe produces. Pick any item — including one of your own new ones."/>
+              <ContentControl Name="OpenMakesHost" HorizontalAlignment="Left"/>
+            </StackPanel>
           </Border>
 
           <!-- A recipe's ingredients: one row per slot, editable (its accepted tag + the five
