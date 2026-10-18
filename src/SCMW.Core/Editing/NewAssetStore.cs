@@ -11,6 +11,10 @@ namespace SCMW.Core.Editing;
 /// </summary>
 public interface INewAssetStore
 {
+    /// <summary>Raised after the list is written (a real add, replace or remove), so screens can
+    /// re-read. A duplicate add or a no-op remove changes nothing, so it stays quiet.</summary>
+    event Action? Changed;
+
     /// <summary>Every new asset in the project, in the order it was recorded. Empty when none.</summary>
     IReadOnlyList<NewAsset> Load(string projectFolder);
 
@@ -47,6 +51,9 @@ public sealed class NewAssetStore : INewAssetStore
 
     /// <summary>Serialises every read-modify-write on the list, so two edits can't lose one another.</summary>
     private readonly object _gate = new();
+
+    /// <summary>Raised after the list is written, so screens re-read rather than caching.</summary>
+    public event Action? Changed;
 
     public IReadOnlyList<NewAsset> Load(string projectFolder)
     {
@@ -88,6 +95,7 @@ public sealed class NewAssetStore : INewAssetStore
     {
         ArgumentNullException.ThrowIfNull(asset);
 
+        bool saved;
         lock (_gate)
         {
             if (IsBlankFolder(projectFolder))
@@ -98,12 +106,16 @@ public sealed class NewAssetStore : INewAssetStore
                 return true; // idempotent by Id
 
             assets.Add(asset);
-            return TrySave(projectFolder, assets);
+            saved = TrySave(projectFolder, assets);
         }
+
+        if (saved) Changed?.Invoke();   // raised outside the lock: a listener never runs under it
+        return saved;
     }
 
     public void Undo(string projectFolder, Guid assetId)
     {
+        bool saved;
         lock (_gate)
         {
             if (IsBlankFolder(projectFolder))
@@ -114,14 +126,17 @@ public sealed class NewAssetStore : INewAssetStore
             if (kept.Count == assets.Count)
                 return; // nothing matched: leave the file untouched
 
-            TrySave(projectFolder, kept);
+            saved = TrySave(projectFolder, kept);
         }
+
+        if (saved) Changed?.Invoke();
     }
 
     public bool Replace(string projectFolder, NewAsset asset)
     {
         ArgumentNullException.ThrowIfNull(asset);
 
+        bool saved;
         lock (_gate)
         {
             if (IsBlankFolder(projectFolder))
@@ -134,8 +149,11 @@ public sealed class NewAssetStore : INewAssetStore
             else
                 assets.Add(asset);
 
-            return TrySave(projectFolder, assets);
+            saved = TrySave(projectFolder, assets);
         }
+
+        if (saved) Changed?.Invoke();
+        return saved;
     }
 
     /// <summary>Moves a damaged new-asset list aside (keeping it) so the next save can start clean.</summary>

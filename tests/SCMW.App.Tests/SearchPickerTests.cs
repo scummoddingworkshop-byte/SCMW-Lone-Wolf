@@ -1,6 +1,9 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using SCMW.App.Controls;
 using SCMW.Core;
 
@@ -83,5 +86,44 @@ public class SearchPickerTests
 
         Assert.Equal(1, raised);
         Assert.Equal("Banana", ((IPickerItem)picker.SelectedItem!).Label);
+    }
+
+    [AvaloniaFact] // opening the list must keep working after the picker's parent is hidden and shown again
+    public void The_list_opens_again_after_its_parent_is_hidden_and_shown()
+    {
+        var picker = new SearchPicker { ItemsSource = Choices() };
+        var host = new Border { Child = picker, IsVisible = true };
+        var window = new Window { Content = host, Width = 400, Height = 300 };
+        window.Show();
+        window.UpdateLayout();
+
+        var pop = picker.FindControl<Popup>("Pop")!;
+        var toggle = picker.FindControl<Button>("Toggle")!;
+        var options = picker.GetLogicalDescendants().OfType<ListBox>().Single();
+
+        toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+        Assert.True(pop.IsOpen);
+        options.SelectedIndex = 0;
+        window.UpdateLayout();
+        Assert.False(pop.IsOpen);
+
+        host.IsVisible = false;
+        window.UpdateLayout();
+        host.IsVisible = true;
+        window.UpdateLayout();
+        System.Threading.Thread.Sleep(400);
+
+        // Build a fresh picker, as a screen would when it rebuilds its card.
+        var fresh = new SearchPicker { ItemsSource = Choices() };
+        host.Child = fresh;
+        window.UpdateLayout();
+        var freshToggle = fresh.FindControl<Button>("Toggle")!;
+        var freshPop = fresh.FindControl<Popup>("Pop")!;
+
+        freshToggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+
+        Assert.True(freshPop.IsOpen);
     }
 }

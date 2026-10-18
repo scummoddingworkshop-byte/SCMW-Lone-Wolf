@@ -30,6 +30,7 @@ public class ChooserViewTests
         Assert.Contains("Items", texts);
         Assert.Contains("Base building", texts);
         Assert.Contains("Recipes", texts);
+        Assert.Contains("New recipes & objects", texts);
     }
 
     [AvaloniaFact]
@@ -76,19 +77,16 @@ public class ChooserViewTests
     }
 
     [AvaloniaFact]
-    public void A_locked_kind_surfaces_the_on_the_way_message()
+    public void The_new_content_tile_opens_the_workspace_and_starts_a_new_recipe()
     {
         var nav = new NavigationHost();
-        var view = Shown(nav);
-        var vm = (ChooserViewModel)view.DataContext!;
+        var workspace = new WorkspaceViewModel();
+        var view = Shown(nav, workspace);
 
-        Assert.False(vm.ShowOnTheWayMessage);
+        view.FindControl<Button>("NewContentTile")!.Command!.Execute(null);
 
-        view.FindControl<Button>("LockedTile")!.Command!.Execute(null);
-
-        Assert.True(vm.ShowOnTheWayMessage);
-        Assert.Equal(ScreenKey.Home, nav.Current);   // a locked tile goes nowhere
-        Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(),
-                        t => t.IsVisible && t.Text == OnTheWay.Message);
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal("Recipes", workspace.SelectedKind);   // the new-recipe panel lives in Recipes
+        Assert.True(workspace.ShowNewRecipe);
     }
 }

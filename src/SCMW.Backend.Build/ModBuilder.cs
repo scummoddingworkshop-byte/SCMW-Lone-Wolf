@@ -180,12 +180,17 @@ public sealed class ModBuilder : IModBuilder
         if (!_reader.TryReadPackage(asset.DonorPath, out var donorFiles) || donorFiles is null || donorFiles.Count == 0)
             return (false, $"\"{asset.Name}\" is copied from \"{asset.DonorName}\", but that game file could not be read.");
 
+        // The donor's real name is the last part of its exact path — the identity the game names the
+        // copied object and files by. Never the shown name: that can differ (e.g. "Cabinet Small Wood"
+        // versus "CR_Cabinet_Small_Wood"), and renaming by it would find nothing to rename.
+        var donorName = DonorTechnicalName(asset.DonorPath);
+
         var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(packageDir);
         string? uassetPath = null;
         foreach (var pair in donorFiles)
         {
-            var stagedName = CloneLayout.StagedFileName(pair.Key, asset.DonorName, asset.Name);
+            var stagedName = CloneLayout.StagedFileName(pair.Key, donorName, asset.Name);
             var destination = Path.Combine(packageDir, stagedName);
             File.WriteAllBytes(destination, pair.Value);
             if (destination.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) uassetPath = destination;
@@ -194,7 +199,7 @@ public sealed class ModBuilder : IModBuilder
         if (uassetPath is null)
             return (false, $"The game file \"{asset.DonorName}\" had no .uasset file to copy.");
 
-        if (!_cloner.TryRenameObjects(uassetPath, asset.DonorName, asset.Name, out var renameError))
+        if (!_cloner.TryRenameObjects(uassetPath, donorName, asset.Name, out var renameError))
             return (false, renameError ?? $"The copy of \"{asset.DonorName}\" could not be renamed.");
 
         if (asset.Changes.Count > 0)
@@ -213,6 +218,28 @@ public sealed class ModBuilder : IModBuilder
         return (true, null);
     }
 
+    /// <summary>The donor's real asset name: the last part of its exact path (e.g.
+    /// <c>…/Placeables/CR_Cabinet_Small_Wood</c> → <c>CR_Cabinet_Small_Wood</c>).</summary>
+    private static string DonorTechnicalName(string donorPath)
+    {
+        var slash = donorPath.LastIndexOf('/');
+        return slash >= 0 && slash < donorPath.Length - 1 ? donorPath[(slash + 1)..] : donorPath;
+    }
+
+    /// <summary>
+    /// The asset index names packages in Unreal's <c>/Game/</c> namespace, while the pak lays the same
+    /// files under <c>SCUM/Content/</c> (the game mounts one as the other). A brand-new asset's folder
+    /// is kept as a pak path (to write the files), so it must be turned into its <c>/Game/…</c> form
+    /// before it goes in the index — otherwise the game never matches the entry to a package.
+    /// </summary>
+    private static string RegistryPackagePath(string pakFolder)
+    {
+        const string pakPrefix = "SCUM/Content/";
+        return pakFolder.StartsWith(pakPrefix, StringComparison.OrdinalIgnoreCase)
+            ? "/Game/" + pakFolder[pakPrefix.Length..]
+            : pakFolder;
+    }
+
     /// <summary>
     /// Adds one entry per new asset to the game's own asset index (read straight from the paks) and
     /// lays the augmented index on the game tree at <see cref="PakMountPackageReader.GameIndexPath"/>.
@@ -227,7 +254,8 @@ public sealed class ModBuilder : IModBuilder
         foreach (var asset in assets)
         {
             if (!AssetRegistryWriter.TryAddAsset(index!,
-                    new NewRegistryAsset(asset.Folder, asset.Name, asset.DonorName),
+                    new NewRegistryAsset(RegistryPackagePath(asset.Folder), asset.Name,
+                                         DonorTechnicalName(asset.DonorPath)),
                     out var updated, out var addError))
                 return (false, addError ?? $"\"{asset.Name}\" could not be added to the game's index.");
 

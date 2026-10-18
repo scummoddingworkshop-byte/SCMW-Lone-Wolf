@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using SCMW.Core.Editing;
 
 namespace SCMW.App.Tests;
 
@@ -12,6 +13,82 @@ public class BuildViewModelTests
         Assert.Equal("My first mod", vm.ProjectName);
         Assert.Equal("1.0.0", vm.ModVersion);
         Assert.Equal(BuildState.Idle, vm.State);
+    }
+
+    [AvaloniaFact] // a brand-new recipe shows on the Build screen even before it has any value edits
+    public void A_new_recipe_shows_even_with_no_edits()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var newAssets = new NewAssetStore();
+            var vm = new BuildViewModel(TestProjects.ChangeStore(projects), projects: projects, newAssets: newAssets);
+            Assert.False(vm.HasChanges);
+
+            newAssets.Add(projects.Current!.FolderPath, new NewAsset(
+                Guid.NewGuid(), "CR_MyStoolTest", NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_MyFirstMod",
+                DateTime.UtcNow));
+
+            Assert.True(vm.HasChanges);
+            var row = Assert.Single(vm.Changes);
+            Assert.Equal("CR_MyStoolTest", row.ItemName);
+            Assert.True(row.IsNewAsset);
+            Assert.Empty(row.Values);   // no value edits yet — but it is still listed
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // a new recipe's heading is its name, never its long game path (which overlapped the row)
+    public void A_new_recipes_row_heading_is_its_name_not_its_path()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var folder = projects.Current!.FolderPath;
+            var changes = TestProjects.ChangeStore(projects);
+            var newAssets = new NewAssetStore();
+
+            var asset = new NewAsset(Guid.NewGuid(), "CR_MyStoolTest", NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_MyFirstMod", DateTime.UtcNow);
+            newAssets.Add(folder, asset);
+
+            // An edit aimed at the new asset: the row arrives as an ordinary change row (by path).
+            changes.RecordEdit(asset.PackagePath, "Ingredients[0].Amount.NoSkill", "2", "3",
+                               projects.Current!.Id, assetPath: asset.PackagePath);
+
+            var vm = new BuildViewModel(changes, projects: projects, newAssets: newAssets);
+
+            var row = Assert.Single(vm.Changes);
+            Assert.True(row.IsNewAsset);
+            Assert.Equal("CR_MyStoolTest", row.FriendlyName);   // the name, not the path
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // adding a brand-new recipe tells Build to notice it, without reopening the screen
+    public void Adding_a_new_recipe_makes_build_notice_it_straight_away()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var newAssets = new NewAssetStore();
+            var vm = new BuildViewModel(TestProjects.ChangeStore(projects), projects: projects, newAssets: newAssets);
+
+            Assert.False(vm.HasChanges);   // nothing to build yet
+
+            newAssets.Add(projects.Current!.FolderPath, new NewAsset(
+                Guid.NewGuid(), "CR_OlivePress", NewAssetKind.Recipe, "CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_MyFirstMod",
+                DateTime.UtcNow));
+
+            Assert.True(vm.HasChanges);
+            Assert.False(vm.ShowNudge);
+        }
+        finally { TestProjects.Cleanup(root); }
     }
 
     [AvaloniaFact]

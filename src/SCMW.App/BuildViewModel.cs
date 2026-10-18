@@ -54,7 +54,7 @@ public partial class BuildViewModel : ObservableObject
         _newAssets = newAssets;
 
         // The preview/diff shown on this screen — the same records Build writes, one home for the diff.
-        Preview = new PreviewViewModel(_changes, _projects, _source);
+        Preview = new PreviewViewModel(_changes, _projects, _source, _newAssets);
 
         if (_projects is not null)
         {
@@ -63,6 +63,7 @@ public partial class BuildViewModel : ObservableObject
         }
 
         if (_changes is not null) _changes.Changed += OnStoreChanged;
+        if (_newAssets is not null) _newAssets.Changed += OnStoreChanged;
 
         Steps = new[] { "Prepare", "Check", "Build", "Package", "Ready" }
             .Select(label => new ModBuildStep(label))

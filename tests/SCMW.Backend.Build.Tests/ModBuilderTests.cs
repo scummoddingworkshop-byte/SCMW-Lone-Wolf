@@ -288,6 +288,47 @@ public class ModBuilderTests : IDisposable
         Assert.Contains(after!.Assets, a => a.AssetName == "CR_New");
     }
 
+    [Fact] // the donor's real name comes from its exact path, never its shown name (which can differ)
+    public async Task A_new_asset_renames_from_the_donors_path_not_its_shown_name()
+    {
+        var (builder, reader, _, packer, _, cloner) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = DonorRegistry();
+
+        // The shown name is friendly ("Stone Axe"), but the file/object is "CR_1H_Stone_Axe".
+        var asset = new NewBuildAsset("CR_New", "Stone Axe", DonorPath, NewFolder, Array.Empty<FieldChange>());
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { asset });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Contains(cloner.Calls, c => c.OldName == "CR_1H_Stone_Axe" && c.NewName == "CR_New");
+
+        var staged = Path.Combine(packer.Staging!, NewFolder.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(Path.Combine(staged, "CR_New.uasset")));
+    }
+
+    [Fact] // the index names a package in Unreal's /Game/ namespace, never the pak's file path
+    public async Task A_new_asset_is_named_in_the_registry_by_its_game_path_not_its_file_path()
+    {
+        var (builder, reader, _, packer, _, _) = New();
+        AddPackage(reader, DonorPath);
+        reader.Index = DonorRegistry();
+
+        var request = new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>(), new[] { NewRecipe() });
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+        Assert.True(outcome.Ok, outcome.Error);
+
+        var index = Path.Combine(packer.Staging!, "SCUM", "AssetRegistry.bin");
+        Assert.True(AssetRegistryReader.TryRead(File.ReadAllBytes(index), out var after, out _));
+
+        var added = after!.Assets.Single(a => a.AssetName == "CR_New");
+        // The game mounts the pak's SCUM/Content/ as /Game/, and the index names packages that way.
+        Assert.StartsWith("/Game/", added.PackageName, StringComparison.Ordinal);
+        Assert.Equal("/Game/ConZ_Files/Items/Crafting/Recipes/Items/SCMW_Test/CR_New", added.PackageName);
+        Assert.DoesNotContain("SCUM/Content/", added.PackagePath, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_new_assets_own_edits_are_written_onto_the_copy()
     {

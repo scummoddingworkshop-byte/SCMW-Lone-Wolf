@@ -27,17 +27,20 @@
           <TextBlock Text="Recipes" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
       </Button>
-      <!-- A kind we have not built yet (levels 3–5): a locked tile that explains itself. -->
-      <Button Grid.Column="3" Name="LockedTile" Classes="choosetile"
-              Command="{Binding LockedKindCommand}">
+      <!-- The headline feature: make a brand-new recipe (level 3). A real tile, not a locked one. -->
+      <Button Grid.Column="3" Name="NewContentTile" Classes="choosetile"
+              Command="{Binding NewContentCommand}"
+              ToolTip.Tip="Make a brand-new recipe, copied from one the game already has">
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Border Width="22" Height="22" CornerRadius="4"
-                  Background="{StaticResource WarningSoftBrush}"/>
+                  Background="{StaticResource AccentBrush}">
+            <TextBlock Text="＋" FontWeight="Bold" FontSize="13"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{StaticResource OnAccentBrush}"/>
+          </Border>
           <TextBlock Text="New recipes &amp; objects" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
       </Button>
     </Grid>
-    <TextBlock Text="{Binding OnTheWayText}" Foreground="{StaticResource WarningBrush}"
-               TextWrapping="Wrap" IsVisible="{Binding ShowOnTheWayMessage}"/>
   </StackPanel>
 </UserControl>

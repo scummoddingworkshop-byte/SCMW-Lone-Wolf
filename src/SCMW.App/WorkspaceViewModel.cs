@@ -21,23 +21,28 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly ContentCatalog? _catalog;
     private readonly ItemChangeStore? _changes;
     private readonly ProjectStore? _projects;
+    private readonly INewAssetStore? _newAssets;
     private bool _loadingKind;
     private ItemSummary? _suppressingSelection;
 
     public WorkspaceViewModel() : this(FieldLibraryLoader.LoadDefault()) { }
 
     public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null,
-                              ItemChangeStore? changes = null, ProjectStore? projects = null)
+                              ItemChangeStore? changes = null, ProjectStore? projects = null,
+                              INewAssetStore? newAssets = null)
     {
         _library = library;
         _source = source;
         _catalog = catalog;
         _changes = changes;
         _projects = projects;
+        _newAssets = newAssets;
 
-        // Choosing (or deleting) a project changes whether editing is allowed — keep the view in step.
+        // Choosing (or deleting) a project changes whether editing is allowed AND which new assets
+        // the list shows — keep the view in step, re-reading so one project's new recipe never stays
+        // on screen (and never takes edits) while another project is chosen.
         if (_projects is not null)
-            _projects.Changed += () => OnPropertyChanged(nameof(NeedsProject));
+            _projects.Changed += OnProjectChanged;
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -50,6 +55,22 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>True when the open file has at least one field to show.</summary>
     [ObservableProperty] private bool _hasFields;
+
+    /// <summary>True when the opened file's name should show (and we are not making a new recipe).</summary>
+    public bool ShowTitle => HasFields && !ShowNewRecipe;
+
+    /// <summary>True when the "no values" line should show (and we are not making a new recipe).</summary>
+    public bool ShowNoFields => !HasFields && !ShowNewRecipe;
+
+    partial void OnHasFieldsChanged(bool value) => RefreshFileHeader();
+
+    partial void OnShowNewRecipeChanged(bool value) => RefreshFileHeader();
+
+    private void RefreshFileHeader()
+    {
+        OnPropertyChanged(nameof(ShowTitle));
+        OnPropertyChanged(nameof(ShowNoFields));
+    }
 
     // --- A recipe's ingredients (the Ingredients card) -------------------------------------------
     // A recipe stores one amount per ingredient slot per skill tier. That shape is shown as its own
@@ -122,6 +143,28 @@ public partial class WorkspaceViewModel : ObservableObject
     public string ProjectWarning =>
         "Choose a project first — that's the mod your changes are saved into.";
 
+    /// <summary>
+    /// The chosen project changed (or was deleted). Update the editing gate, then re-read the open
+    /// kind: each project's new assets live in its own file, so the list must follow the choice — a
+    /// recipe made in one project must never stay on screen (and take edits) under another.
+    /// </summary>
+    private void OnProjectChanged()
+    {
+        OnPropertyChanged(nameof(NeedsProject));
+
+        // Only a real switch of project needs a re-read; a rename or a description/picture edit
+        // (which also announce a change) must not reload the list.
+        var id = _projects?.Chosen?.Id;
+        if (string.Equals(id, _shownProjectId, StringComparison.Ordinal)) return;
+        _shownProjectId = id;
+
+        if (!string.IsNullOrEmpty(_kind))
+            _ = LoadKindAsync(_kind);
+    }
+
+    /// <summary>The chosen project's id the list was last built for, so a real switch is detected.</summary>
+    private string? _shownProjectId;
+
     // --- The kind picker (Task 3.0) --------------------------------------------------------------
     // Only the kinds we have released for browsing. Loot & spawn is built, but not offered yet.
 
@@ -136,6 +179,9 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnSelectedKindChanged(string value)
     {
+        OnPropertyChanged(nameof(ShowNewRecipeButton));
+        if (!ShowNewRecipeButton) ShowNewRecipe = false;   // the panel belongs to Recipes only
+
         if (!_loadingKind && !string.IsNullOrEmpty(value))
         {
             _ = LoadKindAsync(value);
@@ -183,7 +229,10 @@ public partial class WorkspaceViewModel : ObservableObject
                 var all = await AssetReader.ReadAllAsync(_source).ConfigureAwait(false);
                 assets = _catalog.Map(family, all);
                 if (family == AssetFamily.Recipes)
+                {
                     _ingredientTags = RecipeTags.From(all);
+                    assets = WithNewAssetRows(assets);   // this project's own new recipes go on top
+                }
                 else if (family == AssetFamily.Cooking)
                     _cookingFoods = CookingFoods.From(all);
             }
@@ -214,7 +263,8 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (_source is null || _catalog is null) return;
 
-        var ids = assets.Where(a => !string.IsNullOrEmpty(a.AssetId)).Select(a => a.AssetId!).ToList();
+        var ids = assets.Where(a => a.ReadPath is null && !string.IsNullOrEmpty(a.AssetId))
+                        .Select(a => a.AssetId!).ToList();
         if (ids.Count == 0) return;
 
         try
@@ -276,6 +326,7 @@ public partial class WorkspaceViewModel : ObservableObject
             SelectedCategory = "All";
 
         OnPropertyChanged(nameof(Categories));
+        OnPropertyChanged(nameof(ShowNewRecipeButton));   // the "New" button needs the kind actually loaded
         RefreshAssets();
     }
 
@@ -307,6 +358,205 @@ public partial class WorkspaceViewModel : ObservableObject
 
     [RelayCommand]
     private void SelectCategory(string? category) => SelectedCategory = category ?? "All";
+
+    // --- Creating a new recipe (Task 7.5) --------------------------------------------------------
+    // The one place a project gains a brand-new recipe: the owner types a plain name, picks a game
+    // recipe to start from, and the app records it. The new recipe then shows in the list like any
+    // other and is edited the same way — its values are read from the donor but saved against its own
+    // package path, so the build writes them onto the clone (7.4).
+
+    /// <summary>True when the open kind can create new content — for now, recipes only. It also
+    /// requires the Recipes list to actually be loaded, so a quick kind switch never leaves the panel
+    /// offering the previous kind's files as donors.</summary>
+    public bool ShowNewRecipeButton =>
+        string.Equals(SelectedKind, "Recipes", StringComparison.Ordinal)
+        && string.Equals(_kind, "Recipes", StringComparison.Ordinal);
+
+    /// <summary>True while the "New recipe" panel is showing in place of a file's values.</summary>
+    [ObservableProperty] private bool _showNewRecipe;
+
+    /// <summary>The plain name the owner typed for the new recipe (e.g. "Olive Press").</summary>
+    [ObservableProperty] private string _newRecipeName = string.Empty;
+
+    /// <summary>The game recipe the new one is copied from, or null.</summary>
+    [ObservableProperty] private DonorChoice? _newRecipeDonor;
+
+    /// <summary>The recipes the owner can start from (the game's own recipes, never a new asset).</summary>
+    public ObservableCollection<DonorChoice> RecipeDonors { get; } = new();
+
+    /// <summary>A plain line telling the owner what needs fixing before a recipe can be made.</summary>
+    [ObservableProperty] private string _newRecipeNotice = string.Empty;
+
+    /// <summary>True when there is something to say about making the recipe.</summary>
+    public bool HasNewRecipeNotice => !string.IsNullOrWhiteSpace(NewRecipeNotice);
+
+    partial void OnNewRecipeNoticeChanged(string value) => OnPropertyChanged(nameof(HasNewRecipeNotice));
+
+    /// <summary>Open the "New recipe" panel: fill the "start from" list from the game's recipes.</summary>
+    [RelayCommand]
+    private void OpenNewRecipe()
+    {
+        if (!ShowNewRecipeButton) return;   // the Recipes list must be loaded before it can be used
+
+        FillRecipeDonors();
+        NewRecipeNotice = RecipeDonors.Count == 0
+            ? "No recipes were found to start from. Check your SCUM folder in Settings."
+            : string.Empty;
+        ShowNewRecipe = true;
+    }
+
+    /// <summary>Close the panel without making anything.</summary>
+    [RelayCommand]
+    private void CancelNewRecipe()
+    {
+        ShowNewRecipe = false;
+        NewRecipeNotice = string.Empty;
+    }
+
+    /// <summary>
+    /// Record one brand-new recipe from the typed name and the picked donor, then open it for editing.
+    /// Refused (nothing recorded) with a plain reason when there is no project, no donor, no usable
+    /// name, or the name is already taken.
+    /// </summary>
+    [RelayCommand]
+    private void CreateNewRecipe()
+    {
+        if (NeedsProject)
+        {
+            NewRecipeNotice = ProjectWarning;
+            return;
+        }
+
+        var chosen = _projects?.Chosen;
+        if (_newAssets is null || chosen is null) return;
+
+        if (NewRecipeDonor is not { } donor || !IsKnownRecipe(donor))
+        {
+            NewRecipeNotice = "Pick a recipe to start from.";
+            return;
+        }
+
+        var name = NewAssetNaming.RecipeName(NewRecipeName);
+        if (name is null)
+        {
+            NewRecipeNotice = "Type a name for the new recipe.";
+            return;
+        }
+
+        // The name must be free on the loaded list AND in the project's own record — a project switch
+        // leaves the list stale, so the record is the truth.
+        var taken = _allAssets.Any(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase))
+                    || _newAssets.Load(chosen.FolderPath)
+                        .Any(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (taken)
+        {
+            NewRecipeNotice = $"There's already a recipe called {name} — try another name.";
+            return;
+        }
+
+        var asset = new NewAsset(
+            Guid.NewGuid(), name, NewAssetKind.Recipe, donor.Name, donor.Path,
+            NewAssetNaming.FolderFor(FolderOf(donor.Path), chosen.Name), DateTime.UtcNow);
+
+        if (!_newAssets.Add(chosen.FolderPath, asset))
+        {
+            NewRecipeNotice = "The new recipe could not be saved. Please try again.";
+            return;
+        }
+
+        var row = NewRecipeRow(asset);
+        _allAssets = new[] { row }.Concat(_allAssets).ToList();
+        ShowNewRecipe = false;
+        NewRecipeName = string.Empty;
+        NewRecipeNotice = string.Empty;
+
+        Browse(_kind, _allAssets);
+        _ = OpenAsync(row);
+    }
+
+    /// <summary>The picker's choices: the game's own recipes (a new asset is never offered as a donor).</summary>
+    private void FillRecipeDonors()
+    {
+        RecipeDonors.Clear();
+        foreach (var asset in _allAssets.Where(a => a.ReadPath is null))
+            RecipeDonors.Add(new DonorChoice(asset.Name, asset.AssetId ?? asset.Description));
+    }
+
+    /// <summary>True when the choice is one of the game's own recipes in the loaded list — never a
+    /// brand-new asset, and never an item from a stale list.</summary>
+    private bool IsKnownRecipe(DonorChoice donor) =>
+        _allAssets.Any(a => a.ReadPath is null
+                            && string.Equals(a.AssetId, donor.Path, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>This project's recorded new recipes as list rows, on top of the game's own recipes.</summary>
+    private IReadOnlyList<ItemSummary> WithNewAssetRows(IReadOnlyList<ItemSummary> recipes)
+    {
+        var folder = _projects?.Chosen?.FolderPath;
+        if (_newAssets is null || folder is null) return recipes;
+
+        var rows = _newAssets.Load(folder).Select(NewRecipeRow).ToList();
+        return rows.Count == 0 ? recipes : rows.Concat(recipes).ToList();
+    }
+
+    /// <summary>A list row for a new recipe: it reads the donor's values but is saved against its own path.</summary>
+    private static ItemSummary NewRecipeRow(NewAsset asset) =>
+        new(asset.Name, "New", $"New recipe — copied from {asset.DonorName}", editable: true,
+            assetId: asset.PackagePath, readPath: asset.DonorPath);
+
+    /// <summary>The folder a path lives in (everything before the last slash).</summary>
+    private static string FolderOf(string path)
+    {
+        var slash = path.LastIndexOf('/');
+        return slash > 0 ? path[..slash] : string.Empty;
+    }
+
+    /// <summary>Open the "New recipe" panel from the front door: load the Recipes kind first.</summary>
+    public async System.Threading.Tasks.Task OpenNewRecipeAsync()
+    {
+        await OpenKindAsync("Recipes").ConfigureAwait(false);
+        RunOnUi(() => OpenNewRecipe());
+    }
+
+    /// <summary>True when the open file is a brand-new recipe this project made (so it can be removed).
+    /// An ordinary game recipe reads itself (<c>ReadPath</c> is null) and is never removable here.</summary>
+    public bool IsOpenNewRecipe => SelectedAsset?.ReadPath is not null;
+
+    /// <summary>True while the "remove this new recipe?" confirmation is showing.</summary>
+    [ObservableProperty] private bool _confirmingRemoveNewRecipe;
+
+    /// <summary>Arm the removal of the open new recipe (a second click confirms).</summary>
+    [RelayCommand] private void RequestRemoveNewRecipe() => ConfirmingRemoveNewRecipe = true;
+
+    /// <summary>Back out of removing the open new recipe.</summary>
+    [RelayCommand] private void CancelRemoveNewRecipe() => ConfirmingRemoveNewRecipe = false;
+
+    /// <summary>
+    /// Delete the open new recipe: drop its edits and its own record, so nothing orphaned is left
+    /// behind (an orphan edit is exactly what a build cannot read). Refused — nothing removed — when
+    /// the open file is not a new recipe, or no project is chosen.
+    /// </summary>
+    [RelayCommand]
+    private void ConfirmRemoveNewRecipe()
+    {
+        ConfirmingRemoveNewRecipe = false;
+
+        var folder = _projects?.Chosen?.FolderPath;
+        var asset = SelectedAsset;
+        if (folder is null || _changes is null || _newAssets is null
+            || asset?.ReadPath is null || string.IsNullOrEmpty(asset.AssetId))
+        {
+            return;
+        }
+
+        // Drop the edits first, then the record itself — never leave a record-less change behind.
+        _changes.RemoveItem(folder, asset.AssetId!);
+
+        var id = _newAssets.Load(folder)
+            .FirstOrDefault(a => string.Equals(a.PackagePath, asset.AssetId, StringComparison.OrdinalIgnoreCase))?.Id;
+        if (id is { } assetId) _newAssets.Undo(folder, assetId);
+
+        _ = LoadKindAsync(_kind);   // rebuild the list without it
+    }
 
     /// <summary>Open <paramref name="kind"/>'s file named <paramref name="title"/> and show the
     /// fields it actually has, each explained by the library where the library knows it.
@@ -708,6 +958,9 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>Picking a file in the browse list opens it (Task 3.0).</summary>
     partial void OnSelectedAssetChanged(ItemSummary? value)
     {
+        OnPropertyChanged(nameof(IsOpenNewRecipe));
+        ConfirmingRemoveNewRecipe = false;   // a new selection never keeps a pending removal armed
+
         if (value is not null && !ReferenceEquals(value, _suppressingSelection))
         {
             _ = LoadFieldsAsync(value);
@@ -722,7 +975,9 @@ public partial class WorkspaceViewModel : ObservableObject
         {
             try
             {
-                fields = await _source.FieldsAsync(asset.AssetId ?? asset.Description).ConfigureAwait(false);
+                // A brand-new asset reads its donor's values; every ordinary file reads itself.
+                var readPath = asset.ReadPath ?? asset.AssetId ?? asset.Description;
+                fields = await _source.FieldsAsync(readPath).ConfigureAwait(false);
             }
             catch
             {

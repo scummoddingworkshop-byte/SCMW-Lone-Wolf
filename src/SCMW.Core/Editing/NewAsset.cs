@@ -68,4 +68,32 @@ public static class NewAssetNaming
         var slug = "SCMW_" + Slug(projectName);
         return trimmed.Length > 0 ? trimmed + "/" + slug : slug;
     }
+
+    /// <summary>
+    /// The recipe's own name from the plain name the owner typed: <c>CR_</c> plus the name's letters
+    /// and digits, so the game always sees a valid recipe name. A leading <c>CR</c> the owner already
+    /// typed is dropped rather than doubled (<c>"CR_Olive Press"</c> → <c>CR_OlivePress</c>), but a
+    /// word that merely begins with those letters keeps them (<c>"Crate"</c> → <c>CR_Crate</c>).
+    /// Null when the name has nothing usable to build a recipe name from.
+    /// </summary>
+    public static string? RecipeName(string? plainName)
+    {
+        var text = (plainName ?? string.Empty).Trim();
+
+        // Drop a "CR" the owner typed as a prefix — either on its own or followed by a separator —
+        // so it is never doubled, and never the letters of a word that merely begins with "CR"
+        // (so "Crate" keeps its letters).
+        if (text.Length == 2 && text.Equals("CR", StringComparison.OrdinalIgnoreCase))
+        {
+            text = string.Empty;
+        }
+        else if (text.Length >= 3 && text.StartsWith("CR", StringComparison.OrdinalIgnoreCase)
+                 && (text[2] == '_' || text[2] == ' ' || text[2] == '-'))
+        {
+            text = text[3..];
+        }
+
+        var kept = new string(text.Where(char.IsLetterOrDigit).ToArray());
+        return kept.Length > 0 ? "CR_" + kept : null;
+    }
 }

@@ -26,6 +26,14 @@ public partial class BuildChange : ObservableObject
     /// <summary>The item's full game path (the record's path, or its recorded name when none).</summary>
     public string Path { get; }
 
+    /// <summary>True when this row is a brand-new asset the project creates, rather than an edit to a
+    /// game file. Such a row shows even before the asset has any value edits.</summary>
+    public bool IsNewAsset { get; set; }
+
+    /// <summary>For a brand-new asset: its own name, so the row is headed by the name and never by its
+    /// long game path. Null for an ordinary game file.</summary>
+    public string? NewAssetName { get; set; }
+
     /// <summary>The item's friendly name (from its path), shown as the row heading.</summary>
     [ObservableProperty] private string _friendlyName = "";
 

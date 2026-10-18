@@ -161,6 +161,57 @@ public class NewAssetStoreTests
         }
     }
 
+    [Fact] // adding a new asset tells listeners to re-read; a duplicate add changes nothing, so it stays quiet
+    public void Adding_a_new_asset_raises_changed_but_a_duplicate_does_not()
+    {
+        var folder = TempFolder();
+        var store = new NewAssetStore();
+        var raised = 0;
+        store.Changed += () => raised++;
+
+        var first = Asset(name: "CR_First");
+        store.Add(folder, first);
+        Assert.Equal(1, raised);
+
+        store.Add(folder, first);                                   // same id => idempotent, no change
+        Assert.Equal(1, raised);
+
+        store.Add(folder, Asset(name: "CR_Other"));                 // a new id => a real change
+        Assert.Equal(2, raised);
+    }
+
+    [Fact] // removing an asset tells listeners; removing an unknown id changes nothing, so it stays quiet
+    public void Undoing_a_known_asset_raises_changed_and_an_unknown_one_does_not()
+    {
+        var folder = TempFolder();
+        var store = new NewAssetStore();
+        var asset = Asset();
+        store.Add(folder, asset);
+
+        var raised = 0;
+        store.Changed += () => raised++;
+
+        store.Undo(folder, Guid.NewGuid());
+        Assert.Equal(0, raised);
+
+        store.Undo(folder, asset.Id);
+        Assert.Equal(1, raised);
+    }
+
+    [Fact] // a blank project folder writes nothing, so listeners are never told to re-read
+    public void A_blank_folder_never_raises_changed()
+    {
+        var store = new NewAssetStore();
+        var raised = 0;
+        store.Changed += () => raised++;
+
+        store.Add("", Asset());
+        store.Undo("", Guid.NewGuid());
+        store.Replace("", Asset());
+
+        Assert.Equal(0, raised);
+    }
+
     [Fact] // atomicity: a failed write leaves the previous file exactly as it was, with no temp left
     public void A_failed_write_leaves_the_previous_file_intact()
     {
@@ -218,6 +269,42 @@ public class NewAssetNamingTests
     {
         Assert.Equal("Mod", NewAssetNaming.Slug("***"));
         Assert.Equal("ConZ_Files/Items/SCMW_Mod", NewAssetNaming.FolderFor("ConZ_Files/Items", "***"));
+    }
+
+    [Fact] // a plain name the owner typed becomes a valid recipe name: "CR_" + its letters and digits
+    public void A_plain_name_becomes_a_CR_recipe_name()
+    {
+        Assert.Equal("CR_OlivePress", NewAssetNaming.RecipeName("Olive Press"));
+        Assert.Equal("CR_olivepress", NewAssetNaming.RecipeName("  olive   press  ")); // case kept as typed
+    }
+
+    [Fact] // a name the owner typed with the prefix already is not doubled up
+    public void A_name_that_already_starts_with_CR_does_not_double_up()
+    {
+        Assert.Equal("CR_OlivePress", NewAssetNaming.RecipeName("CR_Olive Press"));
+        Assert.Equal("CR_olive", NewAssetNaming.RecipeName("cr-olive"));
+    }
+
+    [Fact] // a word that merely begins with "CR" keeps its letters (Crate must not lose "Cr")
+    public void A_word_merely_starting_with_CR_keeps_its_letters()
+    {
+        Assert.Equal("CR_Crate", NewAssetNaming.RecipeName("Crate"));
+    }
+
+    [Fact] // nothing usable to name with means no recipe name at all, never a stray "CR_Mod"
+    public void A_name_with_nothing_usable_has_no_recipe_name()
+    {
+        Assert.Null(NewAssetNaming.RecipeName(null));
+        Assert.Null(NewAssetNaming.RecipeName(""));
+        Assert.Null(NewAssetNaming.RecipeName("***"));
+    }
+
+    [Fact] // typing only the prefix is refused, never turned into the absurd "CR_CR"
+    public void A_bare_CR_prefix_has_no_recipe_name()
+    {
+        Assert.Null(NewAssetNaming.RecipeName("CR"));
+        Assert.Null(NewAssetNaming.RecipeName("CR_"));
+        Assert.Null(NewAssetNaming.RecipeName("cr "));
     }
 
     [Fact] // the package path the build and the field edits aim at is the folder plus the name

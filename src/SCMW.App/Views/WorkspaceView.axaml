@@ -5,6 +5,20 @@
              xmlns:controls="clr-namespace:SCMW.App.Controls"
              x:Class="SCMW.App.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
+  <UserControl.Resources>
+    <!-- The "start from" dropdown, built fresh for each open of the New-recipe panel (see its host). -->
+    <DataTemplate x:Key="DonorPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="NewRecipeDonorPicker" Width="300"
+                             ItemsSource="{Binding RecipeDonors}"
+                             SelectedItem="{Binding NewRecipeDonor, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:DonorChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
+  </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
   <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="28,8,28,24">
@@ -17,7 +31,7 @@
     </Border>
 
     <!-- Left: find + browse -->
-    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,*">
+    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
       <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
                ItemsSource="{Binding Kinds}"
                SelectedItem="{Binding SelectedKind, Mode=TwoWay}">
@@ -51,7 +65,14 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <ListBox Grid.Row="3" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
+      <!-- The Recipes list's "New" button (the list's own start point for Task 7.5). -->
+      <Button Grid.Row="3" Name="NewRecipeButton" Classes="secondary" Content="＋ New recipe"
+              HorizontalAlignment="Left" Margin="0,12,0,0"
+              IsVisible="{Binding ShowNewRecipeButton}"
+              ToolTip.Tip="Make a brand-new recipe"
+              Command="{Binding OpenNewRecipeCommand}"/>
+
+      <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                IsVisible="{Binding HasAssetMatches}">
@@ -62,7 +83,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <Border Grid.Row="3" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
+      <Border Grid.Row="4" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
               IsVisible="{Binding ShowAssetNoMatches}">
         <TextBlock Text="Nothing matches that" Classes="dim"/>
       </Border>
@@ -71,14 +92,78 @@
     <!-- Right: the open file's real fields, explained -->
     <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,Auto,*">
       <TextBlock Grid.Row="0" Name="TitleText" Classes="h1" Text="{Binding Title}"
-                 IsVisible="{Binding HasFields}"/>
+                 IsVisible="{Binding ShowTitle}"/>
 
       <TextBlock Grid.Row="1" Classes="dim" Margin="0,8,0,0"
                  Text="This file has no values to show."
-                 IsVisible="{Binding !HasFields}"/>
+                 IsVisible="{Binding ShowNoFields}"/>
 
       <ScrollViewer Grid.Row="2" Margin="0,12,0,0" Padding="0,0,12,0">
         <StackPanel>
+          <!-- Make a brand-new recipe (Task 7.5): a plain name and a recipe to start from. -->
+          <Border Name="NewRecipeCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowNewRecipe}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section" Text="New recipe"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="Give the new recipe a name and pick one to copy. Your project keeps the new recipe; the game's own copy is left untouched."/>
+              <StackPanel Spacing="4">
+                <TextBlock Text="Name" Classes="dim"/>
+                <TextBox Name="NewRecipeNameBox" Classes="field" MinWidth="200"
+                         Watermark="e.g. Olive Press"
+                         Text="{Binding NewRecipeName, Mode=TwoWay}"/>
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Text="Start from" Classes="dim"/>
+                <!-- Filled in code each time the panel opens: a fresh dropdown is built per open,
+                     because the app's dropdown stops opening once its card has been hidden and shown. -->
+                <ContentControl Name="NewRecipeDonorHost"/>
+              </StackPanel>
+              <TextBlock Text="{Binding NewRecipeNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}"
+                         IsVisible="{Binding HasNewRecipeNotice}"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Name="CreateNewRecipe" Classes="primary" Content="Create"
+                        Command="{Binding CreateNewRecipeCommand}"/>
+                <Button Name="CancelNewRecipe" Classes="secondary" Content="Cancel"
+                        Command="{Binding CancelNewRecipeCommand}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <StackPanel IsVisible="{Binding !ShowNewRecipe}">
+          <!-- This file is a brand-new recipe the project made: it can be deleted here. Removing it
+               drops its edits too, so no orphan record is left for the build to trip over. -->
+          <Border Name="NewRecipeBar" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding IsOpenNewRecipe}">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                          IsVisible="{Binding !ConfirmingRemoveNewRecipe}">
+                <Border Classes="chip" VerticalAlignment="Center">
+                  <TextBlock Text="new" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+                </Border>
+                <TextBlock Text="This recipe is new in your project." Classes="dim" VerticalAlignment="Center"/>
+              </StackPanel>
+              <Button Grid.Column="1" Name="RemoveNewRecipe" Classes="secondary" Content="Remove"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Delete this new recipe from the project"
+                      IsVisible="{Binding !ConfirmingRemoveNewRecipe}"
+                      Command="{Binding RequestRemoveNewRecipeCommand}"/>
+
+              <TextBlock Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
+                         VerticalAlignment="Center" Margin="0,0,12,0"
+                         Text="Remove this new recipe from your project? Its changes are removed with it."
+                         IsVisible="{Binding ConfirmingRemoveNewRecipe}"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                          IsVisible="{Binding ConfirmingRemoveNewRecipe}">
+                <Button Name="ConfirmRemoveNewRecipe" Classes="secondary" Content="Remove"
+                        Command="{Binding ConfirmRemoveNewRecipeCommand}"/>
+                <Button Name="CancelRemoveNewRecipe" Classes="secondary" Content="Cancel"
+                        Command="{Binding CancelRemoveNewRecipeCommand}"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
           <!-- A recipe's ingredients: one row per slot, editable (its accepted tag + the five
                per-skill amounts). Those values are owned here, so they leave the list below. -->
           <Border Name="IngredientsCard" Classes="card" Margin="0,0,0,14"
@@ -327,6 +412,7 @@
               </ItemsControl>
             </StackPanel>
           </Border>
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>

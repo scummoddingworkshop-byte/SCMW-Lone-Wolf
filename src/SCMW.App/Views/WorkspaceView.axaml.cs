@@ -1,5 +1,7 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -12,7 +14,41 @@ namespace SCMW.App.Views;
 /// </summary>
 public partial class WorkspaceView : UserControl
 {
-    public WorkspaceView() => AvaloniaXamlLoader.Load(this);
+    private WorkspaceViewModel? _vm;
+
+    public WorkspaceView()
+    {
+        AvaloniaXamlLoader.Load(this);
+        DataContextChanged += (_, _) => HookViewModel();
+    }
+
+    /// <summary>Follow the view model so the New-recipe panel's dropdown can be rebuilt per open.</summary>
+    private void HookViewModel()
+    {
+        if (_vm is not null) _vm.PropertyChanged -= OnViewModelPropertyChanged;
+
+        _vm = DataContext as WorkspaceViewModel;
+        if (_vm is not null) _vm.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewRecipe) && _vm?.ShowNewRecipe == true)
+            BuildDonorPicker();
+    }
+
+    /// <summary>
+    /// Builds a fresh "start from" dropdown for the newly opened panel. It is rebuilt rather than
+    /// reused because the app's dropdown stops opening once its card has been hidden and shown again.
+    /// </summary>
+    private void BuildDonorPicker()
+    {
+        if (_vm is null) return;
+        if (this.FindControl<ContentControl>("NewRecipeDonorHost") is not { } host) return;
+        if (Resources["DonorPickerTemplate"] is not IDataTemplate template) return;
+
+        host.Content = template.Build(_vm);
+    }
 
     /// <summary>A recipe's tag picker moved: offer the new tag to the view model to record.</summary>
     private void OnTagChanged(object? sender, EventArgs e)

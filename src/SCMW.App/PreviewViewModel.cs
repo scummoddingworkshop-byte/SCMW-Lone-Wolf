@@ -20,17 +20,21 @@ public partial class PreviewViewModel : ObservableObject
     private readonly ItemChangeStore? _changes;
     private readonly ProjectStore? _projects;
     private readonly IContentSource? _source;
+    private readonly SCMW.Core.Editing.INewAssetStore? _newAssets;
     private IReadOnlyList<BuildChange> _lines = Array.Empty<BuildChange>();
 
     public PreviewViewModel(ItemChangeStore? changes = null, ProjectStore? projects = null,
-                            IContentSource? source = null)
+                            IContentSource? source = null,
+                            SCMW.Core.Editing.INewAssetStore? newAssets = null)
     {
         _changes = changes;
         _projects = projects;
         _source = source;
+        _newAssets = newAssets;
 
         if (_changes is not null) _changes.Changed += Refresh;
         if (_projects is not null) _projects.Changed += Refresh;
+        if (_newAssets is not null) _newAssets.Changed += Refresh;
         Refresh();
     }
 
@@ -63,9 +67,38 @@ public partial class PreviewViewModel : ObservableObject
     public void Refresh()
     {
         var folder = _projects?.Chosen?.FolderPath;
-        _lines = folder is not null && _changes is not null
-            ? ChangeDiff.Build(_changes.For(folder))
-            : Array.Empty<BuildChange>();
+        var lines = folder is not null && _changes is not null
+            ? ChangeDiff.Build(_changes.For(folder)).ToList()
+            : new List<BuildChange>();
+
+        // A brand-new asset has no game file to look up, so its edits arrive as ordinary records aimed
+        // at its package path; an asset with no edits yet has no records at all. Either way it is part
+        // of the mod, so it belongs in the list.
+        if (folder is not null && _newAssets is not null)
+        {
+            var byPath = lines.ToDictionary(l => l.Path, StringComparer.OrdinalIgnoreCase);
+            foreach (var asset in _newAssets.Load(folder))
+            {
+                var key = ChangeDiff.ItemKey(asset.PackagePath);
+                if (byPath.TryGetValue(key, out var existing))
+                {
+                    existing.IsNewAsset = true;
+                    existing.NewAssetName = asset.Name;
+                }
+                else
+                {
+                    var row = new BuildChange(asset.Name, Array.Empty<BuildValueChange>(), key)
+                    {
+                        IsNewAsset = true,
+                        NewAssetName = asset.Name,
+                    };
+                    lines.Insert(0, row);
+                    byPath[key] = row;
+                }
+            }
+        }
+
+        _lines = lines;
 
         foreach (var line in _lines) Enrich(line);
 
@@ -97,7 +130,10 @@ public partial class PreviewViewModel : ObservableObject
 
         try
         {
-            var ids = _lines.Select(l => l.Path).Where(p => !string.IsNullOrEmpty(p)).ToList();
+            var ids = _lines.Where(l => !l.IsNewAsset)
+                            .Select(l => l.Path)
+                            .Where(p => !string.IsNullOrEmpty(p))
+                            .ToList();
             if (ids.Count > 0)
                 await _source.ExtractIconsAsync(ids).ConfigureAwait(false);
         }
@@ -123,7 +159,8 @@ public partial class PreviewViewModel : ObservableObject
     /// <summary>Give a row its friendly name, its path, and its picture (when the game has one).</summary>
     private void Enrich(BuildChange line)
     {
-        line.FriendlyName = ContentCatalog.FriendlyItemName(line.Path);
+        // A new asset shows its own short name; a game file shows its name made friendly.
+        line.FriendlyName = line.NewAssetName ?? ContentCatalog.FriendlyItemName(line.Path);
         line.Picture = LoadIcon(line.Path);
     }
 

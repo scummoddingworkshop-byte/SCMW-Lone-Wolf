@@ -10,7 +10,7 @@ namespace SCMW.App;
 public sealed class ItemSummary
 {
     public ItemSummary(string name, string category, string description, bool editable,
-                       IImage? picture = null, string? assetId = null)
+                       IImage? picture = null, string? assetId = null, string? readPath = null)
     {
         Name = name;
         Category = category;
@@ -18,6 +18,7 @@ public sealed class ItemSummary
         Editable = editable;
         Picture = picture;
         AssetId = assetId;
+        ReadPath = readPath;
     }
 
     public string Name { get; }
@@ -28,6 +29,12 @@ public sealed class ItemSummary
 
     /// <summary>The real content asset id (the reader's load key); null for a sample item.</summary>
     public string? AssetId { get; }
+
+    /// <summary>Where this row's values are read from, when that is not <see cref="AssetId"/>. A
+    /// brand-new asset (which the game does not have yet) is read from its donor, while its edits are
+    /// still saved against <see cref="AssetId"/> — the new asset's own package path. Null for every
+    /// ordinary game file, which reads itself.</summary>
+    public string? ReadPath { get; }
 
     /// <summary>The cached icon PNG path once extracted, or null (the row shows a letter tile).</summary>
     public string? IconPath { get; set; }
