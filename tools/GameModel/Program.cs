@@ -1,5 +1,6 @@
 using System.Globalization;
 using CUE4Parse.UE4.Assets.Exports.Internationalization;
+using CUE4Parse.UE4.Objects.Core.i18N;
 using SCMW.Backend.Pak;
 using SCMW.Core.Content;
 using SCMW.Core.Logging;
@@ -21,6 +22,11 @@ internal static class Program
         {
             Console.Error.WriteLine("Game Model reader — " + error);
             Console.Error.WriteLine("Usage: SCMW.GameModel --out <folder> [--game <folder>] [--key <aes>] [--limit <n>]");
+            Console.Error.WriteLine("       SCMW.GameModel --dump <word> [--field <word>] [--game <folder>] [--key <aes>]");
+            Console.Error.WriteLine("       SCMW.GameModel --make <out.pak> --set <asset> <field>=<value> [--set ...] [--game <folder>] [--key <aes>] [--repak <path>]");
+            Console.Error.WriteLine("       SCMW.GameModel --clone <out.pak> --from <asset> --as <new asset> [--game <folder>] [--key <aes>] [--repak <path>]");
+            Console.Error.WriteLine("       SCMW.GameModel --registry <AssetRegistry.bin>");
+            Console.Error.WriteLine("       SCMW.GameModel --inspect <file.uasset>");
             return 2;
         }
 
@@ -77,14 +83,6 @@ internal static class Program
             return 3;
         }
 
-        // Never write into a folder that isn't ours. Checked before the long read.
-        var guardError = OutputGuard.Check(options.OutDir, options.Limit is not null);
-        if (guardError is not null)
-        {
-            Console.Error.WriteLine(guardError);
-            return 4;
-        }
-
         Log.RegisterSecret(aesKey);
 
         Console.WriteLine($"Game:  {gamePath}");
@@ -92,14 +90,14 @@ internal static class Program
         Console.WriteLine($"Paks:  {paks}");
         Console.WriteLine();
 
-        // Our own meanings (meanings.md), if we have written any yet. Read-only here.
-        var meaningsPath = Path.Combine(options.OutDir, "meanings.md");
-        var meaningBook = File.Exists(meaningsPath)
-            ? MeaningBook.Parse(File.ReadAllText(meaningsPath))
-            : new Dictionary<(string Family, string Field), Meaning>();
-        Console.WriteLine(File.Exists(meaningsPath)
-            ? $"Meanings: {meaningBook.Count} read from meanings.md."
-            : "Meanings: none yet — every field will show 'Assumed (not yet reviewed)'.");
+        // Registry probe (THROWAWAY): walk an AssetRegistry.bin file and report its structure.
+        // When --clone is also given, the registry is an *input* to the clone instead.
+        if (string.IsNullOrWhiteSpace(options.ClonePak) && !string.IsNullOrWhiteSpace(options.Registry))
+            return RegistryProbe.Run(options.Registry!);
+
+        // Inspect probe (THROWAWAY): print a .uasset's names, imports and exports.
+        if (!string.IsNullOrWhiteSpace(options.Inspect))
+            return AssetInspector.Run(options.Inspect!);
 
         // 2. Mount the game through the app's engine.
         using var mount = new PakMount();
@@ -110,6 +108,39 @@ internal static class Program
             Console.Error.WriteLine("Could not open the game's files: " + source.Status.Message);
             return 3;
         }
+
+        // Dump mode: print one asset's fields and stop. Writes nothing.
+        if (!string.IsNullOrWhiteSpace(options.Dump))
+            return Dump(options.Dump!, options.Field, mount, source);
+
+        // Make mode: write a throwaway change-test pak and stop. Writes only the .pak asked for.
+        if (!string.IsNullOrWhiteSpace(options.Make))
+            return Make(options, mount);
+
+        // Clone mode (THROWAWAY probe): write a pak holding a renamed copy of one asset.
+        if (!string.IsNullOrWhiteSpace(options.ClonePak))
+            return Clone(options, mount);
+
+        // Diff mode: print the fields a mod changes against the game. Writes nothing.
+        if (!string.IsNullOrWhiteSpace(options.Diff))
+            return Diff(options.Diff!, mount, source, aesKey);
+
+        // Never write into a folder that isn't ours. Checked before the long read.
+        var guardError = OutputGuard.Check(options.OutDir, options.Limit is not null);
+        if (guardError is not null)
+        {
+            Console.Error.WriteLine(guardError);
+            return 4;
+        }
+
+        // Our own meanings (meanings.md), if we have written any yet. Read-only here.
+        var meaningsPath = Path.Combine(options.OutDir, "meanings.md");
+        var meaningBook = File.Exists(meaningsPath)
+            ? MeaningBook.Parse(File.ReadAllText(meaningsPath))
+            : new Dictionary<(string Family, string Field), Meaning>();
+        Console.WriteLine(File.Exists(meaningsPath)
+            ? $"Meanings: {meaningBook.Count} read from meanings.md."
+            : "Meanings: none yet — every field will show 'Assumed (not yet reviewed)'.");
 
         // 3. Walk the families and read every field of every asset. Nothing is written
         // until the whole read finishes, so a failure can never leave half a notebook.
@@ -192,6 +223,240 @@ internal static class Program
         Console.WriteLine($"Read {read:N0} assets" + (failed > 0 ? $"; skipped {failed:N0} that could not be read (see the log)." : "."));
         Console.WriteLine($"Notebook written to {options.OutDir}");
         return 0;
+    }
+
+    /// <summary>
+    /// Make mode: write a small throwaway change-test mod. Resolves the bundled repak location and
+    /// hands the edits to <see cref="ModMaker"/>. Writes only the one .pak; installs nothing.
+    /// </summary>
+    private static int Make(Options options, PakMount mount)
+    {
+        var repak = options.Repak
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "tools", "repak", "repak.exe");
+        if (!File.Exists(repak))
+        {
+            Console.Error.WriteLine($"repak.exe not found at '{repak}'. Pass --repak <path>.");
+            return 3;
+        }
+
+        var outPak = Path.GetFullPath(options.Make!);
+        var folder = Path.GetDirectoryName(outPak);
+        if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+
+        return ModMaker.Run(outPak, options.Sets, mount, repak);
+    }
+
+    /// <summary>
+    /// Clone mode (THROWAWAY probe): write a pak holding a renamed copy of one game asset, at a new
+    /// path the game does not have. Resolves the bundled repak and hands off to
+    /// <see cref="ProbeCloner"/>. Writes only the one .pak; installs nothing.
+    /// </summary>
+    private static int Clone(Options options, PakMount mount)
+    {
+        var repak = options.Repak
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "tools", "repak", "repak.exe");
+        if (!File.Exists(repak))
+        {
+            Console.Error.WriteLine($"repak.exe not found at '{repak}'. Pass --repak <path>.");
+            return 3;
+        }
+
+        var outPak = Path.GetFullPath(options.ClonePak!);
+        var folder = Path.GetDirectoryName(outPak);
+        if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrWhiteSpace(options.Drop))
+            return ProbeCloner.RunRegistryDrop(outPak, options.Registry!, options.Drop!, repak);
+
+        return ProbeCloner.Run(outPak, options.From!, options.As!, mount, repak, options.Registry);
+    }
+
+    /// <summary>
+    /// Diff mode: for every asset the mod replaces, read it from the game and from the mod and print
+    /// the fields whose value differs (or that the mod adds). A throwaway aid for the meaning work —
+    /// it writes nothing.
+    /// </summary>
+    private static int Diff(string folder, PakMount gameMount, PakContentSource gameSource, string aesKey)
+    {
+        if (!Directory.Exists(folder))
+        {
+            Console.Error.WriteLine($"'{folder}' is not a folder.");
+            return 3;
+        }
+
+        using var modMount = new PakMount();
+        if (!modMount.TryMount(folder, aesKey, out var mountError))
+        {
+            Console.Error.WriteLine("Could not open the mod's files: " + mountError);
+            return 3;
+        }
+
+        var modSource = new PakContentSource(modMount);
+        modSource.Configure(folder, aesKey, "mod");
+        if (modSource.Status.State != ContentSourceState.Ready)
+        {
+            Console.Error.WriteLine("Could not read the mod's files: " + modSource.Status.Message);
+            return 3;
+        }
+
+        var gamePaths = new HashSet<string>(gameMount.FilePaths, StringComparer.OrdinalIgnoreCase);
+        var modAssets = modMount.FilePaths
+            .Where(p => p.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToArray();
+
+        var processed = 0;
+        var changedAssets = 0;
+
+        // The two mounts print asset paths differently ("SCUM/Content/..." vs "/Game/..."), so a
+        // reference would look "changed" when it is the same asset. Normalise before comparing.
+        static string Norm(string v) => v.Replace("SCUM/Content/", "/").Replace("/Game/", "/");
+
+        foreach (var path in modAssets)
+        {
+            if (!gamePaths.Contains(path)) continue;
+            var assetId = path[..^".uasset".Length];
+            processed++;
+
+            IReadOnlyList<AssetField> gameFields, modFields;
+            try
+            {
+                gameFields = gameSource.FieldsAsync(assetId).GetAwaiter().GetResult();
+                modFields = modSource.FieldsAsync(assetId).GetAwaiter().GetResult();
+            }
+            catch { continue; }
+
+            var game = gameFields.ToDictionary(f => f.TechnicalName, f => f.CurrentValue ?? "", StringComparer.Ordinal);
+            var diffs = new List<string>();
+            foreach (var f in modFields)
+            {
+                var modValue = f.CurrentValue ?? "";
+                var gameValue = game.TryGetValue(f.TechnicalName, out var gv) ? gv : "";
+                if (!string.Equals(Norm(gameValue), Norm(modValue), StringComparison.Ordinal))
+                    diffs.Add($"    {f.TechnicalName}: '{gameValue}' -> '{modValue}'");
+            }
+
+            if (diffs.Count == 0) continue;
+            changedAssets++;
+            Console.WriteLine("== " + assetId);
+            foreach (var d in diffs) Console.WriteLine(d);
+            Console.WriteLine();
+        }
+
+        Console.WriteLine($"Read {processed:N0} replaced asset(s); {changedAssets:N0} showed a field difference.");
+        return 0;
+    }
+
+    /// <summary>
+    /// Dump mode: find assets whose path contains <paramref name="text"/> and print their fields
+    /// (optionally only those whose name contains <paramref name="fieldFilter"/>). A throwaway aid
+    /// for the in-game meaning checks — it writes nothing.
+    /// </summary>
+    private static int Dump(string text, string? fieldFilter, PakMount mount, PakContentSource source)
+    {
+        var matches = mount.FilePaths
+            .Where(path => path.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase))
+            .Where(path => path.Contains(text, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            Console.WriteLine($"No asset path contains '{text}'.");
+            return 0;
+        }
+
+        Console.WriteLine($"{matches.Length:N0} asset(s) match '{text}'" +
+                          (fieldFilter is null ? "." : $"; showing fields containing '{fieldFilter}'."));
+        Console.WriteLine();
+
+        const int maxAssets = 10;
+        foreach (var path in matches.Take(maxAssets))
+        {
+            var assetId = path[..^".uasset".Length];
+            var name = assetId[(assetId.LastIndexOf('/') + 1)..];
+            Console.WriteLine($"== {name} ==");
+            Console.WriteLine($"   {assetId}");
+
+            var rawByName = RawValues(mount, assetId);
+            try
+            {
+                var fields = source.FieldsAsync(assetId).GetAwaiter().GetResult()
+                    .Where(f => fieldFilter is null ||
+                                f.TechnicalName.Contains(fieldFilter, StringComparison.OrdinalIgnoreCase) ||
+                                f.FriendlyName.Contains(fieldFilter, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => f.TechnicalName, StringComparer.Ordinal);
+
+                foreach (var field in fields)
+                {
+                    var type = string.IsNullOrEmpty(field.ValueTypeHint) ? string.Empty : $"  [{field.ValueTypeHint}]";
+                    var nested = field.Nested ? " (nested)" : string.Empty;
+                    var value = string.IsNullOrEmpty(field.CurrentValue) ? string.Empty : $" = {field.CurrentValue}";
+                    Console.WriteLine($"   {field.TechnicalName}{nested}{value}{type}");
+
+                    var detail = TextDetail(rawByName.TryGetValue(field.TechnicalName, out var raw) ? raw : null);
+                    if (detail.Length > 0)
+                        Console.WriteLine(detail);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   could not read ({ex.GetType().Name})");
+            }
+
+            Console.WriteLine();
+        }
+
+        if (matches.Length > maxAssets)
+            Console.WriteLine($"(showed {maxAssets} of {matches.Length:N0}; narrow the word to see fewer.)");
+
+        return 0;
+    }
+
+    /// <summary>Every top-level property of an asset, by name: the class default object first,
+    /// then the package's own exports. Enough to look up a field's raw value.</summary>
+    private static Dictionary<string, object?> RawValues(PakMount mount, string assetId)
+    {
+        var map = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        if (mount.TryLoadPackageObject(CdoPathOf(assetId), out var cdo) && cdo is not null)
+            foreach (var prop in cdo.Properties)
+                map[string.IsNullOrEmpty(prop.Name.Text) ? prop.Name.ToString() : prop.Name.Text] = prop.Tag?.GenericValue;
+
+        if (mount.TryLoadExports(assetId, out var exports))
+            foreach (var export in exports)
+                foreach (var prop in export.Properties)
+                    map.TryAdd(string.IsNullOrEmpty(prop.Name.Text) ? prop.Name.ToString() : prop.Name.Text,
+                        prop.Tag?.GenericValue);
+
+        return map;
+    }
+
+    /// <summary>The dotted path of the class default object (".../Name.Default__Name_C").</summary>
+    private static string CdoPathOf(string packagePath)
+    {
+        var path = packagePath.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)
+            ? packagePath[..^7]
+            : packagePath;
+        var assetName = path[(path.LastIndexOf('/') + 1)..];
+        return $"{path}.Default__{assetName}_C";
+    }
+
+    /// <summary>For a text field, the stored entry behind the resolved words — its kind, table
+    /// and key — or empty for anything that is not text.</summary>
+    private static string TextDetail(object? raw)
+    {
+        if (raw is not FText text)
+            return string.Empty;
+
+        return text.TextHistory switch
+        {
+            FTextHistory.Base b =>
+                $"      text: Base          ns=\"{b.Namespace}\"  key=\"{b.Key}\"  source=\"{b.SourceString}\"",
+            FTextHistory.StringTableEntry s =>
+                $"      text: StringTable   table=\"{s.TableId.Text}\"  key=\"{s.Key}\"  source=\"{s.SourceString}\"",
+            _ => $"      text: {text.HistoryType}"
+        };
     }
 
     /// <summary>The two members of a string table, which the app's reader does not see.</summary>

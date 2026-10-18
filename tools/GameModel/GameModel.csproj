@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SCMW.Core\SCMW.Core.csproj" />
     <ProjectReference Include="..\..\src\SCMW.Backend.Pak\SCMW.Backend.Pak.csproj" />
+    <ProjectReference Include="..\..\src\SCMW.Backend.Build\SCMW.Backend.Build.csproj" />
   </ItemGroup>
 
   <ItemGroup>
