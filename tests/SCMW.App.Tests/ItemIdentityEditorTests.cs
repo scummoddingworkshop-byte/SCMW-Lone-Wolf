@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using SCMW.App.Views;
 using SCMW.Core;
 using SCMW.Core.Content;
@@ -77,6 +79,7 @@ public class ItemIdentityEditorTests
             vm.ItemDescriptionDraft = "Oil pressed from olives.";
             vm.SaveItemIdentityCommand.Execute(null);
 
+            Assert.True(vm.HasIdentitySaved);
             var records = TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath);
             Assert.Equal(2, records.Count);
             Assert.Contains(records, r => r.FieldTechnicalName == "Caption" && r.NewValue == "Olive Oil");
@@ -119,6 +122,31 @@ public class ItemIdentityEditorTests
             Assert.All(records, r => Assert.Equal(OliveIcon, r.NewValue));
             Assert.All(new[] { "GeneralPurposeIcon", "GridInventoryIcon", "HandsAndShouldersIcon" },
                 icon => Assert.Contains(records, r => r.FieldTechnicalName == icon));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Leaving_the_name_box_saves_it_without_pressing_save()
+    {
+        // The reported case: the words were typed but never reached the project. Leaving the box must
+        // save them, so a forgotten Save button can never leave the item with the donor's name.
+        var (projects, root) = TestProjects.With("OliveMod");
+        try
+        {
+            var (vm, _) = await Opened(projects, OliveOil);
+            var view = new WorkspaceView { DataContext = vm };
+            var window = new Window { Content = view, Width = 900, Height = 800 };
+            window.Show();
+            window.UpdateLayout();
+
+            vm.ItemNameDraft = "Olive Oil";
+            var box = view.FindControl<TextBox>("ItemNameBox")!;
+            box.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+
+            var record = Assert.Single(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath));
+            Assert.Equal("Caption", record.FieldTechnicalName);
+            Assert.Equal("Olive Oil", record.NewValue);
         }
         finally { TestProjects.Cleanup(root); }
     }

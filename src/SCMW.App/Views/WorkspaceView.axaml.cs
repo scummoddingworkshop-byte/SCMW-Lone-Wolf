@@ -99,6 +99,19 @@ public partial class WorkspaceView : UserControl
             (DataContext as WorkspaceViewModel)?.SetCookingFoodCommand.Execute(food);
     }
 
+    /// <summary>Leaving a name/description box saves the words, so they are never left behind.</summary>
+    private void OnItemIdentityLostFocus(object? sender, RoutedEventArgs e) =>
+        (DataContext as WorkspaceViewModel)?.SaveItemIdentityCommand.Execute(null);
+
+    /// <summary>Enter in the name box saves it; the description box keeps Enter for new lines.</summary>
+    private void OnItemIdentityKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+
+        (DataContext as WorkspaceViewModel)?.SaveItemIdentityCommand.Execute(null);
+        e.Handled = true;
+    }
+
     /// <summary>Enter applies an ingredient amount and Escape cancels, matching the field rows.</summary>
     private void OnAmountKeyDown(object? sender, KeyEventArgs e)
     {

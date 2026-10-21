@@ -225,6 +225,14 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnIdentityNoticeChanged(string value) => OnPropertyChanged(nameof(HasIdentityNotice));
 
+    /// <summary>A quiet confirmation that the words/picture were written (empty when none).</summary>
+    [ObservableProperty] private string _identitySaved = string.Empty;
+
+    /// <summary>True when the card should show its saved line.</summary>
+    public bool HasIdentitySaved => !string.IsNullOrWhiteSpace(IdentitySaved);
+
+    partial void OnIdentitySavedChanged(string value) => OnPropertyChanged(nameof(HasIdentitySaved));
+
     /// <summary>The items whose picture the open item may borrow.</summary>
     public ObservableCollection<DonorChoice> PictureSources { get; } = new();
 
@@ -1210,6 +1218,7 @@ public partial class WorkspaceViewModel : ObservableObject
             ItemNameDraft = CurrentItemValue(assetPath, title, CaptionField);
             ItemDescriptionDraft = CurrentItemValue(assetPath, title, DescriptionField);
             IdentityNotice = string.Empty;
+            IdentitySaved = string.Empty;
         }
 
         FillPictureSources(assetPath);
@@ -1247,13 +1256,15 @@ public partial class WorkspaceViewModel : ObservableObject
               ?? PictureSources.FirstOrDefault();
     }
 
-    /// <summary>Save the typed name and description onto the item's own editable file.</summary>
+    /// <summary>Save the typed name and description onto the item's own editable file. Called by the
+    /// Save button, and automatically when a box loses focus (so words are never left behind).</summary>
     [RelayCommand]
     private void SaveItemIdentity()
     {
         if (NeedsProject)
         {
             IdentityNotice = ProjectWarning;
+            IdentitySaved = string.Empty;
             return;
         }
 
@@ -1265,6 +1276,7 @@ public partial class WorkspaceViewModel : ObservableObject
         if (name.Length == 0)
         {
             IdentityNotice = "Type the name the item should show.";
+            IdentitySaved = string.Empty;
             return;
         }
 
@@ -1272,6 +1284,7 @@ public partial class WorkspaceViewModel : ObservableObject
         if (HasItemDescription && description.Length == 0)
         {
             IdentityNotice = "Type the description the item should show.";
+            IdentitySaved = string.Empty;
             return;
         }
 
@@ -1280,7 +1293,8 @@ public partial class WorkspaceViewModel : ObservableObject
         if (HasItemDescription)
             changed += RecordItemText(path!, project.Id, DescriptionField, description);
 
-        IdentityNotice = changed > 0 ? string.Empty : "Nothing changed.";
+        IdentityNotice = string.Empty;
+        IdentitySaved = changed > 0 ? "Saved." : string.Empty;
         if (changed > 0) RefreshShown();
     }
 
@@ -1346,6 +1360,7 @@ public partial class WorkspaceViewModel : ObservableObject
             if (wanted.Count == 0)
             {
                 IdentityNotice = "That item has no picture to copy.";
+                IdentitySaved = string.Empty;
                 return;
             }
 
@@ -1363,7 +1378,8 @@ public partial class WorkspaceViewModel : ObservableObject
                 changed++;
             }
 
-            IdentityNotice = changed > 0 ? string.Empty : "That picture is already in use.";
+            IdentityNotice = string.Empty;
+            IdentitySaved = changed > 0 ? "Picture saved." : string.Empty;
             if (changed > 0) RefreshShown();
         });
     }

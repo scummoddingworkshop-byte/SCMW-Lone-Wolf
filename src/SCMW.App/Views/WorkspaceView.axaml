@@ -242,6 +242,7 @@
               <StackPanel Spacing="4">
                 <TextBlock Text="Name" Classes="dim"/>
                 <TextBox Name="ItemNameBox" Classes="field" MinWidth="220" Watermark="e.g. Olive Oil"
+                         LostFocus="OnItemIdentityLostFocus" KeyDown="OnItemIdentityKeyDown"
                          Text="{Binding ItemNameDraft, Mode=TwoWay}"/>
               </StackPanel>
 
@@ -249,6 +250,7 @@
                 <TextBlock Text="Description" Classes="dim"/>
                 <TextBox Name="ItemDescriptionBox" Classes="field" MinWidth="220" MinHeight="80"
                          AcceptsReturn="True" TextWrapping="Wrap"
+                         LostFocus="OnItemIdentityLostFocus"
                          Text="{Binding ItemDescriptionDraft, Mode=TwoWay}"/>
               </StackPanel>
 
@@ -272,6 +274,9 @@
               <TextBlock Text="{Binding IdentityNotice}" TextWrapping="Wrap" Classes="dim"
                          Foreground="{StaticResource WarningBrush}"
                          IsVisible="{Binding HasIdentityNotice}"/>
+              <TextBlock Text="{Binding IdentitySaved}" Classes="dim"
+                         Foreground="{StaticResource AccentBrush}"
+                         IsVisible="{Binding HasIdentitySaved}"/>
             </StackPanel>
           </Border>
 
