@@ -338,6 +338,15 @@ public class NewAssetNamingTests
         Assert.Null(NewAssetNaming.CategoryName("CI"));
     }
 
+    [Fact] // a technical name the owner made up reads plainly in the list ("OliveOil" -> "Olive Oil")
+    public void A_technical_name_gains_readable_spaces()
+    {
+        Assert.Equal("Olive Oil", NewAssetNaming.FriendlyName("OliveOil"));
+        Assert.Equal("Crude Oil 2", NewAssetNaming.FriendlyName("CrudeOil2"));
+        Assert.Equal("Olive Oil TEST", NewAssetNaming.FriendlyName("OliveOilTEST"));
+        Assert.Equal(string.Empty, NewAssetNaming.FriendlyName(null));
+    }
+
     [Fact] // a category is one file: its edits (none for now) go on its own package
     public void A_category_records_its_edit_path_at_its_own_package()
     {

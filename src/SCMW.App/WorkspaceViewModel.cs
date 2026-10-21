@@ -366,7 +366,11 @@ public partial class WorkspaceViewModel : ObservableObject
                     }
 
                     _gameItemChoices = ItemChoices(_catalog.Map(AssetFamily.Items, all));
-                    assets = WithNewAssetRows(assets);   // this project's own new recipes go on top
+                    assets = WithNewAssetRows(assets, NewAssetKind.Recipe);   // this project's own new recipes
+                }
+                else if (family == AssetFamily.Items)
+                {
+                    assets = WithNewAssetRows(assets, NewAssetKind.Item);     // this project's own new items
                 }
                 else if (family == AssetFamily.Cooking)
                     _cookingFoods = CookingFoods.From(all);
@@ -1390,20 +1394,26 @@ public partial class WorkspaceViewModel : ObservableObject
         new string(name.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
 
     /// <summary>This project's recorded new recipes as list rows, on top of the game's own recipes.</summary>
-    private IReadOnlyList<ItemSummary> WithNewAssetRows(IReadOnlyList<ItemSummary> recipes)
+    private IReadOnlyList<ItemSummary> WithNewAssetRows(IReadOnlyList<ItemSummary> rows, NewAssetKind kind)
     {
         var folder = _projects?.Chosen?.FolderPath;
-        if (_newAssets is null || folder is null) return recipes;
+        if (_newAssets is null || folder is null) return rows;
 
-        var rows = _newAssets.Load(folder).Where(a => a.Kind == NewAssetKind.Recipe)
-            .Select(NewRecipeRow).ToList();
-        return rows.Count == 0 ? recipes : rows.Concat(recipes).ToList();
+        var added = _newAssets.Load(folder).Where(a => a.Kind == kind).Select(NewRecipeRow).ToList();
+        if (added.Count == 0) return rows;
+
+        // The mod may also be installed, in which case the game's list has the same file: keep the
+        // project's own row (it carries the "new" marker and the Remove option) and drop the copy.
+        var ids = added.Where(a => a.AssetId is not null)
+            .Select(a => a.AssetId!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return added.Concat(rows.Where(r => r.AssetId is null || !ids.Contains(r.AssetId))).ToList();
     }
 
     /// <summary>A list row for a new asset: it reads the donor's values but is saved against its own
     /// path (an item's editable file is its <c>_ES</c> twin, so both read and write use the twin).</summary>
     private static ItemSummary NewRecipeRow(NewAsset asset) =>
-        new(asset.Name, "New",
+        new(asset.Kind == NewAssetKind.Item ? NewAssetNaming.FriendlyName(asset.Name) : asset.Name, "New",
             $"New {KindWord(asset.Kind)} — copied from {asset.DonorName}", editable: true,
             assetId: asset.EditPath, readPath: asset.TwinDonorPath ?? asset.DonorPath);
 

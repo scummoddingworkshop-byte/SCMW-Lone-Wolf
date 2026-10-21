@@ -136,6 +136,45 @@ public static class NewAssetNaming
     }
 
     /// <summary>
+    /// A readable name for a technical asset name the owner made up: <c>OliveOil</c> →
+    /// <c>Olive Oil</c>, <c>CrudeOil2</c> → <c>Crude Oil 2</c>. Used only for the list row of a new
+    /// project asset, never for the name written to the game.
+    /// </summary>
+    public static string FriendlyName(string? name)
+    {
+        var text = (name ?? string.Empty).Trim();
+        if (text.Length == 0) return string.Empty;
+
+        var kept = new System.Text.StringBuilder(text.Length + 8);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            if (c == '_')
+            {
+                kept.Append(' ');
+                continue;
+            }
+
+            if (i > 0 && char.IsUpper(c))
+            {
+                var previous = text[i - 1];
+                var nextIsLower = i + 1 < text.Length && char.IsLower(text[i + 1]);
+                if (char.IsLower(previous) || (char.IsUpper(previous) && nextIsLower))
+                    kept.Append(' ');
+            }
+            else if (i > 0 && char.IsDigit(c) && char.IsLetter(text[i - 1]))
+            {
+                kept.Append(' ');
+            }
+
+            kept.Append(c);
+        }
+
+        return string.Join(' ', kept.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>
     /// A category's own name from the plain name the owner typed: <c>CI_</c> plus its letters and
     /// digits, so the game always sees a valid ingredient tag. A leading <c>CI</c> the owner already
     /// typed is dropped rather than doubled (<c>"CI Olives"</c> → <c>CI_Olives</c>). Null when the

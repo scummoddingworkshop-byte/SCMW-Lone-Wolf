@@ -118,7 +118,8 @@ public class NewRecipeTests
             // The owner's edits aim at the item's "_ES" twin, which is also what the row reads from.
             Assert.Equal("SCUM/Content/ConZ_Files/Items/Food/MiscFood/SCMW_OlivePressMod/OliveOil_ES", saved.EditPath);
 
-            var row = vm.VisibleAssets.Single(a => a.Name == "OliveOil");
+            // The list row reads plainly ("Olive Oil"), even though the asset name has no space.
+            var row = vm.VisibleAssets.Single(a => a.Name == "Olive Oil");
             Assert.Equal(saved.EditPath, row.AssetId);
         }
         finally { TestProjects.Cleanup(root); }
