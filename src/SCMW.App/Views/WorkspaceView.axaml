@@ -65,6 +65,17 @@
         </controls:SearchPicker.ItemTemplate>
       </controls:SearchPicker>
     </DataTemplate>
+    <DataTemplate x:Key="PictureSourcePickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="PictureSourcePicker" Width="260"
+                             ItemsSource="{Binding PictureSources}"
+                             SelectedItem="{Binding PictureSource, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:DonorChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
   </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
@@ -217,6 +228,51 @@
                         Command="{Binding CancelRemoveNewRecipeCommand}"/>
               </StackPanel>
             </Grid>
+          </Border>
+
+          <!-- An item's shown name, description and picture. The words live in the item's own "_ES"
+               file; the picture is copied from another item the owner picks. -->
+          <Border Name="ItemIdentityCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowItemIdentity}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section" Text="Name &amp; description"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="What the game shows for this item — in the inventory and its tooltip."/>
+
+              <StackPanel Spacing="4">
+                <TextBlock Text="Name" Classes="dim"/>
+                <TextBox Name="ItemNameBox" Classes="field" MinWidth="220" Watermark="e.g. Olive Oil"
+                         Text="{Binding ItemNameDraft, Mode=TwoWay}"/>
+              </StackPanel>
+
+              <StackPanel Spacing="4" IsVisible="{Binding HasItemDescription}">
+                <TextBlock Text="Description" Classes="dim"/>
+                <TextBox Name="ItemDescriptionBox" Classes="field" MinWidth="220" MinHeight="80"
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         Text="{Binding ItemDescriptionDraft, Mode=TwoWay}"/>
+              </StackPanel>
+
+              <Button Name="SaveItemIdentity" Classes="primary" Content="Save"
+                      HorizontalAlignment="Left"
+                      Command="{Binding SaveItemIdentityCommand}"/>
+
+              <StackPanel Spacing="4">
+                <TextBlock Text="Picture" Classes="dim"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <!-- Built in code when the card appears (the app's dropdown quirk). -->
+                  <ContentControl Name="PictureSourceHost" VerticalAlignment="Center"/>
+                  <Button Name="UsePicture" Classes="secondary" Content="Use this picture"
+                          IsEnabled="{Binding CanUsePicture}"
+                          Command="{Binding UsePictureCommand}"/>
+                </StackPanel>
+                <TextBlock Classes="dim" TextWrapping="Wrap"
+                           Text="Copy the picture from another item — pick Olives for olive oil, for example."/>
+              </StackPanel>
+
+              <TextBlock Text="{Binding IdentityNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}"
+                         IsVisible="{Binding HasIdentityNotice}"/>
+            </StackPanel>
           </Border>
 
           <!-- An item's ingredient categories (Phase 8, Option A): what it counts as when a recipe

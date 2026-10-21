@@ -37,6 +37,7 @@ public partial class WorkspaceView : UserControl
 
             // The category card's dropdowns are rebuilt per item open (same dropdown quirk).
             if (_vm.ShowItemCategories) BuildItemCategoryPickers();
+            if (_vm.ShowItemIdentity) BuildPicker("PictureSourceHost", "PictureSourcePickerTemplate");
         }
     }
 
@@ -52,6 +53,9 @@ public partial class WorkspaceView : UserControl
         else if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewCategoryForm)
                  && _vm?.ShowNewCategoryForm == true)
             BuildPicker("CategoryDonorPickerHost", "CategoryDonorPickerTemplate");
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowItemIdentity)
+                 && _vm?.ShowItemIdentity == true)
+            BuildPicker("PictureSourceHost", "PictureSourcePickerTemplate");
     }
 
     /// <summary>Builds fresh "add a category" and "copy the shape from" dropdowns for the card.</summary>

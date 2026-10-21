@@ -144,7 +144,7 @@ public class FieldLibraryTests
         Assert.NotNull(lib.Lookup("Items", "Weight"));
     }
 
-    [Fact] // Review Focus 5: a string-table key is not presentable as editable words
+    [Fact] // They are changed on the Name & description card, never as a raw key in the field list
     public void A_string_table_key_field_is_not_writable()
     {
         var lib = FieldLibraryLoader.LoadDefault();

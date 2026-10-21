@@ -67,10 +67,10 @@ internal static class PropertyValue
                 case StrPropertyData s:
                     s.Value = FString.FromString(raw); return true;
 
-                // A display name like a base element's "_name" is a TextProperty (its Value is an
-                // FString, exactly like a StrProperty), so it is set the same way.
+                // A display name like a base element's "_name" is a TextProperty: set the words it
+                // actually shows (its source string), never the key that identifies it.
                 case TextPropertyData t:
-                    t.Value = FString.FromString(raw); return true;
+                    return TextValue.TrySet(t, raw, out error);
 
                 case NamePropertyData n:
                     n.Value = FName.FromString(names!, raw); return true;

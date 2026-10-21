@@ -194,6 +194,50 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnNewCategoryNoticeChanged(string value) => OnPropertyChanged(nameof(HasNewCategoryNotice));
 
+    // --- An item's name, description and picture (2026-10-21) ------------------------------------
+    // The words the game shows live in the item's "_ES" file: a Base text's source string, and often a
+    // string-table lookup for the description. The card records ordinary Set changes; the build's
+    // TextValue writes the words safely (turning a table lookup into plain words).
+
+    /// <summary>The field names that carry the game's shown words and pictures.</summary>
+    private const string CaptionField = "Caption";
+    private const string DescriptionField = "Description";
+    private static readonly string[] IconFields =
+        { "GeneralPurposeIcon", "GridInventoryIcon", "HandsAndShouldersIcon" };
+
+    /// <summary>True when the open file is an item with words to show (so the card belongs on screen).</summary>
+    [ObservableProperty] private bool _showItemIdentity;
+
+    /// <summary>The name as typed in the card.</summary>
+    [ObservableProperty] private string _itemNameDraft = string.Empty;
+
+    /// <summary>The description as typed in the card.</summary>
+    [ObservableProperty] private string _itemDescriptionDraft = string.Empty;
+
+    /// <summary>True when the open item has a description field to edit.</summary>
+    [ObservableProperty] private bool _hasItemDescription;
+
+    /// <summary>A plain note shown under the card (empty when none).</summary>
+    [ObservableProperty] private string _identityNotice = string.Empty;
+
+    /// <summary>True when the card should show its note.</summary>
+    public bool HasIdentityNotice => !string.IsNullOrWhiteSpace(IdentityNotice);
+
+    partial void OnIdentityNoticeChanged(string value) => OnPropertyChanged(nameof(HasIdentityNotice));
+
+    /// <summary>The items whose picture the open item may borrow.</summary>
+    public ObservableCollection<DonorChoice> PictureSources { get; } = new();
+
+    /// <summary>The item picked to copy a picture from.</summary>
+    [ObservableProperty] private DonorChoice? _pictureSource;
+
+    /// <summary>True when "Use this picture" can do something.</summary>
+    public bool CanUsePicture => ShowItemIdentity && PictureSource is not null && !NeedsProject;
+
+    partial void OnPictureSourceChanged(DonorChoice? value) => OnPropertyChanged(nameof(CanUsePicture));
+
+    partial void OnShowItemIdentityChanged(bool value) => OnPropertyChanged(nameof(CanUsePicture));
+
     // The arguments of the last Show, so an ingredient change can redraw the card without re-reading
     // the game file (the file itself never changes; only the project's records do).
     private string _shownKind = string.Empty;
@@ -222,6 +266,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(NeedsProject));
         OnPropertyChanged(nameof(CanAddItemCategory));
+        OnPropertyChanged(nameof(CanUsePicture));
 
         // Only a real switch of project needs a re-read; a rename or a description/picture edit
         // (which also announce a change) must not reload the list.
@@ -1125,6 +1170,200 @@ public partial class WorkspaceViewModel : ObservableObject
         AddItemCategory();
     }
 
+    // --- An item's name, description and picture (the card) --------------------------------------
+
+    /// <summary>
+    /// Fill the name/description card from the file and the project's recorded values. The typed
+    /// drafts are only reloaded when a different file opens, so using the picture never throws away
+    /// words the owner has typed but not saved yet.
+    /// </summary>
+    private void RefreshItemIdentity(string kind, string? assetPath, string title,
+                                     IReadOnlyList<AssetField> fields)
+    {
+        var isItem = string.Equals(kind, "Items", StringComparison.Ordinal)
+                     && assetPath is not null
+                     && assetPath.EndsWith("_ES", StringComparison.OrdinalIgnoreCase);
+
+        var hasName = fields.Any(f => string.Equals(f.TechnicalName, CaptionField, StringComparison.OrdinalIgnoreCase));
+        var hasDescription = fields.Any(f =>
+            string.Equals(f.TechnicalName, DescriptionField, StringComparison.OrdinalIgnoreCase));
+
+        ShowItemIdentity = isItem && (hasName || hasDescription);
+        HasItemDescription = isItem && hasDescription;
+
+        if (!ShowItemIdentity)
+        {
+            _identityAssetPath = null;
+            ItemNameDraft = string.Empty;
+            ItemDescriptionDraft = string.Empty;
+            return;
+        }
+
+        var sameFile = string.Equals(_identityAssetPath, assetPath, StringComparison.OrdinalIgnoreCase);
+        if (!sameFile)
+        {
+            _identityAssetPath = assetPath;
+            ItemNameDraft = CurrentItemValue(assetPath, title, CaptionField);
+            ItemDescriptionDraft = CurrentItemValue(assetPath, title, DescriptionField);
+            IdentityNotice = string.Empty;
+        }
+
+        FillPictureSources(assetPath);
+    }
+
+    /// <summary>The file the name card's drafts belong to, so a refresh keeps unsaved typing.</summary>
+    private string? _identityAssetPath;
+
+    /// <summary>The value a shown text field has now (the project's change, else the game's own).</summary>
+    private string CurrentItemValue(string? assetPath, string title, string field)
+    {
+        var gameValue = _shownFields.FirstOrDefault(f =>
+            string.Equals(f.TechnicalName, field, StringComparison.OrdinalIgnoreCase))?.CurrentValue
+            ?? string.Empty;
+
+        if (string.IsNullOrEmpty(assetPath)) return gameValue;
+        return AppliedValue.ResolveForAsset(Records(), assetPath, title, field, gameValue) ?? gameValue;
+    }
+
+    /// <summary>Fill the "copy the picture from" list with the other items in the open list.</summary>
+    private void FillPictureSources(string? assetPath)
+    {
+        var chosen = PictureSource?.Path;
+        PictureSources.Clear();
+        foreach (var asset in _allAssets.Where(a => a.ReadPath is null))
+        {
+            if (string.IsNullOrEmpty(asset.AssetId)) continue;
+            if (string.Equals(asset.AssetId, assetPath, StringComparison.OrdinalIgnoreCase)) continue;
+            PictureSources.Add(new DonorChoice(asset.Name, asset.AssetId!));
+        }
+
+        PictureSource = chosen is null
+            ? PictureSources.FirstOrDefault()
+            : PictureSources.FirstOrDefault(p => string.Equals(p.Path, chosen, StringComparison.OrdinalIgnoreCase))
+              ?? PictureSources.FirstOrDefault();
+    }
+
+    /// <summary>Save the typed name and description onto the item's own editable file.</summary>
+    [RelayCommand]
+    private void SaveItemIdentity()
+    {
+        if (NeedsProject)
+        {
+            IdentityNotice = ProjectWarning;
+            return;
+        }
+
+        var path = SelectedAsset?.AssetId;
+        var project = _projects?.Chosen;
+        if (_changes is null || string.IsNullOrEmpty(path) || project is null) return;
+
+        var name = ItemNameDraft.Trim();
+        if (name.Length == 0)
+        {
+            IdentityNotice = "Type the name the item should show.";
+            return;
+        }
+
+        var description = ItemDescriptionDraft.Trim();
+        if (HasItemDescription && description.Length == 0)
+        {
+            IdentityNotice = "Type the description the item should show.";
+            return;
+        }
+
+        var changed = 0;
+        changed += RecordItemText(path!, project.Id, CaptionField, name);
+        if (HasItemDescription)
+            changed += RecordItemText(path!, project.Id, DescriptionField, description);
+
+        IdentityNotice = changed > 0 ? string.Empty : "Nothing changed.";
+        if (changed > 0) RefreshShown();
+    }
+
+    /// <summary>Record one text change when the value really differs; returns 1 when recorded.</summary>
+    private int RecordItemText(string assetPath, string projectId, string field, string value)
+    {
+        if (_changes is null) return 0;
+        if (!_shownFields.Any(f => string.Equals(f.TechnicalName, field, StringComparison.OrdinalIgnoreCase)))
+            return 0;
+
+        var current = CurrentItemValue(assetPath, _shownTitle, field);
+        if (string.Equals(current, value, StringComparison.Ordinal)) return 0;
+
+        _changes.RecordEdit(assetPath, field, current, value, projectId, assetPath: assetPath);
+        return 1;
+    }
+
+    /// <summary>
+    /// Copy the three pictures from the picked item onto the open item. The source may be any game
+    /// item — the owner picks the one whose look fits (e.g. the fresh Olives picture for olive oil).
+    /// </summary>
+    [RelayCommand]
+    private async System.Threading.Tasks.Task UsePicture()
+    {
+        if (NeedsProject)
+        {
+            IdentityNotice = ProjectWarning;
+            return;
+        }
+
+        var path = SelectedAsset?.AssetId;
+        var project = _projects?.Chosen;
+        var source = PictureSource;
+        if (_changes is null || _source is null || string.IsNullOrEmpty(path) || project is null || source is null)
+            return;
+
+        IReadOnlyList<AssetField> fields;
+        try
+        {
+            fields = await _source.FieldsAsync(source.Path).ConfigureAwait(false);
+        }
+        catch
+        {
+            RunOnUi(() => IdentityNotice = "That item's picture could not be read.");
+            return;
+        }
+
+        var records = Records();
+        var wanted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var icon in IconFields)
+        {
+            var found = fields.FirstOrDefault(f =>
+                string.Equals(f.TechnicalName, icon, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(f.CurrentValue));
+            if (found is null) continue;
+
+            wanted[icon] = AppliedValue.ResolveForAsset(records, source.Path, source.Name, icon,
+                                                        found.CurrentValue) ?? found.CurrentValue;
+        }
+
+        RunOnUi(() =>
+        {
+            if (wanted.Count == 0)
+            {
+                IdentityNotice = "That item has no picture to copy.";
+                return;
+            }
+
+            var changed = 0;
+            foreach (var (field, value) in wanted)
+            {
+                if (!_shownFields.Any(f =>
+                        string.Equals(f.TechnicalName, field, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                var current = CurrentItemValue(path, _shownTitle, field);
+                if (string.Equals(current, value, StringComparison.Ordinal)) continue;
+
+                _changes.RecordEdit(path!, field, current, value, project.Id, assetPath: path);
+                changed++;
+            }
+
+            IdentityNotice = changed > 0 ? string.Empty : "That picture is already in use.";
+            if (changed > 0) RefreshShown();
+        });
+    }
+
     /// <summary>The game's own items as "Makes" choices: each item's soft object path and its plain
     /// name, in the order the item list already gives them.</summary>
     private static IReadOnlyList<ProductChoice> ItemChoices(IReadOnlyList<ItemSummary> items)
@@ -1311,6 +1550,9 @@ public partial class WorkspaceViewModel : ObservableObject
 
         // The open item's "Ingredient category" card: what it counts as, and how to add a category.
         RefreshItemCategories(kind, assetPath, title, fields);
+
+        // The open item's name, description and picture.
+        RefreshItemIdentity(kind, assetPath, title, fields);
 
         // The Ingredients card (recipes only): the file's slots with the project's list changes played
         // back, one row each, with recorded values applied.

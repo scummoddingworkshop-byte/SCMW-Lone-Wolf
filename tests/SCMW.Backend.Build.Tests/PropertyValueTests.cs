@@ -59,15 +59,16 @@ public class PropertyValueTests
     }
 
     [Fact]
-    public void A_text_value_is_set()
+    public void A_text_value_sets_the_words_it_shows_not_just_a_key()
     {
         // A base element's display name (_name) is a TextProperty; the app offers it, so the writer
-        // must set it rather than refuse the whole build.
+        // must set the words the game shows, never the key that only identifies them.
         var property = new TextPropertyData(new FName());
 
         Assert.True(PropertyValue.TrySet(property, null, "Wooden Crate", out var error));
         Assert.Null(error);
-        Assert.Equal("Wooden Crate", property.Value.ToString());
+        Assert.Equal("Wooden Crate", property.CultureInvariantString.ToString());
+        Assert.False(string.IsNullOrEmpty(property.Value?.ToString()));
     }
 
     [Fact]
