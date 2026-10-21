@@ -13,6 +13,9 @@ public enum NewAssetKind
 
     /// <summary>A brand-new item: the item file plus its <c>_ES</c> twin.</summary>
     Item,
+
+    /// <summary>A brand-new ingredient category (a <c>CI_*</c> tag asset).</summary>
+    Category,
 }
 
 /// <summary>
@@ -130,5 +133,29 @@ public static class NewAssetNaming
     {
         var kept = new string((plainName ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
         return kept.Length > 0 ? kept : null;
+    }
+
+    /// <summary>
+    /// A category's own name from the plain name the owner typed: <c>CI_</c> plus its letters and
+    /// digits, so the game always sees a valid ingredient tag. A leading <c>CI</c> the owner already
+    /// typed is dropped rather than doubled (<c>"CI Olives"</c> → <c>CI_Olives</c>). Null when the
+    /// name has nothing usable.
+    /// </summary>
+    public static string? CategoryName(string? plainName)
+    {
+        var text = (plainName ?? string.Empty).Trim();
+
+        if (text.Length == 2 && text.Equals("CI", StringComparison.OrdinalIgnoreCase))
+        {
+            text = string.Empty;
+        }
+        else if (text.Length >= 3 && text.StartsWith("CI", StringComparison.OrdinalIgnoreCase)
+                 && (text[2] == '_' || text[2] == ' ' || text[2] == '-'))
+        {
+            text = text[3..];
+        }
+
+        var kept = new string(text.Where(char.IsLetterOrDigit).ToArray());
+        return kept.Length > 0 ? "CI_" + kept : null;
     }
 }

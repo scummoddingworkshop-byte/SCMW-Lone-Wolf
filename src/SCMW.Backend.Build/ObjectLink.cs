@@ -106,6 +106,64 @@ internal static class ObjectLink
         }
     }
 
+    /// <summary>
+    /// Points a link at a category (a <c>CI_*</c> asset) whose package does not exist in this file yet.
+    /// Used when a whole new list entry is added from a donor: there is no existing link to copy the
+    /// package from, so the donor's tag import supplies the class shape and the target path supplies
+    /// the package. The game stores one package import per tag, named with the tag's full path.
+    /// </summary>
+    internal static bool TrySetNew(UAsset asset, ObjectPropertyData link, string targetPath,
+                                   Import? donorShape, out string? error)
+    {
+        error = null;
+
+        var path = GamePath(targetPath);
+        var slash = path.LastIndexOf('/');
+        var name = slash >= 0 ? path[(slash + 1)..] : path;
+        if (path.Length == 0 || name.Length == 0 || donorShape is null)
+        {
+            error = "That link could not be changed safely.";
+            return false;
+        }
+
+        try
+        {
+            // Already imported somewhere in this package: point at that import.
+            var existing = asset.SearchForImport(FName.FromString(asset, name));
+            if (existing != 0)
+            {
+                link.Value = FPackageIndex.FromRawIndex(existing);
+                return true;
+            }
+
+            var package = asset.AddImport(new Import(
+                "/Script/CoreUObject", "Package", FPackageIndex.FromRawIndex(0), path, false, asset));
+            link.Value = asset.AddImport(new Import(
+                donorShape.ClassPackage.ToString(), donorShape.ClassName.ToString(), package, name,
+                donorShape.bImportOptional, asset));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            SCMW.Core.Logging.Log.Warn($"Changing a link failed ({ex.GetType().Name}).");
+            error = "That link could not be changed safely.";
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The <c>/Game/…</c> form of an asset path: the game's index and imports use it, while a project
+    /// folder and the pak use <c>SCUM/Content/…</c>. A path already in game form is kept as it is.
+    /// </summary>
+    internal static string GamePath(string? path)
+    {
+        var text = (path ?? string.Empty).Trim().Replace('\\', '/');
+        const string pakPrefix = "SCUM/Content/";
+        if (text.StartsWith(pakPrefix, StringComparison.OrdinalIgnoreCase))
+            return "/Game/" + text[pakPrefix.Length..];
+        return text.StartsWith("/Game/", StringComparison.OrdinalIgnoreCase) ? text : string.Empty;
+    }
+
     /// <summary>The import for <paramref name="name"/>, adding one shaped like <paramref name="shape"/>
     /// when the package does not reference it yet.</summary>
     private static FPackageIndex FindOrAddImport(UAsset asset, Import shape, string name)

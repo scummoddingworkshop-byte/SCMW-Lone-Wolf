@@ -321,6 +321,36 @@ public class NewAssetNamingTests
         Assert.Null(NewAssetNaming.ItemName("***"));
     }
 
+    [Fact] // a plain name the owner typed becomes a category's tag name: "CI_" + its letters and digits
+    public void A_plain_name_becomes_a_CI_category_name()
+    {
+        Assert.Equal("CI_Olives", NewAssetNaming.CategoryName("Olives"));
+        Assert.Equal("CI_GreenOlives", NewAssetNaming.CategoryName("Green Olives"));
+        Assert.Equal("CI_Olives", NewAssetNaming.CategoryName("CI_Olives"));
+        Assert.Equal("CI_olives", NewAssetNaming.CategoryName("ci olives")); // case kept as typed
+    }
+
+    [Fact] // nothing usable to name with means no category name at all
+    public void A_name_with_nothing_usable_has_no_category_name()
+    {
+        Assert.Null(NewAssetNaming.CategoryName(null));
+        Assert.Null(NewAssetNaming.CategoryName("***"));
+        Assert.Null(NewAssetNaming.CategoryName("CI"));
+    }
+
+    [Fact] // a category is one file: its edits (none for now) go on its own package
+    public void A_category_records_its_edit_path_at_its_own_package()
+    {
+        var category = new NewAsset(Guid.NewGuid(), "CI_Olives", NewAssetKind.Category,
+            "Group Canned Vegetables",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/CI_Group_Canned_Vegetables",
+            "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/SCMW_OlivePress",
+            new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal(category.PackagePath, category.EditPath);
+        Assert.Null(category.TwinName);
+    }
+
     [Fact] // an ITEM is two files: the item and its "_ES" twin. The twin is what the owner's edits
            // are recorded against, so the record points its edit path at it.
     public void An_item_records_its_edit_path_at_its_es_twin()

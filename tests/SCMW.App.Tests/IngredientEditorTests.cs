@@ -164,6 +164,35 @@ public class IngredientEditorTests
     }
 
     [AvaloniaFact]
+    public async Task A_project_category_is_offered_and_recorded_with_its_whole_path()
+    {
+        var (projects, root) = TestProjects.With("OliveMod");
+        try
+        {
+            var folder = projects.Current!.FolderPath;
+            var categoryPath = "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/SCMW_OliveMod/CI_Olives";
+            new NewAssetStore().Add(folder, new NewAsset(
+                Guid.NewGuid(), "CI_Olives", NewAssetKind.Category, "Group Canned Vegetables",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/CI_Group_Canned_Vegetables",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/SCMW_OliveMod",
+                DateTime.UtcNow));
+
+            var (vm, _) = await RecipeOpened(projects);
+
+            var choice = Assert.Single(vm.IngredientSlots[0].TagChoices.Where(t => t.Name == "CI_Olives"));
+            Assert.Equal("Olives", choice.Label);
+
+            var slot = vm.IngredientSlots[0];
+            slot.SelectedTag = choice;
+            vm.SetIngredientTagCommand.Execute(slot);
+
+            var record = Assert.Single(TestProjects.ChangeStore(projects).For(folder));
+            Assert.Equal(categoryPath, record.NewValue);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public async Task The_ingredients_card_renders_a_row_per_slot()
     {
         var (vm, source) = await RecipeOpened(null);
@@ -283,7 +312,7 @@ public class IngredientEditorTests
         var source = new RecipeSource();
         ItemChangeStore? changes = projects is null ? null : TestProjects.ChangeStore(projects);
         var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
-                                        new ContentCatalog(source), changes, projects);
+                                        new ContentCatalog(source), changes, projects, new NewAssetStore());
         await vm.OpenKindAsync("Recipes");
         await vm.OpenAsync(vm.VisibleAssets.Single());
         return (vm, source);

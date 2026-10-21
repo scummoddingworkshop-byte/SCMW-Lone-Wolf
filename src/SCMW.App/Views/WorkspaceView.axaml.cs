@@ -34,6 +34,9 @@ public partial class WorkspaceView : UserControl
 
             // A recipe may already be open when this screen is shown (e.g. after a screen change).
             if (_vm.ShowOpenMakes) BuildPicker("OpenMakesHost", "OpenProductPickerTemplate");
+
+            // The category card's dropdowns are rebuilt per item open (same dropdown quirk).
+            if (_vm.ShowItemCategories) BuildItemCategoryPickers();
         }
     }
 
@@ -43,6 +46,19 @@ public partial class WorkspaceView : UserControl
             BuildNewRecipePickers();
         else if (e.PropertyName == nameof(WorkspaceViewModel.ShowOpenMakes) && _vm?.ShowOpenMakes == true)
             BuildPicker("OpenMakesHost", "OpenProductPickerTemplate");
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowItemCategories)
+                 && _vm?.ShowItemCategories == true)
+            BuildItemCategoryPickers();
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewCategoryForm)
+                 && _vm?.ShowNewCategoryForm == true)
+            BuildPicker("CategoryDonorPickerHost", "CategoryDonorPickerTemplate");
+    }
+
+    /// <summary>Builds fresh "add a category" and "copy the shape from" dropdowns for the card.</summary>
+    private void BuildItemCategoryPickers()
+    {
+        BuildPicker("ItemCategoryPickerHost", "ItemCategoryPickerTemplate");
+        BuildPicker("CategoryDonorPickerHost", "CategoryDonorPickerTemplate");
     }
 
     /// <summary>

@@ -42,6 +42,29 @@
         </controls:SearchPicker.ItemTemplate>
       </controls:SearchPicker>
     </DataTemplate>
+    <!-- The open item's category dropdowns, also built fresh per item open (same quirk). -->
+    <DataTemplate x:Key="ItemCategoryPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="ItemCategoryPicker" Width="260"
+                             ItemsSource="{Binding CategoryChoices}"
+                             SelectedItem="{Binding NewItemCategory, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="content:CategoryChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
+    <DataTemplate x:Key="CategoryDonorPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="CategoryDonorPicker" Width="260"
+                             ItemsSource="{Binding CategoryDonors}"
+                             SelectedItem="{Binding NewCategoryDonor, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="content:CategoryChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
   </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
@@ -194,6 +217,87 @@
                         Command="{Binding CancelRemoveNewRecipeCommand}"/>
               </StackPanel>
             </Grid>
+          </Border>
+
+          <!-- An item's ingredient categories (Phase 8, Option A): what it counts as when a recipe
+               asks for an ingredient, plus a way to make a brand-new category. -->
+          <Border Name="ItemCategoryCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowItemCategories}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section" Text="Ingredient category"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="What this item counts as when a recipe asks for an ingredient. Recipes match categories, not single items."/>
+
+              <TextBlock Text="This item isn't in any category yet." Classes="dim"
+                         IsVisible="{Binding HasNoItemCategories}"/>
+
+              <ItemsControl Name="ItemCategoryList" ItemsSource="{Binding ItemCategoryRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ItemCategoryRow">
+                    <Border Classes="card" Margin="0,0,0,8" Padding="10">
+                      <Grid ColumnDefinitions="*,Auto,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Label}"/>
+                          <TextBlock Text="{Binding TagName}" Classes="dim"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Classes="chip" VerticalAlignment="Center" Margin="0,0,8,0"
+                                IsVisible="{Binding HasAmount}">
+                          <TextBlock Text="{Binding Amount}" Classes="dim"/>
+                        </Border>
+                        <Button Grid.Column="2" Name="RemoveItemCategory" Classes="secondary" Content="✕"
+                                VerticalAlignment="Center" ToolTip.Tip="Remove this category"
+                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveItemCategoryCommand}"
+                                CommandParameter="{Binding}"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- Built in code when the card appears (the app's dropdown quirk). -->
+                <ContentControl Name="ItemCategoryPickerHost" VerticalAlignment="Center"/>
+                <Button Name="AddItemCategory" Classes="primary" Content="Add"
+                        IsEnabled="{Binding CanAddItemCategory}"
+                        Command="{Binding AddItemCategoryCommand}"/>
+                <Button Name="NewCategoryButton" Classes="secondary" Content="＋ New category"
+                        ToolTip.Tip="Make a brand-new ingredient category"
+                        Command="{Binding ToggleNewCategoryCommand}"/>
+              </StackPanel>
+
+              <StackPanel Spacing="8" IsVisible="{Binding ShowNewCategoryForm}">
+                <Border Classes="card" Padding="12">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="New category" Classes="section"/>
+                    <TextBlock Classes="dim" TextWrapping="Wrap"
+                               Text="Give it a name and copy the shape from a game category. It is added to this item and can be used again."/>
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Name" Classes="dim"/>
+                      <TextBox Name="NewCategoryNameBox" Classes="field" MinWidth="200"
+                               Watermark="e.g. Olives"
+                               Text="{Binding NewCategoryName, Mode=TwoWay}"/>
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Copy the shape from" Classes="dim"/>
+                      <ContentControl Name="CategoryDonorPickerHost" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding NewCategoryNotice}" TextWrapping="Wrap" Classes="dim"
+                               Foreground="{StaticResource WarningBrush}"
+                               IsVisible="{Binding HasNewCategoryNotice}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Button Name="CreateItemCategory" Classes="primary" Content="Create"
+                              Command="{Binding CreateItemCategoryCommand}"/>
+                      <Button Name="CancelItemCategory" Classes="secondary" Content="Cancel"
+                              Command="{Binding ToggleNewCategoryCommand}"/>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <TextBlock Text="{Binding CategoryNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}"
+                         IsVisible="{Binding HasCategoryNotice}"/>
+            </StackPanel>
           </Border>
 
           <!-- What an existing NEW recipe makes (Phase 8.2 follow-up): set or change its product at

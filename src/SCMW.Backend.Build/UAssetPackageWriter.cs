@@ -93,7 +93,7 @@ public sealed class UAssetPackageWriter : IPackageWriter
 
             string? error;
             var ok = target is ObjectPropertyData link
-                ? ObjectLink.TrySet(asset, link, change.NewValue, out error)
+                ? SetLink(asset, link, change.NewValue, out error)
                 : target is SoftObjectPropertyData soft
                     ? ObjectLink.TrySetSoft(asset, soft, change.NewValue, out error)
                     : PropertyValue.TrySet(target, asset, change.NewValue, out error);
@@ -113,6 +113,22 @@ public sealed class UAssetPackageWriter : IPackageWriter
         }
 
         return new WriteResult(true, null);
+    }
+
+    /// <summary>
+    /// Points an object link at a new target. A bare name keeps the link's own folder (the game's
+    /// ingredient tags), while a whole path (<c>SCUM/Content/…</c> or <c>/Game/…</c>) is used exactly
+    /// as given — that is how a link can point at a category the project itself created.
+    /// </summary>
+    private static bool SetLink(UAsset asset, ObjectPropertyData link, string raw, out string? error)
+    {
+        error = null;
+        var text = (raw ?? string.Empty).Trim();
+
+        if (text.Contains('/') && link.Value is { } value && value.IsImport())
+            return ObjectLink.TrySetNew(asset, link, text, value.ToImport(asset), out error);
+
+        return ObjectLink.TrySet(asset, link, text, out error);
     }
 
     /// <summary>
@@ -244,7 +260,74 @@ public sealed class UAssetPackageWriter : IPackageWriter
         // fall back to the class default object when the target has no export going by that name.
         var target = exports.FirstOrDefault(e => e.ObjectName.ToString() == holderName) ?? exports[0];
 
+        // A list of tagged entries (an item's "what I count as" list) is its own small shape: one
+        // entry, copied from the donor, whose link points at the category the owner chose.
+        if (shape is ArrayPropertyData tagged)
+            return TryInsertClonedTaggedList(target.Data, tagged, donor, change.Field, change.NewValue,
+                                             asset, out error);
+
         return TryInsertClonedField(target.Data, shape, change.Field, change.NewValue, asset, out error);
+    }
+
+    /// <summary>
+    /// Adds a list of tagged entries — the shape an item uses to say which ingredient categories it
+    /// counts as (<c>CraftingIngredientInstances</c>): one entry holding a link and an amount. The
+    /// entry's shape (struct type and link class) is copied from the donor; the link is pointed at
+    /// <paramref name="targetPath"/>'s category in this package's own import table; the amount is 1.
+    /// Refuses plainly when the donor is not that shape, so a guessed list can never break the pak.
+    /// </summary>
+    internal static bool TryInsertClonedTaggedList(
+        List<PropertyData> targetProperties, ArrayPropertyData donor, UAsset donorAsset, string field,
+        string targetPath, UAsset targetAsset, out string? error)
+    {
+        error = null;
+
+        var names = targetProperties.Select(p => p.Name.ToString()).ToList();
+        if (FindPropertyIndex(names, field) >= 0)
+        {
+            error = $"\"{field}\" is already in this file — change its value instead of adding it.";
+            return false;
+        }
+
+        if (donor.Value is not { Length: > 0 } || donor.Value[0] is not StructPropertyData donorEntry)
+        {
+            error = $"\"{field}\" is not a list we can add.";
+            return false;
+        }
+
+        var donorLink = donorEntry.Value.OfType<ObjectPropertyData>().FirstOrDefault();
+        var donorAmount = donorEntry.Value.OfType<FloatPropertyData>().FirstOrDefault();
+        var structType = donorEntry.StructType.ToString();
+        var arrayType = donor.ArrayType.ToString();
+
+        if (donorLink?.Value is null || !donorLink.Value.IsImport()
+            || donorAmount is null || string.IsNullOrEmpty(structType) || string.IsNullOrEmpty(arrayType))
+        {
+            error = $"\"{field}\" is not a list of tagged entries.";
+            return false;
+        }
+
+        var donorShape = donorLink.Value.ToImport(donorAsset);
+        var linkField = donorLink.Name.ToString();
+        var amountField = donorAmount.Name.ToString();
+
+        var amount = new FloatPropertyData(FName.FromString(targetAsset, amountField)) { Value = 1f };
+        var link = new ObjectPropertyData(FName.FromString(targetAsset, linkField));
+        if (!ObjectLink.TrySetNew(targetAsset, link, targetPath, donorShape, out error))
+            return false;
+
+        var entry = new StructPropertyData(FName.FromString(targetAsset, field),
+                                           FName.FromString(targetAsset, structType))
+        {
+            Value = new List<PropertyData> { link, amount },
+        };
+
+        targetProperties.Add(new ArrayPropertyData(FName.FromString(targetAsset, field))
+        {
+            ArrayType = FName.FromString(targetAsset, arrayType),
+            Value = new PropertyData[] { entry },
+        });
+        return true;
     }
 
     /// <summary>

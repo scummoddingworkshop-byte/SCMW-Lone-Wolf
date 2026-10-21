@@ -64,6 +64,23 @@ public class ObjectLinkTests
     }
 
     [Fact]
+    public void A_whole_path_points_at_a_category_the_project_created()
+    {
+        var asset = NewAsset();
+        var seed = ImportTag(asset, "CI_Group_Fastener");
+        var link = Link(asset, seed);
+
+        Assert.True(ObjectLink.TrySetNew(asset, link,
+            "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/SCMW_OlivePress/CI_Olives",
+            seed.ToImport(asset), out var error), error);
+
+        var tag = TagImport(asset, link.Value);
+        Assert.Equal("CI_Olives", tag.ObjectName.ToString());
+        Assert.Equal("/Game/ConZ_Files/Items/Crafting/Ingredients/SCMW_OlivePress/CI_Olives",
+                     tag.OuterIndex.ToImport(asset).ObjectName.ToString());
+    }
+
+    [Fact]
     public void A_new_food_link_is_written_into_the_soft_object()
     {
         var asset = NewAsset();

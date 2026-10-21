@@ -6,9 +6,11 @@ namespace SCMW.Core.Content;
 
 /// <summary>
 /// One selectable ingredient tag: <paramref name="Name"/> is the raw value a recipe stores
-/// (e.g. <c>CI_Metal_Scrap</c>); <paramref name="Label"/> is the plain words the owner reads.
+/// (e.g. <c>CI_Metal_Scrap</c>); <paramref name="Label"/> is the plain words the owner reads;
+/// <paramref name="Path"/> is the tag's own file when we know it (a project category lives in the
+/// mod's folder, so its whole path must be written, not just its name). Null means "name only".
 /// </summary>
-public sealed record RecipeTag(string Name, string Label) : IPickerItem;
+public sealed record RecipeTag(string Name, string Label, string? Path = null) : IPickerItem;
 
 /// <summary>The game's real ingredient tags, gathered from the indexed <c>CI_*</c> assets.</summary>
 public static class RecipeTags

@@ -128,6 +128,72 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnCookingNoticeChanged(string value) => OnPropertyChanged(nameof(HasCookingNotice));
 
+    // --- An item's ingredient categories (Phase 8, Option A) --------------------------------------
+    // Recipes match a category (a CI_* "what it counts as" tag), not a single item. Fresh olives have
+    // no such entry in the game, so this card lets the owner give an item a category — and create a
+    // brand-new category when the game has none that fits.
+
+    /// <summary>The game's real ingredient categories (filled when any kind is loaded).</summary>
+    private IReadOnlyList<CategoryChoice> _gameCategories = Array.Empty<CategoryChoice>();
+
+    /// <summary>A game file that already carries the category list; its exact shape is copied when
+    /// an item that lacks the list is given its first category. Null when none was found.</summary>
+    private string? _labelDonorPath;
+
+    /// <summary>The categories the owner may give an item: the game's own, then this project's new ones.</summary>
+    public ObservableCollection<CategoryChoice> CategoryChoices { get; } = new();
+
+    /// <summary>The categories a NEW category may copy its shape from (the game's own only).</summary>
+    public ObservableCollection<CategoryChoice> CategoryDonors { get; } = new();
+
+    /// <summary>One row per category the open item counts as; empty for every other kind.</summary>
+    public ObservableCollection<ItemCategoryRow> ItemCategoryRows { get; } = new();
+
+    /// <summary>True when the open file is an item, so the category card belongs on screen.</summary>
+    [ObservableProperty] private bool _showItemCategories;
+
+    /// <summary>The category picked to add to the open item.</summary>
+    [ObservableProperty] private CategoryChoice? _newItemCategory;
+
+    /// <summary>A plain note shown under the category card (empty when none).</summary>
+    [ObservableProperty] private string _categoryNotice = string.Empty;
+
+    /// <summary>True when the category card should show its note.</summary>
+    public bool HasCategoryNotice => !string.IsNullOrWhiteSpace(CategoryNotice);
+
+    partial void OnCategoryNoticeChanged(string value) => OnPropertyChanged(nameof(HasCategoryNotice));
+
+    /// <summary>True when the open item is in no category yet.</summary>
+    public bool HasNoItemCategories => ShowItemCategories && ItemCategoryRows.Count == 0;
+
+    /// <summary>True when "Add" can do something.</summary>
+    public bool CanAddItemCategory => ShowItemCategories && NewItemCategory is not null && !NeedsProject;
+
+    partial void OnShowItemCategoriesChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasNoItemCategories));
+        OnPropertyChanged(nameof(CanAddItemCategory));
+    }
+
+    partial void OnNewItemCategoryChanged(CategoryChoice? value) => OnPropertyChanged(nameof(CanAddItemCategory));
+
+    /// <summary>True while the small "make a new category" form is showing.</summary>
+    [ObservableProperty] private bool _showNewCategoryForm;
+
+    /// <summary>The plain name the owner typed for a new category (e.g. "Olives").</summary>
+    [ObservableProperty] private string _newCategoryName = string.Empty;
+
+    /// <summary>The game category a new one copies its shape from.</summary>
+    [ObservableProperty] private CategoryChoice? _newCategoryDonor;
+
+    /// <summary>A plain note shown under the new-category form (empty when none).</summary>
+    [ObservableProperty] private string _newCategoryNotice = string.Empty;
+
+    /// <summary>True when the new-category form should show its note.</summary>
+    public bool HasNewCategoryNotice => !string.IsNullOrWhiteSpace(NewCategoryNotice);
+
+    partial void OnNewCategoryNoticeChanged(string value) => OnPropertyChanged(nameof(HasNewCategoryNotice));
+
     // The arguments of the last Show, so an ingredient change can redraw the card without re-reading
     // the game file (the file itself never changes; only the project's records do).
     private string _shownKind = string.Empty;
@@ -155,6 +221,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private void OnProjectChanged()
     {
         OnPropertyChanged(nameof(NeedsProject));
+        OnPropertyChanged(nameof(CanAddItemCategory));
 
         // Only a real switch of project needs a re-read; a rename or a description/picture edit
         // (which also announce a change) must not reload the list.
@@ -228,15 +295,31 @@ public partial class WorkspaceViewModel : ObservableObject
         IReadOnlyList<ItemSummary> assets = Array.Empty<ItemSummary>();
         _ingredientTags = Array.Empty<RecipeTag>();
         _cookingFoods = Array.Empty<CookingFood>();
+        _gameCategories = Array.Empty<CategoryChoice>();
         if (_source is not null && _catalog is not null)
         {
             try
             {
                 var all = await AssetReader.ReadAllAsync(_source).ConfigureAwait(false);
                 assets = _catalog.Map(family, all);
+                _gameCategories = ItemCategories.CategoriesFrom(all);
                 if (family == AssetFamily.Recipes)
                 {
                     _ingredientTags = RecipeTags.From(all);
+
+                    // This project's own categories are ingredients too, and their whole path must be
+                    // written (they live in the mod's folder, not the game's).
+                    var projectFolder = _projects?.Chosen?.FolderPath;
+                    if (_newAssets is not null && projectFolder is not null)
+                    {
+                        _ingredientTags = _ingredientTags
+                            .Concat(_newAssets.Load(projectFolder)
+                                .Where(a => a.Kind == NewAssetKind.Category)
+                                .Select(a => new RecipeTag(a.Name, RecipeTags.Label(a.Name), a.PackagePath)))
+                            .OrderBy(t => t.Label, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                    }
+
                     _gameItemChoices = ItemChoices(_catalog.Map(AssetFamily.Items, all));
                     assets = WithNewAssetRows(assets);   // this project's own new recipes go on top
                 }
@@ -257,6 +340,10 @@ public partial class WorkspaceViewModel : ObservableObject
             Fields.Clear();
             Title = string.Empty;
             HasFields = false;
+            CategoryDonors.Clear();
+            foreach (var category in _gameCategories) CategoryDonors.Add(category);
+            NewCategoryDonor = CategoryDonors.FirstOrDefault();
+            ShowNewCategoryForm = false;
             Browse(family.ToString(), assets);
         });
     }
@@ -703,6 +790,341 @@ public partial class WorkspaceViewModel : ObservableObject
         foreach (var id in ids) _changes.Undo(folder, id);
     }
 
+    // --- An item's ingredient categories (the card) ----------------------------------------------
+
+    /// <summary>
+    /// Rebuild the open item's category card: the game's own categories plus this project's new ones,
+    /// and one row per entry the item has (with the project's list changes and value edits applied).
+    /// Hidden for every kind but an item.
+    /// </summary>
+    private void RefreshItemCategories(string kind, string? assetPath, string title,
+                                       IReadOnlyList<AssetField> fields)
+    {
+        ItemCategoryRows.Clear();
+
+        var isItem = string.Equals(kind, "Items", StringComparison.Ordinal)
+                     && assetPath is not null
+                     && assetPath.EndsWith("_ES", StringComparison.OrdinalIgnoreCase);
+        if (!isItem)
+        {
+            ShowItemCategories = false;
+            OnPropertyChanged(nameof(HasNoItemCategories));
+            return;
+        }
+
+        FillCategoryChoices();
+        if (ShowNewCategoryForm && NewCategoryDonor is null && CategoryDonors.Count > 0)
+            NewCategoryDonor = CategoryDonors[0];
+
+        var records = Records();
+        var addRecord = AddRecordForCategories(assetPath);
+        var fileSlots = ItemCategories.From(fields);
+
+        IReadOnlyList<ItemCategorySlot> displayed;
+        if (fileSlots.Count == 0 && addRecord is not null)
+        {
+            // The list does not exist in the game file yet: this project adds it whole. Show that one
+            // entry so it can be seen and removed like any other.
+            displayed = ItemCategories.WithListChanges(
+                new[] { new ItemCategorySlot(0, null, null) }, CategoryListChanges(assetPath));
+        }
+        else
+        {
+            displayed = ItemCategories.WithListChanges(fileSlots, CategoryListChanges(assetPath));
+        }
+
+        foreach (var slot in displayed)
+        {
+            var tagPath = ItemCategories.TagPath(slot.Index);
+            var fromAddedList = slot.Index == 0 && fileSlots.Count == 0 && addRecord is not null;
+            var gameValue = fromAddedList ? addRecord!.NewValue : slot.TagName;
+
+            var applied = string.IsNullOrEmpty(assetPath)
+                ? gameValue
+                : AppliedValue.ResolveForAsset(records, assetPath, title, tagPath, gameValue) ?? gameValue;
+
+            var name = ItemCategories.NameOf(applied);
+            ItemCategoryRows.Add(new ItemCategoryRow(
+                slot.Index, name is null ? string.Empty : CategoryLabel(name), name ?? string.Empty,
+                fromAddedList && slot.AmountValue is null ? "1" : slot.AmountValue,
+                applied ?? string.Empty));
+        }
+
+        ShowItemCategories = true;
+        OnPropertyChanged(nameof(HasNoItemCategories));
+    }
+
+    /// <summary>Fill the picker with the game's categories first, then this project's own new ones.</summary>
+    private void FillCategoryChoices()
+    {
+        var chosen = NewItemCategory?.Name;
+        CategoryChoices.Clear();
+        foreach (var choice in _gameCategories) CategoryChoices.Add(choice);
+
+        var folder = _projects?.Chosen?.FolderPath;
+        if (folder is not null && _newAssets is not null)
+        {
+            foreach (var asset in _newAssets.Load(folder).Where(a => a.Kind == NewAssetKind.Category))
+                CategoryChoices.Add(new CategoryChoice(asset.Name, RecipeTags.Label(asset.Name), asset.PackagePath));
+        }
+
+        if (chosen is not null)
+            NewItemCategory = CategoryChoices.FirstOrDefault(c =>
+                string.Equals(c.Name, chosen, StringComparison.OrdinalIgnoreCase));
+        else
+            NewItemCategory = null;
+    }
+
+    /// <summary>The plain words for a category: the picker's own label, or the tag name tidied up.</summary>
+    private string CategoryLabel(string name)
+    {
+        foreach (var choice in CategoryChoices)
+        {
+            if (string.Equals(choice.Name, name, StringComparison.OrdinalIgnoreCase)) return choice.Label;
+        }
+
+        return RecipeTags.Label(name);
+    }
+
+    /// <summary>The project's whole-list "add a field" record for the open item's categories, or null.</summary>
+    private ChangeRecord? AddRecordForCategories(string? assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath)) return null;
+
+        return Records().FirstOrDefault(r =>
+            r.Operation == ChangeOperation.AddField
+            && string.Equals(r.FieldTechnicalName, ItemCategories.ListName, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.AssetPath ?? r.AssetId, assetPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The project's recorded add/remove changes to the open item's category list, in order.</summary>
+    private IReadOnlyList<ItemCategoryListChange> CategoryListChanges(string? assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath)) return Array.Empty<ItemCategoryListChange>();
+
+        var changes = new List<ItemCategoryListChange>();
+        foreach (var record in Records())
+        {
+            if (!string.Equals(record.AssetPath ?? record.AssetId, assetPath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (record.Operation == ChangeOperation.AddEntry
+                && string.Equals(record.FieldTechnicalName, ItemCategories.ListName, StringComparison.OrdinalIgnoreCase))
+            {
+                changes.Add(new ItemCategoryListChange(ChangeOperation.AddEntry, -1));
+            }
+            else if (record.Operation == ChangeOperation.RemoveEntry
+                     && ItemCategories.TrySlotIndex(record.FieldTechnicalName, out var index))
+            {
+                changes.Add(new ItemCategoryListChange(ChangeOperation.RemoveEntry, index));
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>Give the open item the picked category.</summary>
+    [RelayCommand]
+    private void AddItemCategory()
+    {
+        if (NeedsProject)
+        {
+            CategoryNotice = ProjectWarning;
+            return;
+        }
+
+        var path = SelectedAsset?.AssetId;
+        var chosen = NewItemCategory;
+        if (_changes is null || string.IsNullOrEmpty(path) || chosen is null) return;
+
+        if (ItemCategoryRows.Any(r => string.Equals(r.TagName, chosen.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            CategoryNotice = $"This item already counts as {chosen.Label}.";
+            return;
+        }
+
+        var project = _projects!.Chosen!;
+        if (AddRecordForCategories(path) is not null)
+        {
+            // The whole list is this project's own: rebuild it, so adding/removing never leaves a
+            // category behind or drops one silently.
+            var values = ItemCategoryRows.Select(r => r.Value).ToList();
+            values.Add(chosen.Path);
+            RebuildCategoryList(path!, values);
+        }
+        else if (ItemCategories.From(_shownFields).Count > 0)
+        {
+            _changes.RecordListChange(path!, ItemCategories.ListName, ChangeOperation.AddEntry,
+                                      project.Id, assetPath: path);
+
+            // A new entry is appended: its index is the number of rows shown right now.
+            var index = ItemCategoryRows.Count;
+            _changes.RecordEdit(path!, ItemCategories.TagPath(index), null, chosen.Path,
+                                project.Id, assetPath: path);
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(_labelDonorPath))
+            {
+                CategoryNotice = "The game file that carries ingredient categories could not be found.";
+                return;
+            }
+
+            if (_changes.RecordAddField(path!, ItemCategories.ListName, chosen.Path, _labelDonorPath,
+                                        project.Id, assetPath: path) is null)
+            {
+                CategoryNotice = "The category could not be saved. Please try again.";
+                return;
+            }
+        }
+
+        CategoryNotice = string.Empty;
+        RefreshShown();
+    }
+
+    /// <summary>
+    /// Rebuild the project's own category list on an item from the values given: drop every record
+    /// for that list first, then add the first category as a whole list (borrowing a donor's shape)
+    /// and each later one as an appended entry. Used when the game item had no list at all, so the
+    /// project owns the whole thing and a remove must never leave a stale entry behind.
+    /// </summary>
+    private void RebuildCategoryList(string assetPath, IReadOnlyList<string> values)
+    {
+        var folder = _projects?.Chosen?.FolderPath;
+        var project = _projects?.Chosen;
+        if (_changes is null || folder is null || project is null) return;
+
+        if (values.Count > 0 && string.IsNullOrEmpty(_labelDonorPath))
+        {
+            CategoryNotice = "The game file that carries ingredient categories could not be found.";
+            return;
+        }
+
+        var ownRecords = _changes.For(folder)
+            .Where(r => string.Equals(r.AssetPath ?? r.AssetId, assetPath, StringComparison.OrdinalIgnoreCase)
+                        && IsCategoryField(r.FieldTechnicalName))
+            .Select(r => r.Id)
+            .ToList();
+        foreach (var id in ownRecords) _changes.Undo(folder, id);
+
+        if (values.Count == 0) return;
+
+        _changes.RecordAddField(assetPath, ItemCategories.ListName, values[0], _labelDonorPath!,
+                                project.Id, assetPath: assetPath);
+        for (var i = 1; i < values.Count; i++)
+        {
+            _changes.RecordListChange(assetPath, ItemCategories.ListName, ChangeOperation.AddEntry,
+                                      project.Id, assetPath: assetPath);
+            _changes.RecordEdit(assetPath, ItemCategories.TagPath(i), null, values[i],
+                                project.Id, assetPath: assetPath);
+        }
+    }
+
+    /// <summary>True for the category list field itself or a value inside one of its entries.</summary>
+    private static bool IsCategoryField(string? field) =>
+        string.Equals(field, ItemCategories.ListName, StringComparison.OrdinalIgnoreCase)
+        || (field?.StartsWith(ItemCategories.ListName + "[", StringComparison.OrdinalIgnoreCase) ?? false);
+
+    /// <summary>Remove one category from the open item.</summary>
+    [RelayCommand]
+    private void RemoveItemCategory(ItemCategoryRow? row)
+    {
+        if (row is null || _changes is null || NeedsProject) return;
+
+        var path = SelectedAsset?.AssetId;
+        var project = _projects?.Chosen;
+        if (string.IsNullOrEmpty(path) || project is null) return;
+
+        // The list the project created whole: rebuild it from the rows that stay, so no category is
+        // lost or left behind by shifting entries.
+        if (AddRecordForCategories(path) is not null)
+        {
+            var values = ItemCategoryRows.Where(r => !ReferenceEquals(r, row)).Select(r => r.Value).ToList();
+            RebuildCategoryList(path!, values);
+            CategoryNotice = string.Empty;
+        }
+        else
+        {
+            var dropped = _changes.RecordListChange(path!, ItemCategories.SlotPath(row.Index),
+                                                    ChangeOperation.RemoveEntry, project.Id, assetPath: path);
+            CategoryNotice = dropped > 0
+                ? $"Removed it. {dropped} value change(s) on this list were cleared too."
+                : string.Empty;
+        }
+
+        RefreshShown();
+    }
+
+    /// <summary>Show or hide the small "make a new category" form.</summary>
+    [RelayCommand]
+    private void ToggleNewCategory()
+    {
+        ShowNewCategoryForm = !ShowNewCategoryForm;
+        NewCategoryNotice = string.Empty;
+        if (ShowNewCategoryForm && NewCategoryDonor is null && CategoryDonors.Count > 0)
+            NewCategoryDonor = CategoryDonors[0];
+    }
+
+    /// <summary>
+    /// Create a brand-new category from the typed name, copying a game category's shape, then give it
+    /// to the open item. The category is a normal new asset, so the build clones and registers it; it
+    /// can be picked again for any other item afterwards.
+    /// </summary>
+    [RelayCommand]
+    private void CreateItemCategory()
+    {
+        if (NeedsProject)
+        {
+            NewCategoryNotice = ProjectWarning;
+            return;
+        }
+
+        var chosenProject = _projects?.Chosen;
+        if (_newAssets is null || chosenProject is null) return;
+
+        if (NewCategoryDonor is not { } donor)
+        {
+            NewCategoryNotice = "Pick a game category to copy the shape from.";
+            return;
+        }
+
+        var name = NewAssetNaming.CategoryName(NewCategoryName);
+        if (name is null)
+        {
+            NewCategoryNotice = "Type a name for the new category.";
+            return;
+        }
+
+        var key = NormalisedName(name);
+        var taken = CategoryChoices.Any(c => NormalisedName(c.Name) == key)
+                    || _newAssets.Load(chosenProject.FolderPath)
+                        .Any(a => a.Kind == NewAssetKind.Category && NormalisedName(a.Name) == key);
+        if (taken)
+        {
+            NewCategoryNotice = $"There's already a category called {RecipeTags.Label(name)} — try another name.";
+            return;
+        }
+
+        var asset = new NewAsset(
+            Guid.NewGuid(), name, NewAssetKind.Category, donor.Label, donor.Path,
+            NewAssetNaming.FolderFor(FolderOf(donor.Path), chosenProject.Name), DateTime.UtcNow);
+
+        if (!_newAssets.Add(chosenProject.FolderPath, asset))
+        {
+            NewCategoryNotice = "The new category could not be saved. Please try again.";
+            return;
+        }
+
+        var choice = new CategoryChoice(asset.Name, RecipeTags.Label(asset.Name), asset.PackagePath);
+        CategoryChoices.Add(choice);
+        NewItemCategory = choice;
+        ShowNewCategoryForm = false;
+        NewCategoryName = string.Empty;
+        NewCategoryNotice = string.Empty;
+
+        AddItemCategory();
+    }
+
     /// <summary>The game's own items as "Makes" choices: each item's soft object path and its plain
     /// name, in the order the item list already gives them.</summary>
     private static IReadOnlyList<ProductChoice> ItemChoices(IReadOnlyList<ItemSummary> items)
@@ -734,7 +1156,8 @@ public partial class WorkspaceViewModel : ObservableObject
         var folder = _projects?.Chosen?.FolderPath;
         if (_newAssets is null || folder is null) return recipes;
 
-        var rows = _newAssets.Load(folder).Select(NewRecipeRow).ToList();
+        var rows = _newAssets.Load(folder).Where(a => a.Kind == NewAssetKind.Recipe)
+            .Select(NewRecipeRow).ToList();
         return rows.Count == 0 ? recipes : rows.Concat(recipes).ToList();
     }
 
@@ -746,7 +1169,12 @@ public partial class WorkspaceViewModel : ObservableObject
             assetId: asset.EditPath, readPath: asset.TwinDonorPath ?? asset.DonorPath);
 
     /// <summary>The plain word for a new asset's kind.</summary>
-    private static string KindWord(NewAssetKind kind) => kind == NewAssetKind.Item ? "item" : "recipe";
+    private static string KindWord(NewAssetKind kind) => kind switch
+    {
+        NewAssetKind.Item => "item",
+        NewAssetKind.Category => "category",
+        _ => "recipe",
+    };
 
     /// <summary>The folder a path lives in (everything before the last slash).</summary>
     private static string FolderOf(string path)
@@ -820,7 +1248,13 @@ public partial class WorkspaceViewModel : ObservableObject
         _shownFields = fields;
         _shownAssetPath = assetPath;
         _shownAddable = addable;
-        if (!sameAsset) { IngredientNotice = string.Empty; CookingNotice = string.Empty; }
+        if (!sameAsset)
+        {
+            IngredientNotice = string.Empty;
+            CookingNotice = string.Empty;
+            CategoryNotice = string.Empty;
+            NewCategoryNotice = string.Empty;
+        }
 
         Title = title;
         Fields.Clear();
@@ -874,6 +1308,9 @@ public partial class WorkspaceViewModel : ObservableObject
         // The open recipe's "Makes" card (a brand-new recipe only): its own product and the items
         // it may be pointed at.
         RefreshOpenMake(kind, assetPath);
+
+        // The open item's "Ingredient category" card: what it counts as, and how to add a category.
+        RefreshItemCategories(kind, assetPath, title, fields);
 
         // The Ingredients card (recipes only): the file's slots with the project's list changes played
         // back, one row each, with recorded values applied.
@@ -1237,6 +1674,10 @@ public partial class WorkspaceViewModel : ObservableObject
         // Work out which described fields this file lacks and we could add (a donor item has them).
         var addable = await BuildAddableAsync(_kind, asset.AssetId, fields).ConfigureAwait(false);
 
+        // The category list's shape comes from an item that already has one (found once, then cached).
+        if (string.Equals(_kind, "Items", StringComparison.Ordinal))
+            _labelDonorPath = await FindDonorAsync("Items", ItemCategories.ListName).ConfigureAwait(false);
+
         RunOnUi(() => Show(_kind, asset.Name, fields, asset.AssetId, addable));
     }
 
@@ -1527,14 +1968,16 @@ public partial class WorkspaceViewModel : ObservableObject
         if (slot?.SelectedTag is null) return;
 
         var chosen = slot.SelectedTag.Name;
-        if (string.Equals(chosen, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase))
+        var value = slot.SelectedTag.Path ?? chosen;
+        if (string.Equals(chosen, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(value, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase))
             return;   // the file's own tag (or the picker settling on load): nothing to record
 
         var path = SelectedAsset?.AssetId;
         if (_changes is null || string.IsNullOrEmpty(path)) return;   // not wired to a project: show only
         if (NeedsProject) return;   // no project chosen: refuse (the banner says why)
 
-        _changes.RecordEdit(path!, RecipeIngredients.TagPath(slot.Index), slot.OriginalTagName, chosen,
+        _changes.RecordEdit(path!, RecipeIngredients.TagPath(slot.Index), slot.OriginalTagName, value,
                             _projects!.Chosen!.Id, assetPath: path);
     }
 
@@ -2037,3 +2480,38 @@ public partial class AddableField : ObservableObject
 
     partial void OnDraftChanged(string value) => OnPropertyChanged(nameof(IsDraftValid));
 }
+
+/// <summary>
+/// One category the open item counts as: the plain words, the raw tag the game stores, and how much
+/// it counts for. Rebuilt whenever the card is redrawn, so it needs no change notifications.
+/// </summary>
+public sealed class ItemCategoryRow
+{
+    public ItemCategoryRow(int index, string label, string tagName, string? amount, string value)
+    {
+        Index = index;
+        Label = label;
+        TagName = tagName;
+        Amount = amount ?? string.Empty;
+        Value = value;
+    }
+
+    /// <summary>Its position in the item's list (for a remove).</summary>
+    public int Index { get; }
+
+    /// <summary>The plain words the owner reads (e.g. "Group Canned Vegetables").</summary>
+    public string Label { get; }
+
+    /// <summary>The game's own tag name (e.g. <c>CI_Group_Canned_Vegetables</c>).</summary>
+    public string TagName { get; }
+
+    /// <summary>How much it counts for, as the file shows it.</summary>
+    public string Amount { get; }
+
+    /// <summary>The value the build writes (a category's whole file path), so the list can be rebuilt.</summary>
+    public string Value { get; }
+
+    /// <summary>True when the amount is worth showing.</summary>
+    public bool HasAmount => !string.IsNullOrWhiteSpace(Amount);
+}
+
