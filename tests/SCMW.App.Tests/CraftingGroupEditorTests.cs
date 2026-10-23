@@ -245,6 +245,22 @@ public class CraftingGroupEditorTests
     }
 
     [AvaloniaFact]
+    public async Task The_group_values_leave_the_plain_field_list()
+    {
+        var (vm, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+
+            // The card owns both values now, so they are not shown twice (and the shelf struct's
+            // "we haven't worked out what this does yet" row is gone too).
+            Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "CraftingCategoryTag.TagName");
+            Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "DisplayPriority");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public async Task The_card_shows_a_working_shelf_dropdown_and_a_place_dropdown()
     {
         var (vm, _, _, root) = Ready(new RecipeSource());

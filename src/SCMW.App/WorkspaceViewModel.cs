@@ -1812,6 +1812,16 @@ public partial class WorkspaceViewModel : ObservableObject
         var owned = OwnedIngredientPaths(fileSlots);
         foreach (var path in OwnedCookingPaths(cookingSlots)) owned.Add(path);
 
+        // The Crafting group card owns the shelf and order on a new recipe, so those leave the plain
+        // list instead of showing twice (including the raw "Crafting Category Tag" struct row).
+        if (string.Equals(kind, "Recipes", StringComparison.Ordinal) && IsOpenNewRecipe
+            && fields.Any(f => string.Equals(f.TechnicalName, CraftingGroupField, StringComparison.OrdinalIgnoreCase)))
+        {
+            owned.Add("CraftingCategoryTag");
+            owned.Add(CraftingGroupField);
+            owned.Add(DisplayPriorityField);
+        }
+
         foreach (var field in fields)
         {
             if (owned.Contains(field.TechnicalName)) continue;
@@ -1939,6 +1949,13 @@ public partial class WorkspaceViewModel : ObservableObject
                 ? tagName
                 : AppliedValue.OriginalForAsset(records, assetPath, title, tagPath) ?? tagName;
 
+            // Show the tag the slot accepts NOW: the project's recorded change when there is one,
+            // else the file's own. Without this, reopening a recipe showed the donor's tag even
+            // though the built mod (and the field list) had the new one.
+            var appliedTag = tagName is null || string.IsNullOrEmpty(assetPath)
+                ? tagName
+                : AppliedValue.ResolveForAsset(records, assetPath, title, tagPath, tagName) ?? tagName;
+
             var amounts = new List<WorkspaceField>(SkillLevels.Length);
             foreach (var level in SkillLevels)
             {
@@ -1959,22 +1976,30 @@ public partial class WorkspaceViewModel : ObservableObject
                 amounts.Add(field);
             }
 
-            IngredientSlots.Add(new IngredientSlotRow(slot.Index, TagChoice(tagName, _ingredientTags), originalTag,
+            IngredientSlots.Add(new IngredientSlotRow(slot.Index, TagChoice(appliedTag, _ingredientTags), originalTag,
                                                       _ingredientTags, amounts));
         }
     }
 
-    /// <summary>The picker's entry for a tag name: the indexed tag, or a plainly-labelled stand-in.</summary>
+    /// <summary>The picker's entry for a tag's stored value: the indexed tag (matched by its name or,
+    /// for a project category, its whole path), or a plainly-labelled stand-in. Never shows a path.</summary>
     private static RecipeTag? TagChoice(string? name, IReadOnlyList<RecipeTag> choices)
     {
         if (string.IsNullOrEmpty(name)) return null;
 
         foreach (var choice in choices)
         {
-            if (string.Equals(choice.Name, name, StringComparison.OrdinalIgnoreCase)) return choice;
+            if (string.Equals(choice.Name, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(choice.Path, name, StringComparison.OrdinalIgnoreCase))
+                return choice;
         }
 
-        return new RecipeTag(name, RecipeTags.Label(name));
+        // A project category's value is its whole path. Even when the project's own list no longer
+        // has it, the row shows the file name in plain words, and re-picking writes the path back.
+        var text = name.TrimEnd('/');
+        var slash = text.LastIndexOf('/');
+        var file = slash >= 0 ? text[(slash + 1)..] : text;
+        return new RecipeTag(file, RecipeTags.Label(file), slash >= 0 ? text : null);
     }
 
     /// <summary>The owner-facing label for a skill tier.</summary>
@@ -2512,18 +2537,26 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         if (slot?.SelectedTag is null) return;
 
-        var chosen = slot.SelectedTag.Name;
-        var value = slot.SelectedTag.Path ?? chosen;
-        if (string.Equals(chosen, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(value, slot.OriginalTagName, StringComparison.OrdinalIgnoreCase))
-            return;   // the file's own tag (or the picker settling on load): nothing to record
-
         var path = SelectedAsset?.AssetId;
         if (_changes is null || string.IsNullOrEmpty(path)) return;   // not wired to a project: show only
         if (NeedsProject) return;   // no project chosen: refuse (the banner says why)
 
-        _changes.RecordEdit(path!, RecipeIngredients.TagPath(slot.Index), slot.OriginalTagName, value,
-                            _projects!.Chosen!.Id, assetPath: path);
+        var tagPath = RecipeIngredients.TagPath(slot.Index);
+        var chosen = slot.SelectedTag.Path ?? slot.SelectedTag.Name;   // a project category is its path
+        var original = slot.OriginalTagName;
+
+        // The slot's value now: the project's change when there is one, else the file's own tag.
+        var applied = AppliedValue.ResolveForAsset(Records(), path!, _shownTitle, tagPath,
+                                                   original ?? string.Empty) ?? original;
+        if (string.Equals(chosen, applied, StringComparison.OrdinalIgnoreCase))
+            return;   // the picker settling on what the slot already accepts: nothing to record
+
+        // Picking the file's own tag back drops the change, like every other card.
+        if (string.Equals(chosen, original, StringComparison.OrdinalIgnoreCase))
+            UndoSetsOnOpenRecipe(path, tagPath);
+        else
+            _changes.RecordEdit(path!, tagPath, original, chosen,
+                                _projects!.Chosen!.Id, assetPath: path);
     }
 
     /// <summary>Add an ingredient slot. Recorded as a list change; the build clones the last slot, so

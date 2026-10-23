@@ -193,6 +193,75 @@ public class IngredientEditorTests
     }
 
     [AvaloniaFact]
+    public async Task Reopening_a_recipe_shows_the_tag_that_was_chosen()
+    {
+        var (projects, root) = TestProjects.With("Recipe mod");
+        try
+        {
+            var (vm, _) = await RecipeOpened(projects);
+
+            var slot = vm.IngredientSlots[0];
+            slot.SelectedTag = new RecipeTag("CI_Metal_Scrap", "Metal Scrap");
+            vm.SetIngredientTagCommand.Execute(slot);
+
+            await vm.OpenAsync(vm.SelectedAsset!);
+
+            Assert.Equal("CI_Metal_Scrap", vm.IngredientSlots[0].SelectedTag!.Name);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Reopening_shows_a_project_category_by_its_plain_name()
+    {
+        var (projects, root) = TestProjects.With("OliveMod");
+        try
+        {
+            var folder = projects.Current!.FolderPath;
+            new NewAssetStore().Add(folder, new NewAsset(
+                Guid.NewGuid(), "CI_Olives", NewAssetKind.Category, "Group Canned Vegetables",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/CI_Group_Canned_Vegetables",
+                "SCUM/Content/ConZ_Files/Items/Crafting/Ingredients/SCMW_OliveMod",
+                DateTime.UtcNow));
+
+            var (vm, _) = await RecipeOpened(projects);
+
+            var slot = vm.IngredientSlots[0];
+            slot.SelectedTag = slot.TagChoices.Single(t => t.Name == "CI_Olives");
+            vm.SetIngredientTagCommand.Execute(slot);
+
+            await vm.OpenAsync(vm.SelectedAsset!);
+
+            var shown = vm.IngredientSlots[0].SelectedTag!;
+            Assert.Equal("CI_Olives", shown.Name);
+            Assert.Equal("Olives", shown.Label);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Picking_the_files_own_tag_back_drops_the_change()
+    {
+        var (projects, root) = TestProjects.With("Recipe mod");
+        try
+        {
+            var (vm, _) = await RecipeOpened(projects);
+
+            var slot = vm.IngredientSlots[0];
+            slot.SelectedTag = new RecipeTag("CI_Metal_Scrap", "Metal Scrap");
+            vm.SetIngredientTagCommand.Execute(slot);
+
+            var back = vm.IngredientSlots[0];
+            back.SelectedTag = back.TagChoices.Single(t => t.Name == "CI_Plank");
+            vm.SetIngredientTagCommand.Execute(back);
+
+            Assert.DoesNotContain(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath),
+                                  r => r.FieldTechnicalName == "Ingredients[0].AllowedTypes[0]");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public async Task The_ingredients_card_renders_a_row_per_slot()
     {
         var (vm, source) = await RecipeOpened(null);
