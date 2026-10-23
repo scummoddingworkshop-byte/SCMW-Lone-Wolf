@@ -41,6 +41,22 @@ public class ItemSoftPathsTests
     public void A_package_path_outside_the_game_folder_has_no_soft_path()
         => Assert.Equal(string.Empty, ItemSoftPaths.FromItemPackage("Mod/OliveOil"));
 
+    // --- A soft path back to the package it names -----------------------------------------------
+
+    [Fact]
+    public void A_soft_path_names_its_package()
+        => Assert.Equal(
+            "SCUM/Content/ConZ_Files/Items/Equipment/AnimalBaitFeederItem",
+            ItemSoftPaths.PackageOf(
+                "/Game/ConZ_Files/Items/Equipment/AnimalBaitFeederItem.AnimalBaitFeederItem_C"));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("ConZ_Files/Items/Equipment/Thing.Thing_C")]   // not under /Game
+    [InlineData("/Game")]                                      // no package
+    public void A_value_that_is_not_a_game_soft_path_names_no_package(string softPath)
+        => Assert.Equal(string.Empty, ItemSoftPaths.PackageOf(softPath));
+
     // --- The friendly label ---------------------------------------------------------------------
 
     [Fact]

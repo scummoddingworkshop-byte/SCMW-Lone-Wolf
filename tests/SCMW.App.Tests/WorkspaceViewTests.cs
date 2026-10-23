@@ -574,6 +574,76 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact]   // an item's class is the file its _ES names, not always the _ES name minus "_ES"
+    public async Task The_add_target_is_the_item_the_ES_names()
+    {
+        var source = new AddFieldSource();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
+
+        await vm.OpenKindAsync("Items");
+        await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
+
+        var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+        Assert.Equal(AddFieldSource.BaitRealClass, add.TargetPath);
+    }
+
+    [AvaloniaFact]
+    public async Task Adding_a_field_uses_the_item_the_ES_names()
+    {
+        var (projects, root) = TestProjects.With("Bait mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
+
+            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            add.Draft = "0";
+            vm.AddCommand.Execute(add);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(AddFieldSource.BaitRealClass, record.AssetPath);
+            Assert.NotEqual(AddFieldSource.BaitOldClass, record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]   // an old record aimed at the name-derived (wrong) path still shows, so it can be redone
+    public async Task An_old_add_record_on_the_wrong_path_can_be_removed_and_redone()
+    {
+        var (projects, root) = TestProjects.With("Bait mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            changes.RecordAddField(AddFieldSource.BaitOldClass, "_autoDestructTime", "0",
+                                   AddFieldSource.TorchClass, projects.Current!.Id,
+                                   assetPath: AddFieldSource.BaitOldClass);
+
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
+
+            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            Assert.True(add.IsAdded);          // the old record is still visible, not silently lost
+
+            vm.RemoveCommand.Execute(add);
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+
+            add.Draft = "0";
+            vm.AddCommand.Execute(add);
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(AddFieldSource.BaitRealClass, record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void The_add_section_shows_a_field_you_could_add()
     {
@@ -737,10 +807,17 @@ public class WorkspaceViewTests
         public const string Torch = "SCUM/Content/ConZ_Files/Items/Food/Torch_ES";
         public const string TorchClass = "SCUM/Content/ConZ_Files/Items/Food/Torch";
 
+        // An item whose real package is NOT its "_ES" name minus "_ES": the "_ES" itself names
+        // Animal_Bait_Item in its Actor link (the game's own pairing).
+        public const string Bait = "SCUM/Content/ConZ_Files/Items/Equipment/Animal_Bait_ES";
+        public const string BaitOldClass = "SCUM/Content/ConZ_Files/Items/Equipment/Animal_Bait";
+        public const string BaitRealClass = "SCUM/Content/ConZ_Files/Items/Equipment/Animal_Bait_Item";
+
         private static readonly IReadOnlyList<AssetSummary> Rows = new[]
         {
             new AssetSummary(Tomato, "Tomato", "Food", StatusKind.Editable, 1, Tomato + ".uasset", null),
             new AssetSummary(Torch, "Torch", "Food", StatusKind.Editable, 1, Torch + ".uasset", null),
+            new AssetSummary(Bait, "Animal Bait", "Equipment", StatusKind.Editable, 1, Bait + ".uasset", null),
         };
 
         public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
@@ -758,6 +835,13 @@ public class WorkspaceViewTests
                 Tomato => new[] { Field("Weight", "20000") },                     // item file: no timer
                 TorchClass => new[] { Field("Weight", "5000"), Field("_autoDestructTime", "5"),
                                       Field("MaxWaterWeightRatio", "1") },        // the donor's class file
+                Bait => new[]
+                {
+                    Field("Weight", "20000"),
+                    Field("Actor", "/Game/ConZ_Files/Items/Equipment/Animal_Bait_Item.Animal_Bait_Item_C"),
+                },
+                BaitOldClass => Array.Empty<AssetField>(),                        // does not exist in the game
+                BaitRealClass => new[] { Field("Weight", "1000") },               // the real class file
                 _ => new[] { Field("Weight", "1000") },                           // Tomato class, Torch item, others
             });
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>

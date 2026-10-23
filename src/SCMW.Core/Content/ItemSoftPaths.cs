@@ -58,6 +58,25 @@ public static class ItemSoftPaths
         return folder + name + "." + name + "_C";
     }
 
+    /// <summary>
+    /// The package path a soft object path names: <c>/Game/…/AnimalBaitFeederItem.AnimalBaitFeederItem_C</c>
+    /// becomes <c>SCUM/Content/…/AnimalBaitFeederItem</c>. Empty when the value is not a <c>/Game/…</c>
+    /// soft path. This is how an item's "_ES" names its item — which need not be "_ES" minus "_ES".
+    /// </summary>
+    public static string PackageOf(string? softPath)
+    {
+        if (string.IsNullOrEmpty(softPath)) return string.Empty;
+
+        var text = softPath.Trim();
+        if (!text.StartsWith(GameRoot + "/", StringComparison.OrdinalIgnoreCase)) return string.Empty;
+
+        var dot = text.LastIndexOf('.');
+        if (dot >= 0) text = text[..dot];
+
+        var rest = text[GameRoot.Length..];
+        return rest.Length > 1 ? ContentRoot + rest : string.Empty;
+    }
+
     /// <summary>The plain words for a soft path: <c>…/Olive_Oil.Olive_Oil_C</c> → <c>Olive Oil</c>.</summary>
     public static string Label(string? softPath)
     {

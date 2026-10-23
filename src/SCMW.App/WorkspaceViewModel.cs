@@ -1848,7 +1848,7 @@ public partial class WorkspaceViewModel : ObservableObject
         // given, so it can be seen and changed here — not only in the "fields you could add" card.
         if (!string.IsNullOrEmpty(assetPath))
         {
-            foreach (var record in AddedRecordsFor(assetPath))
+            foreach (var record in AddedRecordsFor(assetPath, fields))
                 Fields.Add(AddedRow(record));
         }
 
@@ -2153,10 +2153,13 @@ public partial class WorkspaceViewModel : ObservableObject
     private static FieldType FoodValueType(string name) =>
         name is "ShouldConsumeWhole" or "IsResource" ? FieldType.Boolean : FieldType.Number;
 
-    /// <summary>The project's "add a field" records for this item (its own file or its class file).</summary>
-    private IEnumerable<ChangeRecord> AddedRecordsFor(string assetPath) =>
+    /// <summary>The project's "add a field" records for this item (its own file or its class file).
+    /// Old records aimed at the name-derived class path still show, so an item whose class is named
+    /// differently can still be seen (and its field removed and added again).</summary>
+    private IEnumerable<ChangeRecord> AddedRecordsFor(string assetPath, IReadOnlyList<AssetField>? fields) =>
         Records().Where(r => r.Operation == ChangeOperation.AddField
-                             && IsTargetOf(r, assetPath, ClassFileOf(assetPath)));
+                             && (IsTargetOf(r, assetPath, ClassFileFor(assetPath, fields))
+                                 || IsTargetOf(r, assetPath, ClassFileOf(assetPath))));
 
     /// <summary>A field row for a field the project added to the item, described by the library.</summary>
     private WorkspaceField AddedRow(ChangeRecord record)
@@ -2189,7 +2192,7 @@ public partial class WorkspaceViewModel : ObservableObject
         var path = SelectedAsset?.AssetId;
         if (!string.IsNullOrEmpty(path))
         {
-            foreach (var record in AddedRecordsFor(path))
+            foreach (var record in AddedRecordsFor(path, _shownFields))
                 Fields.Add(AddedRow(record));
         }
 
@@ -2279,7 +2282,8 @@ public partial class WorkspaceViewModel : ObservableObject
         if (_source is null || string.IsNullOrEmpty(kind) || string.IsNullOrEmpty(assetPath))
             return Array.Empty<AddableField>();
 
-        var classPath = ClassFileOf(assetPath);
+        var classPath = ClassFileFor(assetPath, present);
+        var oldClassPath = ClassFileOf(assetPath);
 
         // What the item already has, on BOTH files: the item file and its class file (the game keeps
         // item-level values like _autoDestructTime on the class file).
@@ -2290,8 +2294,11 @@ public partial class WorkspaceViewModel : ObservableObject
                 presentNames.Add(name);
         }
 
+        // An old record aimed at the name-derived class path still counts as this item's, so it is
+        // never lost from view (it may need removing and adding again — see AddedRecordsFor).
         var addedRecords = Records()
-            .Where(r => r.Operation == ChangeOperation.AddField && IsTargetOf(r, assetPath, classPath))
+            .Where(r => r.Operation == ChangeOperation.AddField
+                        && (IsTargetOf(r, assetPath, classPath) || IsTargetOf(r, assetPath, oldClassPath)))
             .ToList();
 
         var candidates = _library.ForKind(kind)
@@ -2306,10 +2313,14 @@ public partial class WorkspaceViewModel : ObservableObject
 
             if (added is not null)
             {
-                // This project already added the field: show it as added, with a Remove option.
+                // This project already added the field: show it as added, with a Remove option. Its
+                // add target is the CURRENT right file, so removing an old wrong-path record and
+                // adding the field again lands in the right place.
+                var onClass = added.DonorPath is { Length: > 0 } donorPath && IsClassFile(donorPath);
+                var again = onClass ? (classPath ?? assetPath) : assetPath;
                 addable.Add(new AddableField(definition.Label, definition.Unit, definition.Meaning,
                                              definition.Name, added.DonorPath ?? "", definition.Type,
-                                             added.AssetPath ?? assetPath, isAdded: true, recordId: added.Id));
+                                             again, isAdded: true, recordId: added.Id));
                 continue;
             }
 
@@ -2382,8 +2393,9 @@ public partial class WorkspaceViewModel : ObservableObject
         }
     }
 
-    /// <summary>An item's class file: an "_ES" package path with the suffix dropped (Radio_ES ->
-    /// Radio), in the same folder. Null when the name is not an "_ES" one.</summary>
+    /// <summary>An item's class file by NAME: an "_ES" package path with the suffix dropped (Radio_ES ->
+    /// Radio), in the same folder. Null when the name is not an "_ES" one. This is only the fallback —
+    /// the game does not guarantee the item is named like its setup (see <see cref="ClassFileFor"/>).</summary>
     internal static string? ClassFileOf(string? packagePath)
     {
         if (string.IsNullOrEmpty(packagePath)
@@ -2393,6 +2405,23 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         return packagePath[..^3];
+    }
+
+    /// <summary>
+    /// An item's class file — where the game keeps item-level values such as the auto-destruct timer.
+    /// The "_ES" setup names its item in its own <c>Actor</c> link, and that is the truth:
+    /// <c>AnimalBaitFeeder_ES</c> sets up <c>AnimalBaitFeederItem</c>, not "AnimalBaitFeeder". Falls
+    /// back to the name rule when the link is missing or unreadable.
+    /// </summary>
+    internal static string? ClassFileFor(string? assetPath, IReadOnlyList<AssetField>? fields)
+    {
+        var byName = ClassFileOf(assetPath);
+        if (fields is null) return byName;
+
+        var actor = fields.FirstOrDefault(f =>
+            string.Equals(f.TechnicalName, "Actor", StringComparison.OrdinalIgnoreCase))?.CurrentValue;
+        var named = ItemSoftPaths.PackageOf(actor);
+        return named.Length == 0 ? byName : named;
     }
 
     /// <summary>Add a field the file lacks: record it, borrowing the donor's shape at build time.
