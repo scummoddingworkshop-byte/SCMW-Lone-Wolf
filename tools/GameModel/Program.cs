@@ -27,6 +27,7 @@ internal static class Program
             Console.Error.WriteLine("       SCMW.GameModel --clone <out.pak> --from <asset> --as <new asset> [--game <folder>] [--key <aes>] [--repak <path>]");
             Console.Error.WriteLine("       SCMW.GameModel --registry <AssetRegistry.bin>");
             Console.Error.WriteLine("       SCMW.GameModel --inspect <file.uasset>");
+            Console.Error.WriteLine("       SCMW.GameModel --recipe-groups <out.json> [--game <folder>] [--key <aes>]");
             return 2;
         }
 
@@ -108,6 +109,10 @@ internal static class Program
             Console.Error.WriteLine("Could not open the game's files: " + source.Status.Message);
             return 3;
         }
+
+        // Recipe groups (KEPT): collect every recipe's group and order for the app's group picker.
+        if (!string.IsNullOrWhiteSpace(options.RecipeGroups))
+            return RecipeGroupScan.Run(mount, source, options.RecipeGroups!, buildId);
 
         // Dump mode: print one asset's fields and stop. Writes nothing.
         if (!string.IsNullOrWhiteSpace(options.Dump))

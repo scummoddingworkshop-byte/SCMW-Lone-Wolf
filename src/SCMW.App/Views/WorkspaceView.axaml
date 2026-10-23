@@ -42,6 +42,29 @@
         </controls:SearchPicker.ItemTemplate>
       </controls:SearchPicker>
     </DataTemplate>
+    <!-- The open recipe's shelf and place dropdowns, built fresh per recipe open (same quirk). -->
+    <DataTemplate x:Key="CraftingGroupPickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="CraftingGroupPicker" Width="320"
+                             ItemsSource="{Binding CraftingGroupChoices}"
+                             SelectedItem="{Binding CraftingGroup, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecipeGroupChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
+    <DataTemplate x:Key="CraftingPlacePickerTemplate" x:DataType="vm:WorkspaceViewModel">
+      <controls:SearchPicker Name="CraftingPlacePicker" Width="320"
+                             ItemsSource="{Binding CraftingPlaceChoices}"
+                             SelectedItem="{Binding CraftingPlace, Mode=TwoWay}">
+        <controls:SearchPicker.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecipePlaceChoice">
+            <TextBlock Text="{Binding Label}"/>
+          </DataTemplate>
+        </controls:SearchPicker.ItemTemplate>
+      </controls:SearchPicker>
+    </DataTemplate>
     <!-- The open item's category dropdowns, also built fresh per item open (same quirk). -->
     <DataTemplate x:Key="ItemCategoryPickerTemplate" x:DataType="vm:WorkspaceViewModel">
       <controls:SearchPicker Name="ItemCategoryPicker" Width="260"
@@ -370,6 +393,43 @@
               <TextBlock Classes="dim" TextWrapping="Wrap"
                          Text="What this recipe produces. Pick any item — including one of your own new ones."/>
               <ContentControl Name="OpenMakesHost" HorizontalAlignment="Left"/>
+            </StackPanel>
+          </Border>
+
+          <!-- A new recipe's shelf and place in the Items menu (Phase 8.3). The dropdowns are built
+               fresh per recipe open, like the New panel's ones. -->
+          <Border Name="CraftingGroupCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowCraftingGroup}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section" Text="Crafting group"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="Which shelf this recipe sits on in the Items menu, and its place on that shelf. Leave it alone to keep the starting recipe's."/>
+              <TextBlock Name="CraftingGroupNow" Text="{Binding CraftingGroupNow}" Classes="dim"/>
+
+              <StackPanel Spacing="4">
+                <TextBlock Text="Shelf" Classes="dim"/>
+                <!-- Built in code when the card appears (the app's dropdown quirk). -->
+                <ContentControl Name="CraftingGroupHost" HorizontalAlignment="Left"/>
+              </StackPanel>
+
+              <TextBlock Classes="dim" TextWrapping="Wrap" IsVisible="{Binding HasNoOrderField}"
+                         Text="This recipe has no order number of its own, so its place can't be set."/>
+
+              <StackPanel Spacing="4" IsVisible="{Binding ShowCraftingPlace}">
+                <TextBlock Text="Place" Classes="dim"/>
+                <ContentControl Name="CraftingPlaceHost" HorizontalAlignment="Left"/>
+                <TextBlock Text="On this shelf:" Classes="dim" Margin="0,4,0,0"
+                           IsVisible="{Binding HasCraftingGroupList}"/>
+                <TextBlock Text="{Binding CraftingGroupList}" Classes="dim" TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <TextBlock Text="{Binding CraftingGroupNotice}" TextWrapping="Wrap" Classes="dim"
+                         Foreground="{StaticResource WarningBrush}"
+                         IsVisible="{Binding HasCraftingGroupNotice}"/>
+              <TextBlock Text="{Binding CraftingGroupSaved}" Classes="dim"
+                         Foreground="{StaticResource AccentBrush}"
+                         IsVisible="{Binding HasCraftingGroupSaved}"/>
+              <TextBlock Text="{Binding CraftingGroupSource}" Classes="dim" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>
 

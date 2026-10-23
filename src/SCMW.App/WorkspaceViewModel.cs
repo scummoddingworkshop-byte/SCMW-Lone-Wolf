@@ -22,6 +22,8 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly ItemChangeStore? _changes;
     private readonly ProjectStore? _projects;
     private readonly INewAssetStore? _newAssets;
+    private readonly RecipeMenuFile _menu;
+    private readonly IReadOnlyList<RecipeGroup> _menuShelves;
     private bool _loadingKind;
     private ItemSummary? _suppressingSelection;
 
@@ -29,7 +31,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null,
                               ItemChangeStore? changes = null, ProjectStore? projects = null,
-                              INewAssetStore? newAssets = null)
+                              INewAssetStore? newAssets = null, RecipeMenuFile? menu = null)
     {
         _library = library;
         _source = source;
@@ -37,6 +39,11 @@ public partial class WorkspaceViewModel : ObservableObject
         _changes = changes;
         _projects = projects;
         _newAssets = newAssets;
+
+        // The crafting menu's shelves ship with the app; a caller may hand in a small fixed list
+        // (the tests do, so they never pin one game build's numbers).
+        _menu = menu ?? RecipeMenuData.Load();
+        _menuShelves = RecipeMenu.Groups(_menu.Recipes);
 
         // Choosing (or deleting) a project changes whether editing is allowed AND which new assets
         // the list shows — keep the view in step, re-reading so one project's new recipe never stays
@@ -832,20 +839,286 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Drop every recorded "Makes" change on one recipe (used when the pick returns to the
     /// donor's own product, so the change is truly gone rather than a no-op the build would still write).</summary>
-    private void UndoProductSet(string assetPath)
+    private void UndoProductSet(string assetPath) => UndoSetsOnOpenRecipe(assetPath, ProductField);
+
+    /// <summary>Drop every recorded Set of one field on one recipe's own path (so a pick back to
+    /// the starting value is truly gone, not a no-op the build would still write).</summary>
+    private void UndoSetsOnOpenRecipe(string? assetPath, string field)
     {
         var folder = _projects?.Chosen?.FolderPath;
-        if (_changes is null || string.IsNullOrEmpty(folder)) return;
+        if (_changes is null || string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(assetPath)) return;
 
         var ids = _changes.For(folder)
             .Where(r => r.Operation == ChangeOperation.Set
                         && string.Equals(r.AssetPath, assetPath, StringComparison.OrdinalIgnoreCase)
-                        && string.Equals(r.FieldTechnicalName, ProductField, StringComparison.OrdinalIgnoreCase))
+                        && string.Equals(r.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
             .Select(r => r.Id)
             .ToList();
 
         foreach (var id in ids) _changes.Undo(folder, id);
     }
+
+    // --- The open recipe's crafting group and place in the list (Phase 8.3) ----------------------
+    // The shelf and its order live on the recipe's little companion object, but they are ordinary
+    // fields: the same writer that changes anything else puts them there. The shelf list is read
+    // from the game (tools/GameModel --recipe-groups) and ships with the app; the owner never types
+    // a tag. Leaving both alone keeps the starting recipe's shelf and number.
+
+    /// <summary>The recipe's shelf tag and its number on that shelf.</summary>
+    private const string CraftingGroupField = "CraftingCategoryTag.TagName";
+    private const string DisplayPriorityField = "DisplayPriority";
+
+    /// <summary>The game build and date the shelf list was read from, shown in plain words.</summary>
+    public string CraftingGroupSource => _menu.Recipes.Count == 0
+        ? "The game's menu list could not be read, so no shelves are offered."
+        : $"Shelves read from game build {_menu.GameBuild} on {_menu.ReadOn}.";
+
+    /// <summary>The shelves the owner may pick (only the open recipe's own menu tab).</summary>
+    public ObservableCollection<RecipeGroupChoice> CraftingGroupChoices { get; } = new();
+
+    /// <summary>The shelf picked for the open recipe, or null when it keeps the starting one.</summary>
+    [ObservableProperty] private RecipeGroupChoice? _craftingGroup;
+
+    /// <summary>Where on the shelf the recipe goes.</summary>
+    public ObservableCollection<RecipePlaceChoice> CraftingPlaceChoices { get; } = new();
+
+    /// <summary>The place picked for the open recipe.</summary>
+    [ObservableProperty] private RecipePlaceChoice? _craftingPlace;
+
+    /// <summary>True while the "Crafting group" card should show.</summary>
+    private bool _showCraftingGroup;
+    public bool ShowCraftingGroup => _showCraftingGroup;
+
+    /// <summary>What the recipe's shelf and number are now, in plain words.</summary>
+    [ObservableProperty] private string _craftingGroupNow = string.Empty;
+
+    /// <summary>The chosen shelf's recipes, earliest first, as one dim line.</summary>
+    [ObservableProperty] private string _craftingGroupList = string.Empty;
+    public bool HasCraftingGroupList => !string.IsNullOrWhiteSpace(CraftingGroupList);
+    partial void OnCraftingGroupListChanged(string value) => OnPropertyChanged(nameof(HasCraftingGroupList));
+
+    /// <summary>True once a shelf is picked and the recipe has an order field, so "Place" can show.
+    /// Some game recipes carry no order number at all; there is nothing to write for those.</summary>
+    public bool ShowCraftingPlace => CraftingGroup is not null && _hasOrderField;
+
+    /// <summary>True when the recipe has a shelf but no order number, so the card explains why.</summary>
+    public bool HasNoOrderField => _showCraftingGroup && !_hasOrderField;
+
+    /// <summary>A plain reason the card could not do what was asked.</summary>
+    [ObservableProperty] private string _craftingGroupNotice = string.Empty;
+    public bool HasCraftingGroupNotice => !string.IsNullOrWhiteSpace(CraftingGroupNotice);
+    partial void OnCraftingGroupNoticeChanged(string value) => OnPropertyChanged(nameof(HasCraftingGroupNotice));
+
+    /// <summary>A short "saved" line confirming the change.</summary>
+    [ObservableProperty] private string _craftingGroupSaved = string.Empty;
+    public bool HasCraftingGroupSaved => !string.IsNullOrWhiteSpace(CraftingGroupSaved);
+    partial void OnCraftingGroupSavedChanged(string value) => OnPropertyChanged(nameof(HasCraftingGroupSaved));
+
+    /// <summary>True while the card is being filled from the recipe, so the pickers cannot record.</summary>
+    private bool _fillingCraftingGroup;
+    private bool _fillingCraftingPlace;
+
+    /// <summary>True when the open recipe's file actually carries an order field to write.</summary>
+    private bool _hasOrderField;
+
+    partial void OnCraftingGroupChanged(RecipeGroupChoice? value)
+    {
+        if (_fillingCraftingGroup) return;
+        SetCraftingGroup(value);
+    }
+
+    partial void OnCraftingPlaceChanged(RecipePlaceChoice? value)
+    {
+        if (_fillingCraftingPlace) return;
+        SetCraftingPlace(value);
+    }
+
+    /// <summary>
+    /// Rebuild the "Crafting group" card for the open file. It shows only on a brand-new item recipe
+    /// (its file carries the shelf field) — a placeable or cooking recipe has a different card.
+    /// </summary>
+    private void RefreshCraftingGroup(string kind, string? assetPath, string title,
+                                      IReadOnlyList<AssetField> fields)
+    {
+        _showCraftingGroup = false;
+        CraftingGroupChoices.Clear();
+        CraftingPlaceChoices.Clear();
+        CraftingGroupList = string.Empty;
+        CraftingGroupNotice = string.Empty;
+        CraftingGroup = null;
+        CraftingPlace = null;
+
+        var isRecipe = string.Equals(kind, "Recipes", StringComparison.Ordinal);
+        var hasShelfField = fields.Any(f =>
+            string.Equals(f.TechnicalName, CraftingGroupField, StringComparison.OrdinalIgnoreCase));
+        _hasOrderField = fields.Any(f =>
+            string.Equals(f.TechnicalName, DisplayPriorityField, StringComparison.OrdinalIgnoreCase));
+
+        if (!isRecipe || !IsOpenNewRecipe || !hasShelfField || assetPath is null)
+        {
+            OnPropertyChanged(nameof(ShowCraftingGroup));
+            OnPropertyChanged(nameof(ShowCraftingPlace));
+            OnPropertyChanged(nameof(HasNoOrderField));
+            return;
+        }
+
+        var currentTag = CurrentItemValue(assetPath, title, CraftingGroupField);
+        var currentNumber = CurrentItemValue(assetPath, title, DisplayPriorityField);
+
+        // Offer only the menu tab the recipe already belongs to: an item recipe's shelf list would
+        // never hold a base-building shelf (and the game would not show it there).
+        var tab = RecipeMenu.GroupOf(currentTag)?.Tab;
+        foreach (var group in _menuShelves)
+        {
+            if (tab is not null && !string.Equals(group.Tab, tab, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            CraftingGroupChoices.Add(new RecipeGroupChoice(group.Tag, group.Label, group));
+        }
+
+        _fillingCraftingGroup = true;
+        CraftingGroup = CraftingGroupChoices.FirstOrDefault(c =>
+            string.Equals(c.Tag, currentTag, StringComparison.OrdinalIgnoreCase));
+        _fillingCraftingGroup = false;
+
+        CraftingGroupNow = NowLine(currentTag, currentNumber);
+        _showCraftingGroup = true;
+        OnPropertyChanged(nameof(ShowCraftingGroup));
+        OnPropertyChanged(nameof(HasNoOrderField));
+
+        FillCraftingPlaces();
+    }
+
+    /// <summary>The "Now:" line: the shelf in plain words and the number the recipe has today.</summary>
+    private static string NowLine(string? tag, string? number)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return "Now: no shelf is set.";
+
+        var label = RecipeMenu.GroupOf(tag)?.Label;
+        if (string.IsNullOrWhiteSpace(label)) label = tag;
+
+        return string.IsNullOrWhiteSpace(number)
+            ? $"Now: {label}."
+            : $"Now: {label}, number {number}.";
+    }
+
+    /// <summary>Fill the "Place" choices for the chosen shelf: the end, or after any recipe on it.</summary>
+    private void FillCraftingPlaces()
+    {
+        CraftingPlaceChoices.Clear();
+        _fillingCraftingPlace = true;
+        CraftingPlace = null;
+        _fillingCraftingPlace = false;
+        OnPropertyChanged(nameof(ShowCraftingPlace));
+
+        if (CraftingGroup is not { } choice || !_hasOrderField)
+        {
+            CraftingGroupList = string.Empty;
+            return;
+        }
+
+        // The open recipe's own row is never a neighbour: it is the one being placed.
+        var ownName = SelectedAsset?.Name;
+        var recipes = choice.Group.Recipes
+            .Where(r => !string.Equals(r.Recipe, ownName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (RecipeMenu.AtEnd(recipes) is int end)
+            CraftingPlaceChoices.Add(new RecipePlaceChoice(end, "At the end of the list", null));
+
+        foreach (var recipe in recipes)
+        {
+            if (RecipeMenu.After(recipes, recipe.Priority) is not int number) continue;
+
+            CraftingPlaceChoices.Add(new RecipePlaceChoice(
+                number, $"After {RecipeMenu.RecipeLabel(recipe.Recipe)}", recipe.Priority));
+        }
+
+        if (CraftingPlaceChoices.Count == 0)
+            CraftingGroupNotice = "No order number is free on this shelf — the game stops at 255.";
+
+        CraftingGroupList = string.Join(" · ", recipes
+            .Select(r => $"{r.Priority} {RecipeMenu.RecipeLabel(r.Recipe)}"));
+    }
+
+    /// <summary>Record the picked shelf against the open recipe's own path; the starting shelf drops
+    /// the change instead of leaving a no-op behind.</summary>
+    private void SetCraftingGroup(RecipeGroupChoice? choice)
+    {
+        if (!_showCraftingGroup || choice is null) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (string.IsNullOrEmpty(path) || _changes is null || NeedsProject) return;
+
+        var current = RawField(CraftingGroupField, out var original);
+        if (string.Equals(choice.Tag, current, StringComparison.OrdinalIgnoreCase))
+        {
+            FillCraftingPlaces();   // the picker settling on what is already shown
+            return;
+        }
+
+        if (string.Equals(choice.Tag, original, StringComparison.OrdinalIgnoreCase))
+            UndoSetOnOpenRecipe(CraftingGroupField);
+        else
+            _changes.RecordEdit(path!, CraftingGroupField, original, choice.Tag,
+                                _projects!.Chosen!.Id, assetPath: path);
+
+        CraftingGroupNotice = string.Empty;
+        RefreshShown();
+        CraftingGroupSaved = "Shelf saved.";
+    }
+
+    /// <summary>Record the picked place as the recipe's order number; the starting number drops it.</summary>
+    private void SetCraftingPlace(RecipePlaceChoice? choice)
+    {
+        if (!_showCraftingGroup || choice is null || !_hasOrderField) return;
+
+        var path = SelectedAsset?.AssetId;
+        if (string.IsNullOrEmpty(path) || _changes is null || NeedsProject) return;
+
+        var text = choice.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var current = RawField(DisplayPriorityField, out var original);
+        if (string.Equals(text, current, StringComparison.Ordinal)) return;
+
+        if (string.Equals(text, original, StringComparison.Ordinal))
+            UndoSetOnOpenRecipe(DisplayPriorityField);
+        else
+            _changes.RecordEdit(path!, DisplayPriorityField, original, text,
+                                _projects!.Chosen!.Id, assetPath: path);
+
+        CraftingGroupNotice = string.Empty;
+        RefreshShown();
+
+        // The refresh rebuilds the choices, so put the same pick back on the dropdown: the card then
+        // reads like the other cards instead of looking unsaved.
+        var again = CraftingPlaceChoices.FirstOrDefault(c =>
+            c.Number == choice.Number && string.Equals(c.Label, choice.Label, StringComparison.Ordinal));
+        _fillingCraftingPlace = true;
+        CraftingPlace = again;
+        _fillingCraftingPlace = false;
+
+        CraftingGroupSaved = $"Place saved — number {choice.Number}.";
+    }
+
+    /// <summary>A named field's raw value in the shown file: the project's change when there is one,
+    /// else the file's own; <paramref name="original"/> is that own value.</summary>
+    private string? RawField(string field, out string? original)
+    {
+        original = null;
+
+        var shown = _shownFields.FirstOrDefault(f =>
+            string.Equals(f.TechnicalName, field, StringComparison.OrdinalIgnoreCase));
+        if (shown is null) return null;
+
+        original = shown.CurrentValue;
+        var path = SelectedAsset?.AssetId;
+        if (string.IsNullOrEmpty(path)) return original;
+
+        return AppliedValue.ResolveForAsset(Records(), path, _shownTitle, field, original) ?? original;
+    }
+
+    /// <summary>Drop every recorded Set of one field on the open recipe.</summary>
+    private void UndoSetOnOpenRecipe(string field) => UndoSetsOnOpenRecipe(SelectedAsset?.AssetId, field);
 
     // --- An item's ingredient categories (the card) ----------------------------------------------
 
@@ -1519,6 +1792,7 @@ public partial class WorkspaceViewModel : ObservableObject
             CookingNotice = string.Empty;
             CategoryNotice = string.Empty;
             NewCategoryNotice = string.Empty;
+            CraftingGroupSaved = string.Empty;
         }
 
         Title = title;
@@ -1573,6 +1847,9 @@ public partial class WorkspaceViewModel : ObservableObject
         // The open recipe's "Makes" card (a brand-new recipe only): its own product and the items
         // it may be pointed at.
         RefreshOpenMake(kind, assetPath);
+
+        // The open recipe's "Crafting group" card (a brand-new item recipe only): its shelf and place.
+        RefreshCraftingGroup(kind, assetPath, title, fields);
 
         // The open item's "Ingredient category" card: what it counts as, and how to add a category.
         RefreshItemCategories(kind, assetPath, title, fields);

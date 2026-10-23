@@ -25,18 +25,21 @@ internal sealed record SetEdit(string AssetId, string Field, string Value);
 /// <param name="Registry">THROWAWAY probe: walk an AssetRegistry.bin file and report its structure.</param>
 /// <param name="Drop">THROWAWAY probe: with --clone, remove this asset from the registry instead (a read test).</param>
 /// <param name="Inspect">THROWAWAY probe: print a .uasset's names, imports and exports.</param>
+/// <param name="RecipeGroups">Write every recipe's crafting category and DisplayPriority as JSON (kept).</param>
 internal sealed record Options(string OutDir, string? GamePath, string? AesKey,
     int? Limit, string? Dump, string? Field, string? Make, IReadOnlyList<SetEdit> Sets, string? Repak,
-    string? Diff, string? ClonePak, string? From, string? As, string? Registry, string? Drop, string? Inspect)
+    string? Diff, string? ClonePak, string? From, string? As, string? Registry, string? Drop, string? Inspect,
+    string? RecipeGroups)
 {
     internal static bool TryParse(string[] args, out Options options, out string error)
     {
         options = new Options(string.Empty, null, null, null, null, null, null, Array.Empty<SetEdit>(), null, null,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null);
         error = string.Empty;
 
         string? outDir = null, game = null, key = null, dump = null, field = null, make = null, repak = null, diff = null;
         string? clone = null, from = null, asId = null, registry = null, drop = null, inspect = null;
+        string? recipeGroups = null;
         int? limit = null;
         var sets = new List<SetEdit>();
 
@@ -86,6 +89,9 @@ internal sealed record Options(string OutDir, string? GamePath, string? AesKey,
                 case "--inspect":
                     if (!Next(args, ref i, out inspect)) { error = "--inspect needs a .uasset path."; return false; }
                     break;
+                case "--recipe-groups":
+                    if (!Next(args, ref i, out recipeGroups)) { error = "--recipe-groups needs an output .json path."; return false; }
+                    break;
                 case "--set":
                     if (!Next(args, ref i, out var assetId)) { error = "--set needs an asset path."; return false; }
                     if (!Next(args, ref i, out var assignment)) { error = "--set needs field=value."; return false; }
@@ -117,14 +123,15 @@ internal sealed record Options(string OutDir, string? GamePath, string? AesKey,
         if (!string.IsNullOrWhiteSpace(clone)) modes++;
         if (registryIsMode) modes++;
         if (!string.IsNullOrWhiteSpace(inspect)) modes++;
+        if (!string.IsNullOrWhiteSpace(recipeGroups)) modes++;
         if (modes == 0)
         {
-            error = "Give one of --out <folder>, --dump <word>, --make <pak>, --diff <folder>, --clone <pak>, or --registry <file>.";
+            error = "Give one of --out <folder>, --dump <word>, --make <pak>, --diff <folder>, --clone <pak>, --registry <file>, or --recipe-groups <file>.";
             return false;
         }
         if (modes > 1)
         {
-            error = "Give only one of --out, --dump, --make, --diff, --clone, or --registry.";
+            error = "Give only one of --out, --dump, --make, --diff, --clone, --registry, or --recipe-groups.";
             return false;
         }
 
@@ -172,7 +179,7 @@ internal sealed record Options(string OutDir, string? GamePath, string? AesKey,
         }
 
         options = new Options(outDir ?? string.Empty, game, key, limit, dump, field, make, sets, repak, diff,
-            clone, from, asId, registry, drop, inspect);
+            clone, from, asId, registry, drop, inspect, recipeGroups);
         return true;
     }
 

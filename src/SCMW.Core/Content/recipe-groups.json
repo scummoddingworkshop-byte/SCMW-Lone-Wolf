@@ -1,0 +1,2666 @@
+{
+  "gameBuild": "25804202",
+  "readOn": "2026-10-23",
+  "recipes": [
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_1H_Improvised_Tomahawk",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_1H_Stone_Axe",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_1H_Stone_Axe_Head",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_2H_Stone_Axe",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_2H_Stone_Axe_Head",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Advanced_Lock_Item",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_12_Gauge",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal22",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal30-06",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal30-06_AP",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal308",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal308_AP",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal338",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal338_AP",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal357",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal357_AP",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal38",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal38_AP",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal44",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal44_AP",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal45ACP",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal45ACP_AP",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal50AE",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal50AE_AP",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal5_45x39",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal5_45x39_AP",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal5_56x45",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal5_56x45_AP",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_62x39",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_62x39_AP",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_62x54",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_62x54_AP",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_92x57",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal7_92x57_AP",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal9mm",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal9mm_AP",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal9x39",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.Bullets",
+      "name": "CR_Ammo_Cal9x39_AP",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Animal_Skin_Quiver",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Armband",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Barbed_Wire",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Baseball_Bat_Nails",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Baseball_Bat_Wire",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Basic_Lock_Item",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Bear_Hat",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Big_Improvised_Backpack",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Birthday_Hat",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Blast_Cap",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Boar_Hat",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Bolts",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothingRepairs",
+      "name": "CR_Bone_Needle",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Bow_Silencer",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Bundle_of_Bricks",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Bundle_of_Lockpicks",
+      "priority": 32
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_C4",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Can_Rain_Collector",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Carbon_Explosive_Arrow",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Cartridge_Trap",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Dildo_Arrow",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Dildo_Crossbow_Bolt",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Ear_Necklace",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Ear_Necklace_2",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Ear_Necklace_3",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Empty_Bag",
+      "priority": 35
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Explosive_Arrow",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Explosive_Bolt",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Fire_Drill",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Bleak",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Bread",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Cheese",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Corn",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Cricket",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Grasshopper",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Meat",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Redworm",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Sardine",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_FishingBait_Worm",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Folded_Douglas_Fir",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Goat_Hat",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Head_Sack",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Horse_Head_Mask",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Animal_Skin_Jacket",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Animal_Skin_Pants",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_BBQ",
+      "priority": 33
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Boots",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Bottle_Suppressor_White",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.BowsAndCrossbows",
+      "name": "CR_Improvised_Bow_20",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.BowsAndCrossbows",
+      "name": "CR_Improvised_Bow_35",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Bow_Stabilizer",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Bulletproof_Armor",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Burn_Gel",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Can_Suppressor_Gray",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Can_Suppressor_Red",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Improvised_Claymore",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Courier_Backpack",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.BowsAndCrossbows",
+      "name": "CR_Improvised_Crossbow",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Dildo_Spear",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_Improvised_Fishing_Floater",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_Improvised_Fishing_Hook",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_Improvised_Fishing_Line",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_Improvised_Fishing_Reel",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Fishing",
+      "name": "CR_Improvised_Fishing_Rod",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Firearms",
+      "name": "CR_Improvised_Flamethrower",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Flashlight",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Gardening_Hoe",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Geiger_Counter",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Ghillie_Jacket",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Ghillie_Pants",
+      "priority": 32
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Firearms",
+      "name": "CR_Improvised_Grenade_Launcher",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Hammer",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Hatchet",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Knife",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Improvised_Lockpick",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Long_Rail",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Magnifying_Glass",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Mask",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Metal_Detector",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Metal_Shovel",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Metal_Spear",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Improvised_Mine",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Motorcycle_Wheel",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Oil_Can_Suppressor",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Paddle",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Quiver",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Raincoat",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Raincoat_Rain_Collector",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Rifle_Rail",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Rope",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Scope",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothingRepairs",
+      "name": "CR_Improvised_Sewing_Kit",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Shiv",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Attachments",
+      "name": "CR_Improvised_Short_Rail",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Shovel",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Improvised_Stabproof_Vest",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Stone_Spear",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Toolbox",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Tree_Bark_Rope",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Water_Container",
+      "priority": 37
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Firearms",
+      "name": "CR_Improvised_Weapon_Handgun",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.RangedWeapons.Firearms",
+      "name": "CR_Improvised_Weapon_Shotgun",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Improvised_Wheel",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Improvised_Wooden_Spear",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Jack_O_Lantern",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Jack_O_Lantern_02",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Jack_O_Lantern_03",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Jane_Doe_Mask",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_John_Doe_Mask",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Joint",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Kunai",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Large_Battery_Charger",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Laser_Detonator",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Leather_Belt_Pistol_Holster",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Lock_Protection_Advanced",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Lock_Protection_Basic",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Lock_Protection_Medium",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Lockpicking_Board",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Medium_Battery_Charger",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Medium_Lock_Item",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Metal_Arrow_Tips",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Metal_Axe",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Metal_Explosive_Arrow",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Metal_Knife",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Metal_Sword",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Motion_Sensor_Detonator",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Animal_Skin_Jacket",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Animal_Skin_Pants",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Bear_Hat",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Boar_Hat",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Deer_Hat",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Mutant_Wolf_Hat",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Nails",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_PET_Bottle_Rain_Collector",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc",
+      "name": "CR_Paint_Sprayer",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Pipe_Bomb",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Practice_Bomb",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Explosives",
+      "name": "CR_Pressure_Cooker_Bomb",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Primitive_Compass",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Rag_Gloves",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Rag_Shoes",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Remote_Door_Sensor",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.LockpickingAndDoorAccessories",
+      "name": "CR_Remote_Door_key",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Rolled_Tobacco",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Sand_Bag",
+      "priority": 36
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Small_Battery_Charger",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Small_Improvised_Backpack",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Spliff",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Stone_Arrow_Tips",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Tinder",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Tooth_Necklace",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Tooth_Necklace_2",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Tooth_Necklace_3",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Torch",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Daredevil_Boots_01_TwitchDrops",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Daredevil_Gloves_01_TwitchDrops",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Daredevil_Helmet_01_TwitchDrops",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Daredevil_Jacket_01_TwitchDrops",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Daredevil_Pants_01_TwitchDrops",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_EnlistedMilitary_Cap_01",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_EnlistedMilitary_Jacket_01",
+      "priority": 32
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_EnlistedMilitary_Pants_01",
+      "priority": 33
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Outback_Boots_01",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Outback_Hat_01",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Outback_Knife_Sheath_01",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Outback_Pants_01",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Outback_Shirt_01",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_PinUp_Boots_01_TwitchDrops",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_PinUp_Hat_01_TwitchDrops",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_PinUp_Jacket_01_TwitchDrops",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_PinUp_Pants_01_TwitchDrops",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Punk_Boots_01_TwitchDrops",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Punk_Helmet_01_TwitchDrops",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Punk_Jacket_01_TwitchDrops",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Punk_Pants_01_TwitchDrops",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Rastaman_Backpack_01_TwitchDrops",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Rastaman_Hat_01_TwitchDrops",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Rastaman_Pants_01_TwitchDrops",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Rastaman_Shirt_01_TwitchDrops",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Stellar_Santa_Balaclava_01",
+      "priority": 36
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Stellar_Santa_Gloves_01",
+      "priority": 37
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Stellar_Santa__Pants_01",
+      "priority": 34
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_Stellar_Santa__Sweater_01",
+      "priority": 35
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_ThMetal_Cap_01",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_ThMetal_Jacket_01",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_ThMetal_Pants_01",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_ThMetal_Sneakers_01",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_TheBirdCamo_Backpack_01",
+      "priority": 38
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_TheBirdCamo_Hat_01",
+      "priority": 39
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_TheBirdCamo_Jacket_01",
+      "priority": 40
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_TheBirdCamo_Pants_01",
+      "priority": 41
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_YellowSuit_Glove_01",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_YellowSuit_Jacket_01",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_YellowSuit_Pants_01",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_TwD_YellowSuit_Sneakers_01",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Water_Bottle_Rain_Collector",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.Items.ToolsAndMisc.Misc",
+      "name": "CR_Water_Bucket",
+      "priority": 34
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.QuestRewards",
+      "name": "CR_Weapon_CarbonBear",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.TwitchDrops",
+      "name": "CR_Weapon_DEagle_50_Premium_DeluxeEdition",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Weapon_M16A4_Premium_DeluxeEdition",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Weapon_M1887_Premium_DeluxeEdition",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.QuestRewards",
+      "name": "CR_Weapon_M1_Garand_Premium_TimeLimitedQuest",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Weapon_SVD_Dragunov_Premium_DeluxeEdition",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.Items.Clothing.ClothesAndAccessories",
+      "name": "CR_Wolf_Hat",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Arrow",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Arrow_Feathers",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Arrow_Metal_Tip",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Arrow_Stone_Tip",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Wooden_Club",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Wooden_Club_Nails",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Wooden_Club_Wire",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Crossbow_Bolt",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Crossbow_Bolt_Metal_Tip",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.Items.Ammunition.ArrowsAndBolts",
+      "name": "CR_Wooden_Crossbow_Bolt_Stone_Tip",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.Items.MeleeWeapons",
+      "name": "CR_Wooden_Sword",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Chest",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Chest_Improved",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Chest_Metal",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Electric_Lamp_Ceiling",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Electric_Lamp_Wall",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Gas_Lamp_Ceiling",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Gas_Lamp_Wall",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Asian_Rug",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Bed_Asian",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Bench_Asian",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Cabinet_Large_Asian",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Cabinet_Small_Asian",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Chair_Asian",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Kitchen_Element_Asian_Base",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Kitchen_Element_Asian_Corner",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Kitchen_Element_Asian_DrawersThree",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Kitchen_Element_Asian_DrawersTwo",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Oven_Asian",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Shelf_Asian",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Shelf_Half_Asian",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Sofa_Asian_Double",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Sofa_Asian_Single",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Sofa_Asian_Triple",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Stool_Asian",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Table_Asian",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_Wardrobe_Asian",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_WeaponRack_Asian",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.AsianDecorPack",
+      "name": "CR_WeaponRack_Wall_Asian",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Advanced_Fortification",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Advanced_Standing_Torch",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Barbed_Spike_Trap",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Barbed_Wire_Barricade",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Base_Block",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Flags",
+      "name": "CR_Base_Flag_01",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Flags",
+      "name": "CR_Base_Flag_Supporter",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Base_Garden",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Ladder_Twig",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Door_Double_Twig",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Door_Frame_Double_Twig",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Door_Frame_Single_Twig",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Door_Hatch_Twig",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Door_Single_Twig",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Floor_Bars_Twig",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Floor_CamoNet",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Floor_Triangle_CamoNet",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Floor_Triangle_Twig",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Floor_Twig",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Foundation_Triangle_Twig",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Foundation_Twig",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Half_Wall_Support_Frame_Twig",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Half_Wall_Twig",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Half_Width_Wall_Twig",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Hatch_Floor_Triangle_Twig",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Hatch_Floor_Twig",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_L_Support_Frame_Twig",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Loophole_Door_Double_Twig",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Loophole_Door_Single_Twig",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Loophole_Wall_Twig",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Low_Wall_Support_Frame_Twig",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Low_Wall_Twig",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Flooring",
+      "name": "CR_Base_Modular_Ramp_Twig",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Roofs",
+      "name": "CR_Base_Modular_Roof_Triangle_Twig",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Roofs",
+      "name": "CR_Base_Modular_Roof_Twig",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_L_Shaped_Mirrored_Twig",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_L_Shaped_Twig",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_Small_Twig",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_Spiral_End_Twig",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_Spiral_Twig",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Stairs",
+      "name": "CR_Base_Modular_Stairs_U_Shaped_Twig",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Doors",
+      "name": "CR_Base_Modular_Support_Frame_Twig",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Wall_Bars_Twig",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Wall_CamoNet",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Wall_Twig",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.ModularBuildingElements.Walls",
+      "name": "CR_Base_Modular_Wall_Window_Twig",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Base_Smoker",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Bear",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Boar",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Buck",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Carp",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Catfish",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Dentex",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Doe",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Donkey",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Goat",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Horse",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Human",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Pike",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Tuna",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Wolf",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Base_Wall_Base",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Basic_Fortification",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Bed_Improvised",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Bench_Improvised_Wood",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_BigRaft",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Blank_Sign",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Blank_Sign_Premium",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Boar_Head_Spike",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Bonfire",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Cabinet_Large_Wood",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Cabinet_Small_Wood",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Car_Lamp_Ceiling",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Car_Lamp_Wall",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Chair_Improvised_Wood",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Chinese_Lantern",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Christmas_Tree_Decorated",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Donkey_Head_Spike",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Airplane",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Double",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Frame_Airplane",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Frame_Double",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Frame_Single",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Door_Single",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Fire_Ring",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Fireworks_Trap",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Flare_Trap",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Goat_Head_Spike",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Horse_Head_Spike",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Human_Head_Spike",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Improved_Wooden_Chest",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Improvised_Basic_Turret",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Improvised_Bed",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Improvised_Cal50_Turret",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Improvised_Chandelier",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Improvised_Fireplace",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Improvised_Flamethrower_Turret",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Improvised_GasLamp_Ceiling",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Improvised_GasLamp_Wall",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Improvised_Lamp_Ceiling",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Improvised_Lamp_Wall",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Improvised_Minigun_Turret",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Improvised_Rocket_Turret",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Improvised_Well",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Improvised_Wheelbarrow",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Improvised_Workbench",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Kitchen_Element_Base",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Kitchen_Element_Corner",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Kitchen_Element_DrawersThree",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Kitchen_Element_DrawersTwo",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Kitchen_Element_Improvised_Base",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Kitchen_Element_Improvised_Corner",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Kitchen_Element_Improvised_DrawersThree",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Kitchen_Element_Improvised_DrawersTwo",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Large_Log_Shed",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Large_Target",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Medium_Fortification",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Medium_Target",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Metal_Chest",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Oven_Brick",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Oven_Improvised",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Bear",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Boar",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Deer",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Doe",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Donkey",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Goat",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Rug_Horse",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Shelf_Half_Wood",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Shelf_Wood",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_Shelter",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Sign_01",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Sign_02",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Sign_03",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Sign_04",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Sign_05",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Silent_Alarm",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_SmallRaft",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Small_Log_shed",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Small_Target",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Snowman",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Fabric_Double",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Fabric_Single",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Fabric_Triple",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Sofa_Improvised_Double",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Sofa_Improvised_Single",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Sofa_Improvised_Triple",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Leather_Double",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Leather_Single",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.BBDecorPack",
+      "name": "CR_Sofa_Leather_Triple",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Stake_Pit_Trap",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Standing_Torch",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Stool_Improvised_Wood",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_T_Banner_Basic",
+      "priority": 32
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_T_Banner_Premium",
+      "priority": 33
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Table_Improvised_Wood",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Tent",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Tombstone",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Wall_Flag_Premium",
+      "priority": 35
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Wall_Mounted_Squad_Emblem_Flag",
+      "priority": 34
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Wardrobe_Improvised_Wood",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Watchtower_Base",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Watchtower_Middle",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Watchtower_Top",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_WeaponRack_Wall_Wood",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_WeaponRack_Wood",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.TrapsAndDefense",
+      "name": "CR_Wooden_Barricade",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Storage",
+      "name": "CR_Wooden_Chest",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.OutdoorElements",
+      "name": "CR_Wooden_Platform",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Wooden_TV",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Bear_Skull",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Boar_Skull",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Deer_Skull",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Wolf_Skull",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_Hunting_Chandelier",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.ApexPredatorPack",
+      "name": "CR_Hunting_Throne",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.GeneralBuildingElements.Furniture",
+      "name": "CR_WF_T3_Bed",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.ApexPredatorPack",
+      "name": "CR_WF_T4_Chest",
+      "priority": 122
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_1H_Apex_Knife",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Apex_Boots",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Apex_Gauntlers",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Apex_Jacket",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Apex_Knife_Holster",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Apex_Trousers",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Bone_Spear",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Weapon_Hunter85_Ivory_WoodlandHunter",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Mutant_Bear",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Mutant_Boar",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Mutant_Deer",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_Base_Trophy_Mutant_Wolf",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_AnglerBoots",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_AnglerReel",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_AnglerRod",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Anglers_Backpack",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Specialist_Angler_Waders",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Animal_Skin_Quiver_01",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Snake_Skin_Bow",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Stone_Tipped_Arrow",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Monocular",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Utility_Belt_Hunter",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_Boots",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_FaceMask",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_Headgear",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_Pants",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_Shroud",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_SpecialistStalker_Tomahawk",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Bed_WFP",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Bench_WFP",
+      "priority": 10
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Bench_WFP_01",
+      "priority": 11
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Cabinet_Large_WFP",
+      "priority": 18
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chair_WFP",
+      "priority": 15
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chair_WFP_01",
+      "priority": 16
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chandelier_WFP",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chest_Improved_WFP",
+      "priority": 1
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chest_Metal_WFP",
+      "priority": 2
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Chest_WFP",
+      "priority": 0
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Curtains_Open_WFP",
+      "priority": 19
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Curtains_WFP",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Electric_Lamp_Ceiling_WFP",
+      "priority": 3
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Electric_Lamp_Wall_WFP",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Hearth_WFP",
+      "priority": 24
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Kitchen_Element_Base_WFP",
+      "priority": 26
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Kitchen_Element_Basin_WFP",
+      "priority": 25
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Kitchen_Element_Corner_WFP",
+      "priority": 27
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Kitchen_Element_DrawersThree_WFP",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Kitchen_Element_DrawersTwo_WFP",
+      "priority": 28
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Rug_01_WFP",
+      "priority": 6
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Rug_02_WFP",
+      "priority": 7
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Rug_03_WFP",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Sofa_Double_WFP",
+      "priority": 22
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Sofa_Single_WFP",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Sofa_Triple_WFP",
+      "priority": 23
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Stool_WFP",
+      "priority": 12
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Stool_WFP_01",
+      "priority": 13
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_T_Banner_WFP",
+      "priority": 36
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Table_WFP",
+      "priority": 14
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_Wardrobe_WFP",
+      "priority": 17
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_WeaponRack_WFP",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Cosmetics.WoodlandFurniturePack",
+      "name": "CR_WeaponRack_Wall_WFP",
+      "priority": 31
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_1H_SkinningKnife",
+      "priority": 4
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_Penobscot_Bow_40",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_WoodlandHunterPoncho_01",
+      "priority": 21
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_WoodlandHunter_AntlerBackpack_01",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_WoodlandHunter_Facemask",
+      "priority": 5
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_WoodlandHunter_Hat_01",
+      "priority": 8
+    },
+    {
+      "tag": "CraftingCategory.Items.Cosmetics.DLC",
+      "name": "CR_WoodlandHunter_Quiver_01",
+      "priority": 20
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Utilities",
+      "name": "CR_HunterTent",
+      "priority": 9
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_WHP_Trophy_Bear",
+      "priority": 29
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_WHP_Trophy_Buck",
+      "priority": 30
+    },
+    {
+      "tag": "CraftingCategory.BaseBuilding.Miscellaneous",
+      "name": "CR_WHP_Trophy_Wolf",
+      "priority": 31
+    }
+  ]
+}

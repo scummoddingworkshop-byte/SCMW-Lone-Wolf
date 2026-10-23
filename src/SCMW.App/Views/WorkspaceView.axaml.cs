@@ -38,6 +38,9 @@ public partial class WorkspaceView : UserControl
             // The category card's dropdowns are rebuilt per item open (same dropdown quirk).
             if (_vm.ShowItemCategories) BuildItemCategoryPickers();
             if (_vm.ShowItemIdentity) BuildPicker("PictureSourceHost", "PictureSourcePickerTemplate");
+
+            // The recipe's shelf card, likewise rebuilt per recipe open.
+            if (_vm.ShowCraftingGroup) BuildCraftingGroupPickers();
         }
     }
 
@@ -56,6 +59,22 @@ public partial class WorkspaceView : UserControl
         else if (e.PropertyName == nameof(WorkspaceViewModel.ShowItemIdentity)
                  && _vm?.ShowItemIdentity == true)
             BuildPicker("PictureSourceHost", "PictureSourcePickerTemplate");
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowCraftingGroup)
+                 && _vm?.ShowCraftingGroup == true)
+            BuildCraftingGroupPickers();
+
+        // Picking a shelf can reveal the Place dropdown later; rebuild it as well, since a picker
+        // that has been hidden and shown again is exactly the case that stops reopening.
+        else if (e.PropertyName == nameof(WorkspaceViewModel.ShowCraftingPlace)
+                 && _vm?.ShowCraftingPlace == true)
+            BuildPicker("CraftingPlaceHost", "CraftingPlacePickerTemplate");
+    }
+
+    /// <summary>Builds fresh shelf and place dropdowns for the open recipe's card.</summary>
+    private void BuildCraftingGroupPickers()
+    {
+        BuildPicker("CraftingGroupHost", "CraftingGroupPickerTemplate");
+        BuildPicker("CraftingPlaceHost", "CraftingPlacePickerTemplate");
     }
 
     /// <summary>Builds fresh "add a category" and "copy the shape from" dropdowns for the card.</summary>

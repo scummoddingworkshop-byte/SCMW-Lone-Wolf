@@ -15,6 +15,10 @@
     <!-- The field library's reference data ships inside the assembly, so it needs no file paths. -->
     <None Remove="Knowledge\library\**\*.json" />
     <EmbeddedResource Include="Knowledge\library\**\*.json" />
+
+    <!-- The crafting menu's shelves and order, read from the game by tools/GameModel. -->
+    <None Remove="Content\recipe-groups.json" />
+    <EmbeddedResource Include="Content\recipe-groups.json" />
   </ItemGroup>
 
 </Project>

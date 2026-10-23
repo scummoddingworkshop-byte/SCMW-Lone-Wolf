@@ -4,6 +4,7 @@ using SCMW.Testing;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace SCMW.Backend.Build.Tests;
@@ -177,6 +178,91 @@ public class AssetClonerRealTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [SkippableFact(EnvVars = "SCMW_SCUM_PATH;SCMW_TEST_AES_KEY",
+                   EnvSkipReason = "Set SCMW_SCUM_PATH and SCMW_TEST_AES_KEY to run the real writer test.")]
+    public void A_real_recipes_shelf_and_order_can_be_set()
+    {
+        // Phase 8.3 relies on this: the crafting group lives on the recipe's companion object, not
+        // its main one, and the order is a byte. The writer must reach both and read them back.
+        var gamePath = Environment.GetEnvironmentVariable("SCMW_SCUM_PATH")!;
+        var key = Environment.GetEnvironmentVariable("SCMW_TEST_AES_KEY")!;
+        var paks = Path.Combine(gamePath, "SCUM", "Content", "Paks");
+
+        using var mount = new PakMount();
+        Assert.True(mount.TryMount(paks, key, out var error), error);
+
+        const string donor = "SCUM/Content/ConZ_Files/Items/Crafting/Recipes/Items/CR_1H_Stone_Axe";
+        Assert.True(mount.TryReadPackage(donor, out var files));
+
+        var dir = Path.Combine(Path.GetTempPath(), "scmw-shelf-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (var pair in files!)
+                File.WriteAllBytes(Path.Combine(dir, CloneLayout.StagedFileName(pair.Key, "CR_1H_Stone_Axe", "CR_SECMW_Shelf")), pair.Value);
+
+            var uasset = Directory.GetFiles(dir, "*.uasset").Single();
+            var written = new UAssetPackageWriter().Apply(uasset, new[]
+            {
+                new FieldChange("CraftingCategoryTag.TagName", "CraftingCategory.Items.Clothing.ClothingRepairs"),
+                new FieldChange("DisplayPriority", "2"),
+            });
+            Assert.True(written.Ok, written.Error);
+
+            Assert.Equal("CraftingCategory.Items.Clothing.ClothingRepairs",
+                StructFieldOf(uasset, "CraftingCategoryTag", "TagName"));
+            Assert.Equal("2", FieldOf(uasset, "DisplayPriority"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    /// <summary>A top-level value on any export of the package (the order lives beside the struct).</summary>
+    private static string? FieldOf(string uasset, string fieldName)
+    {
+        var package = new UAsset(uasset, EngineVersion.VER_UE4_27);
+        foreach (var export in package.Exports.OfType<NormalExport>())
+        {
+            foreach (var prop in export.Data ?? new List<PropertyData>())
+            {
+                if (prop.Name.ToString() != fieldName) continue;
+                return ScalarOf(prop);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A value inside a struct property (the shelf's tag lives in one).</summary>
+    private static string? StructFieldOf(string uasset, string structName, string fieldName)
+    {
+        var package = new UAsset(uasset, EngineVersion.VER_UE4_27);
+        foreach (var export in package.Exports.OfType<NormalExport>())
+        {
+            foreach (var prop in export.Data ?? new List<PropertyData>())
+            {
+                if (prop.Name.ToString() != structName || prop is not StructPropertyData structure)
+                    continue;
+
+                foreach (var child in structure.Value ?? new List<PropertyData>())
+                {
+                    if (child.Name.ToString() != fieldName) continue;
+                    return ScalarOf(child);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A scalar property as the plain text the writer stored.</summary>
+    private static string? ScalarOf(PropertyData property) => property switch
+    {
+        NamePropertyData name => name.Value?.ToString(),
+        BytePropertyData b => b.Value.ToString(),
+        IntPropertyData i => i.Value.ToString(),
+        _ => null,
+    };
 
     /// <summary>A recipe's "Product" value — the item it makes — as the writer stores it, or null.</summary>
     private static string? ProductOf(string uasset)
