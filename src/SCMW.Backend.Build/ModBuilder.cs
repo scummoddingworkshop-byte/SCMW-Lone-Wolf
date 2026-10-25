@@ -14,10 +14,12 @@ public sealed class ModBuilder : IModBuilder
     private readonly IPacker _packer;
     private readonly IAssetResolver _resolver;
     private readonly IAssetCloner _cloner;
+    private readonly ICraftingMenuWriter _menuWriter;
     private readonly string _buildsRoot;
 
     public ModBuilder(IPackageReader reader, IPackageWriter writer, IPacker packer,
-                      IAssetResolver resolver, IAssetCloner cloner, string buildsRoot)
+                      IAssetResolver resolver, IAssetCloner cloner, string buildsRoot,
+                      ICraftingMenuWriter? menuWriter = null)
     {
         _reader = reader;
         _writer = writer;
@@ -25,6 +27,7 @@ public sealed class ModBuilder : IModBuilder
         _resolver = resolver;
         _cloner = cloner;
         _buildsRoot = buildsRoot;
+        _menuWriter = menuWriter ?? new CraftingMenuWriter();
     }
 
     public async Task<BuildOutcome> BuildAsync(BuildRequest request, IProgress<int>? progress, CancellationToken ct)
@@ -126,6 +129,14 @@ public sealed class ModBuilder : IModBuilder
                 var (indexOk, indexError) = StageRegistry(newAssets, staging);
                 if (!indexOk)
                     return new BuildOutcome(false, null, indexError);
+            }
+
+            var sections = request.Sections ?? Array.Empty<NewBuildSection>();
+            if (sections.Count > 0)
+            {
+                var (sectionsOk, sectionsError) = StageSections(sections, staging, work);
+                if (!sectionsOk)
+                    return new BuildOutcome(false, null, sectionsError);
             }
 
             progress?.Report(3);
@@ -295,6 +306,53 @@ public sealed class ModBuilder : IModBuilder
         return pakFolder.StartsWith(pakPrefix, StringComparison.OrdinalIgnoreCase)
             ? "/Game/" + pakFolder[pakPrefix.Length..]
             : pakFolder;
+    }
+
+    /// <summary>
+    /// Adds the project's own sections to the game's tag list and crafting menu, both read from the
+    /// current paks and laid on the game tree. The recipe's own tag change is written like any other
+    /// value. Returns one plain message on any failure.
+    /// </summary>
+    private (bool Ok, string? Error) StageSections(IReadOnlyList<NewBuildSection> sections,
+                                                    string staging, string work)
+    {
+        if (!_reader.TryReadFile(CraftingMenuWriter.TagsIniPath, out var tagsFile) || tagsFile is null)
+            return (false, "The game's tag list could not be read, so a new menu section cannot be added.");
+
+        var ini = CraftingMenuWriter.AddTags(System.Text.Encoding.UTF8.GetString(tagsFile),
+            sections.Select(s => s.Tag));
+        var iniTarget = Path.Combine(staging, "SCUM", "Config", "DefaultGameplayTags.ini");
+        Directory.CreateDirectory(Path.GetDirectoryName(iniTarget)!);
+        File.WriteAllText(iniTarget, ini, new System.Text.UTF8Encoding(false));
+
+        if (!_reader.TryReadPackage(CraftingMenuWriter.MenuDataPath, out var files) || files is null
+            || files.Count == 0)
+            return (false, "The game's crafting menu data could not be read, so a new menu section cannot be added.");
+
+        var packageDir = Path.Combine(work, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packageDir);
+        string? uassetPath = null;
+        foreach (var pair in files)
+        {
+            var destination = Path.Combine(packageDir, pair.Key);
+            File.WriteAllBytes(destination, pair.Value);
+            if (destination.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase)) uassetPath = destination;
+        }
+
+        if (uassetPath is null)
+            return (false, "The game's crafting menu data had no file to change.");
+
+        var written = _menuWriter.AddSections(uassetPath, sections);
+        if (!written.Ok)
+            return (false, written.Error ?? "The new menu section could not be added.");
+
+        var relative = CraftingMenuWriter.MenuDataPath.Replace('/', Path.DirectorySeparatorChar);
+        var targetDir = Path.GetDirectoryName(Path.Combine(staging, relative))!;
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.GetFiles(packageDir))
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), true);
+
+        return (true, null);
     }
 
     /// <summary>

@@ -11,16 +11,33 @@ public class ModBuilderTests : IDisposable
     private sealed class FakeReader : IPackageReader
     {
         public readonly Dictionary<string, Dictionary<string, byte[]>> Packages = new();
+        public readonly Dictionary<string, byte[]> Files = new();
         public byte[]? Index;
         public bool TryReadPackage(string path, out IReadOnlyDictionary<string, byte[]>? files)
         {
             if (Packages.TryGetValue(path, out var f)) { files = f; return true; }
             files = null; return false;
         }
+        public bool TryReadFile(string path, out byte[]? bytes)
+        {
+            if (Files.TryGetValue(path, out var b)) { bytes = b; return true; }
+            bytes = null; return false;
+        }
         public bool TryReadAssetIndex(out byte[]? bytes)
         {
             bytes = Index;
             return Index is not null;
+        }
+    }
+
+    private sealed class FakeMenuWriter : ICraftingMenuWriter
+    {
+        public WriteResult Next = new(true, null);
+        public readonly List<IReadOnlyList<NewBuildSection>> Calls = new();
+        public WriteResult AddSections(string uassetFilePath, IReadOnlyList<NewBuildSection> sections)
+        {
+            Calls.Add(sections);
+            return Next;
         }
     }
 
@@ -160,6 +177,64 @@ public class ModBuilderTests : IDisposable
             new BuildRequest("M", "1.0.0", Array.Empty<BuildItem>()), null, CancellationToken.None);
         Assert.False(outcome.Ok);
         Assert.Contains("nothing to build", outcome.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact] // a project section writes the game's tag list and its menu entry into the pak
+    public async Task A_project_section_registers_its_tag_and_adds_the_menu_entry()
+    {
+        var reader = new FakeReader();
+        var writer = new FakeWriter();
+        var packer = new FakePacker();
+        var resolver = new FakeResolver();
+        var cloner = new FakeCloner();
+        var menu = new FakeMenuWriter();
+        const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
+        AddPackage(reader, pkg);
+        AddPackage(reader, CraftingMenuWriter.MenuDataPath);
+        reader.Files[CraftingMenuWriter.TagsIniPath] =
+            System.Text.Encoding.UTF8.GetBytes("[GameplayTags]\n+GameplayTagList=(Tag=\"Existing\",DevComment=\"\")\n");
+        resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
+        var builder = new ModBuilder(reader, writer, packer, resolver, cloner,
+            Path.Combine(_root, "Builds"), menu);
+        var request = new BuildRequest("M", "1.0.0",
+            new[] { new BuildItem("Duct Tape ES", new[] { new FieldChange("MaxStackSize", "25") }) },
+            Sections: new[] { new NewBuildSection("SCMW Mods", "CraftingCategory.Items.SCMW_Mods") });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        var ini = File.ReadAllText(Path.Combine(packer.Staging!, "SCUM", "Config", "DefaultGameplayTags.ini"));
+        Assert.Contains("+GameplayTagList=(Tag=\"Existing\",DevComment=\"\")", ini);
+        Assert.Contains("CraftingCategory.Items.SCMW_Mods", ini);
+        Assert.Single(menu.Calls);
+        Assert.Equal("SCMW Mods", Assert.Single(menu.Calls[0]).Name);
+        Assert.True(File.Exists(Path.Combine(packer.Staging!, "SCUM", "Content", "ConZ_Files",
+            "UI", "Crafting", "CraftingUIData.uasset")));
+    }
+
+    [Fact] // no tag list in the game -> one plain reason, no pak
+    public async Task A_missing_tag_list_fails_the_build_plainly()
+    {
+        var reader = new FakeReader();
+        var writer = new FakeWriter();
+        var packer = new FakePacker();
+        var resolver = new FakeResolver();
+        var cloner = new FakeCloner();
+        var menu = new FakeMenuWriter();
+        const string pkg = "SCUM/Content/ConZ_Files/Items/Equipment/Duct_Tape_ES";
+        AddPackage(reader, pkg);
+        resolver.Map["Duct Tape ES"] = new AssetResolution(pkg, null);
+        var builder = new ModBuilder(reader, writer, packer, resolver, cloner,
+            Path.Combine(_root, "Builds"), menu);
+        var request = new BuildRequest("M", "1.0.0",
+            new[] { new BuildItem("Duct Tape ES", new[] { new FieldChange("MaxStackSize", "25") }) },
+            Sections: new[] { new NewBuildSection("SCMW Mods", "CraftingCategory.Items.SCMW_Mods") });
+
+        var outcome = await builder.BuildAsync(request, null, CancellationToken.None);
+
+        Assert.False(outcome.Ok);
+        Assert.Contains("tag list", outcome.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(packer.Pak);
     }
 
     [Fact]

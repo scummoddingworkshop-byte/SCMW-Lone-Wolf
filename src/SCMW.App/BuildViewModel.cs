@@ -27,6 +27,7 @@ public partial class BuildViewModel : ObservableObject
     private readonly ModList? _mods;
     private readonly ProjectStore? _projects;
     private readonly SCMW.Core.Editing.INewAssetStore? _newAssets;
+    private readonly SCMW.Core.Editing.ICraftingSectionStore? _sections;
     private IBuildService? _service;
     private readonly IContentSource? _source;
     private readonly IElevation? _elevation;
@@ -40,7 +41,8 @@ public partial class BuildViewModel : ObservableObject
                           ProjectStore? projects = null, IBuildService? service = null,
                           IContentSource? source = null,
                           IElevation? elevation = null, ISaveBackupsService? saves = null,
-                          SCMW.Core.Editing.INewAssetStore? newAssets = null)
+                          SCMW.Core.Editing.INewAssetStore? newAssets = null,
+                          SCMW.Core.Editing.ICraftingSectionStore? sections = null)
     {
         _changes = changes;
         _nav = nav ?? NavigationHost.Shared;
@@ -52,6 +54,7 @@ public partial class BuildViewModel : ObservableObject
         _elevation = elevation;
         _saves = saves;
         _newAssets = newAssets;
+        _sections = sections;
 
         // The preview/diff shown on this screen — the same records Build writes, one home for the diff.
         Preview = new PreviewViewModel(_changes, _projects, _source, _newAssets);
@@ -244,6 +247,7 @@ public partial class BuildViewModel : ObservableObject
         var projectId = project.Id;
         var records = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
         var newAssets = NewAssetsForChosenProject();
+        var sections = SectionsForChosenProject();
         var token = RecordsToken(records) + "|" + AssetsToken(newAssets);
         var plan = PlanBuild(records, newAssets);
 
@@ -256,7 +260,8 @@ public partial class BuildViewModel : ObservableObject
         SCMW.Backend.Build.BuildOutcome outcome;
         try
         {
-            outcome = await _service.BuildAsync(project.Name, ModVersion, plan.Items, plan.NewAssets, progress, CancellationToken.None);
+            outcome = await _service.BuildAsync(project.Name, ModVersion, plan.Items, plan.NewAssets,
+                sections, progress, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -321,6 +326,14 @@ public partial class BuildViewModel : ObservableObject
         _projects?.Chosen is { } project && _newAssets is not null
             ? _newAssets.Load(project.FolderPath)
             : Array.Empty<SCMW.Core.Editing.NewAsset>();
+
+    /// <summary>The chosen project's own menu sections (empty when there is none to read).</summary>
+    private IReadOnlyList<NewBuildSection> SectionsForChosenProject() =>
+        _projects?.Chosen is { } project && _sections is not null
+            ? _sections.Load(project.FolderPath)
+                .Select(s => new NewBuildSection(s.Name, s.Tag))
+                .ToArray()
+            : Array.Empty<NewBuildSection>();
 
     /// <summary>
     /// Splits a project's records into the ordinary items and the brand-new assets. A record aimed at

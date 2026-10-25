@@ -22,6 +22,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly ItemChangeStore? _changes;
     private readonly ProjectStore? _projects;
     private readonly INewAssetStore? _newAssets;
+    private readonly ICraftingSectionStore? _sections;
     private readonly RecipeMenuFile _menu;
     private readonly IReadOnlyList<RecipeGroup> _menuShelves;
     private bool _loadingKind;
@@ -31,7 +32,8 @@ public partial class WorkspaceViewModel : ObservableObject
 
     public WorkspaceViewModel(FieldLibrary library, IContentSource? source = null, ContentCatalog? catalog = null,
                               ItemChangeStore? changes = null, ProjectStore? projects = null,
-                              INewAssetStore? newAssets = null, RecipeMenuFile? menu = null)
+                              INewAssetStore? newAssets = null, RecipeMenuFile? menu = null,
+                              ICraftingSectionStore? sections = null)
     {
         _library = library;
         _source = source;
@@ -39,6 +41,7 @@ public partial class WorkspaceViewModel : ObservableObject
         _changes = changes;
         _projects = projects;
         _newAssets = newAssets;
+        _sections = sections;
 
         // The crafting menu's shelves ship with the app; a caller may hand in a small fixed list
         // (the tests do, so they never pin one game build's numbers).
@@ -923,6 +926,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnCraftingGroupChanged(RecipeGroupChoice? value)
     {
+        OnPropertyChanged(nameof(CanRemoveSection));
         if (_fillingCraftingGroup) return;
         SetCraftingGroup(value);
     }
@@ -932,6 +936,104 @@ public partial class WorkspaceViewModel : ObservableObject
         if (_fillingCraftingPlace) return;
         SetCraftingPlace(value);
     }
+
+    // --- A section of the project's own (2026-10-25) ---------------------------------------------
+
+    /// <summary>The plain name typed for a new menu section. Starts from the project's name.</summary>
+    [ObservableProperty] private string _newSectionName = string.Empty;
+
+    /// <summary>True when the open recipe sits on a section this project created.</summary>
+    public bool CanRemoveSection => CraftingGroup?.IsProjectSection == true;
+
+    /// <summary>
+    /// Turns the typed words into a section of the project's own, saves it, and puts the open recipe
+    /// on it. A name the menu already uses is refused in plain words rather than guessed at.
+    /// </summary>
+    [RelayCommand]
+    private void CreateSection()
+    {
+        var project = _projects?.Chosen;
+        if (_sections is null || project is null || !_showCraftingGroup) return;
+
+        var words = CraftingSectionNaming.WordsFor(NewSectionName);
+        var tag = CraftingSectionNaming.TagFor(NewSectionName);
+        if (tag is null)
+        {
+            CraftingGroupNotice = "Type a name with letters or numbers.";
+            return;
+        }
+
+        if (CraftingGroupChoices.Any(c => string.Equals(c.Tag, tag, StringComparison.OrdinalIgnoreCase)
+                                       || string.Equals(c.Label, words, StringComparison.OrdinalIgnoreCase)))
+        {
+            CraftingGroupNotice = "The menu already has a section with that name. Pick another.";
+            return;
+        }
+
+        if (CraftingSectionNaming.IsTaken(tag, _sections.Load(project.FolderPath).Select(s => s.Tag)))
+        {
+            CraftingGroupNotice = "This project already has that section.";
+            return;
+        }
+
+        var section = new CraftingSection(Guid.NewGuid(), words, tag, DateTime.UtcNow);
+        if (!_sections.Add(project.FolderPath, section))
+        {
+            CraftingGroupNotice = "The section could not be saved. Try again.";
+            return;
+        }
+
+        var choice = new RecipeGroupChoice(section.Tag, section.Name, SectionGroup(section), true);
+        CraftingGroupChoices.Add(choice);
+        _fillingCraftingGroup = true;
+        CraftingGroup = choice;
+        _fillingCraftingGroup = false;
+        SetCraftingGroup(choice);
+
+        NewSectionName = string.Empty;
+        CraftingGroupNotice = string.Empty;
+        CraftingGroupSaved = $"New section “{section.Name}” will be added at the end of the Items menu.";
+        OnPropertyChanged(nameof(CanRemoveSection));
+    }
+
+    /// <summary>
+    /// Removes the section the open recipe is on, but only while no new recipe in the project uses
+    /// it — a recipe must be moved to another shelf first.
+    /// </summary>
+    [RelayCommand]
+    private void RemoveSection()
+    {
+        var project = _projects?.Chosen;
+        var choice = CraftingGroup;
+        if (_sections is null || project is null || choice is null || !choice.IsProjectSection) return;
+
+        var stored = _sections.Load(project.FolderPath)
+            .FirstOrDefault(s => string.Equals(s.Tag, choice.Tag, StringComparison.OrdinalIgnoreCase));
+        if (stored is null) return;
+
+        var inUse = _changes?.For(project.FolderPath).Any(r =>
+            string.Equals(r.FieldTechnicalName, CraftingGroupField, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.NewValue, stored.Tag, StringComparison.OrdinalIgnoreCase)) == true;
+        if (inUse)
+        {
+            CraftingGroupNotice = "A new recipe still uses this section. Move it to another shelf first.";
+            return;
+        }
+
+        _sections.Undo(project.FolderPath, stored.Id);
+        CraftingGroupChoices.Remove(choice);
+        _fillingCraftingGroup = true;
+        CraftingGroup = null;
+        _fillingCraftingGroup = false;
+        CraftingGroupNotice = string.Empty;
+        CraftingGroupSaved = $"The section “{stored.Name}” was removed.";
+        OnPropertyChanged(nameof(CanRemoveSection));
+        RefreshShown();
+    }
+
+    /// <summary>The choice for a project section: a shelf of its own with no recipes yet.</summary>
+    private static RecipeGroup SectionGroup(CraftingSection section) =>
+        new(section.Tag, "Items", section.Name, null, section.Name, Array.Empty<RecipePlace>());
 
     /// <summary>
     /// Rebuild the "Crafting group" card for the open file. It shows only on a brand-new item recipe
@@ -968,12 +1070,22 @@ public partial class WorkspaceViewModel : ObservableObject
         // Offer only the menu tab the recipe already belongs to: an item recipe's shelf list would
         // never hold a base-building shelf (and the game would not show it there).
         var tab = RecipeMenu.GroupOf(currentTag)?.Tab;
+        var project = _projects?.Chosen;
         foreach (var group in _menuShelves)
         {
             if (tab is not null && !string.Equals(group.Tab, tab, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             CraftingGroupChoices.Add(new RecipeGroupChoice(group.Tag, group.Label, group));
+        }
+
+        // The project's own sections sit at the end of the Items rail, alongside the game's shelves.
+        if (_sections is not null && project is not null
+            && (tab is null || string.Equals(tab, "Items", StringComparison.OrdinalIgnoreCase)))
+        {
+            foreach (var section in _sections.Load(project.FolderPath))
+                CraftingGroupChoices.Add(new RecipeGroupChoice(section.Tag, section.Name,
+                    SectionGroup(section), true));
         }
 
         _fillingCraftingGroup = true;
@@ -985,6 +1097,11 @@ public partial class WorkspaceViewModel : ObservableObject
         _showCraftingGroup = true;
         OnPropertyChanged(nameof(ShowCraftingGroup));
         OnPropertyChanged(nameof(HasNoOrderField));
+        OnPropertyChanged(nameof(CanRemoveSection));
+
+        // A new section's name starts from the project's own name; the owner can change it.
+        if (string.IsNullOrWhiteSpace(NewSectionName) && !string.IsNullOrWhiteSpace(project?.Name))
+            NewSectionName = project.Name;
 
         FillCraftingPlaces();
     }

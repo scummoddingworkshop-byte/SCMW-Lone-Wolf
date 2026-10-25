@@ -492,7 +492,8 @@ public class ScreenshotTests
     {
         private bool _installed;
         public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i,
-            IReadOnlyList<NewBuildAsset> na, IProgress<int>? p, CancellationToken ct)
+            IReadOnlyList<NewBuildAsset> na, IReadOnlyList<NewBuildSection> sections,
+            IProgress<int>? p, CancellationToken ct)
         { p?.Report(4); return Task.FromResult(new BuildOutcome(true, @"C:\Users\Fran\Documents\SCMW\Builds\My-first-mod\SCMW_My-first-mod_v1.0.0_P.pak", null)); }
         public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
                                                  bool enabled, CancellationToken ct)

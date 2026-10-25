@@ -412,6 +412,23 @@
                 <ContentControl Name="CraftingGroupHost" HorizontalAlignment="Left"/>
               </StackPanel>
 
+              <!-- A section of the project's own, added to the end of the Items rail. -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="Or add a section of your own" Classes="dim"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBox Name="NewSectionNameBox" Classes="field" MinWidth="200"
+                           Watermark="e.g. SCMW Mods"
+                           Text="{Binding NewSectionName, Mode=TwoWay}"/>
+                  <Button Name="CreateSection" Classes="secondary" Content="Create section"
+                          ToolTip.Tip="Add this section to the end of the Items menu and put this recipe on it"
+                          Command="{Binding CreateSectionCommand}"/>
+                  <Button Name="RemoveSection" Classes="secondary" Content="Remove section"
+                          ToolTip.Tip="Remove this project's section (only when no new recipe uses it)"
+                          IsVisible="{Binding CanRemoveSection}"
+                          Command="{Binding RemoveSectionCommand}"/>
+                </StackPanel>
+              </StackPanel>
+
               <TextBlock Classes="dim" TextWrapping="Wrap" IsVisible="{Binding HasNoOrderField}"
                          Text="This recipe has no order number of its own, so its place can't be set."/>
 

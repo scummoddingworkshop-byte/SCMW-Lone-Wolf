@@ -4,8 +4,7 @@ namespace SCMW.Backend.Build;
 
 /// <summary>The real reader: pulls package bytes straight out of the mounted SCUM paks.</summary>
 public sealed class PakMountPackageReader : IPackageReader
-{
-    /// <summary>Where the game's own asset index normally sits inside the paks.</summary>
+{    /// <summary>Where the game's own asset index normally sits inside the paks.</summary>
     public const string GameIndexPath = "SCUM/AssetRegistry.bin";
 
     private readonly PakMount _mount;
@@ -14,6 +13,9 @@ public sealed class PakMountPackageReader : IPackageReader
 
     public bool TryReadPackage(string packagePath, out IReadOnlyDictionary<string, byte[]>? files)
         => _mount.TryReadPackage(packagePath, out files);
+
+    public bool TryReadFile(string path, out byte[]? bytes)
+        => _mount.TryReadFile(path, out bytes);
 
     public bool TryReadAssetIndex(out byte[]? bytes)
     {

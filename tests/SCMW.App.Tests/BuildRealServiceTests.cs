@@ -21,17 +21,19 @@ public class BuildRealServiceTests : IDisposable
         public InstallResult_ Arg;
 
         public Task<BuildOutcome> BuildAsync(string name, string version, IReadOnlyList<BuildItem> items,
-            IReadOnlyList<NewBuildAsset> newAssets, IProgress<int>? progress, CancellationToken ct)
+            IReadOnlyList<NewBuildAsset> newAssets, IReadOnlyList<NewBuildSection> sections,
+            IProgress<int>? progress, CancellationToken ct)
         {
             SentItems = items;
             SentNewAssets = newAssets;
+            SentSections = sections;
             progress?.Report(0); progress?.Report(4);
             return Task.FromResult(BuildResult);
         }
 
         public IReadOnlyList<BuildItem>? SentItems;
         public IReadOnlyList<NewBuildAsset>? SentNewAssets;
-
+        public IReadOnlyList<NewBuildSection>? SentSections;
         public Task<InstallOutcome> InstallAsync(string id, string name, string version, string pak,
                                                  bool enabled, CancellationToken ct)
         { Arg = new(id, name, version, pak); SentEnabled = enabled; return Task.FromResult(InstallResult); }
@@ -52,7 +54,8 @@ public class BuildRealServiceTests : IDisposable
         private readonly TaskCompletionSource<BuildOutcome> _tcs = new();
         public void Complete(BuildOutcome outcome) => _tcs.TrySetResult(outcome);
         public Task<BuildOutcome> BuildAsync(string n, string v, IReadOnlyList<BuildItem> i,
-            IReadOnlyList<NewBuildAsset> na, IProgress<int>? p, CancellationToken ct)
+            IReadOnlyList<NewBuildAsset> na, IReadOnlyList<NewBuildSection> sections,
+            IProgress<int>? p, CancellationToken ct)
             => _tcs.Task;
         public Task<InstallOutcome> InstallAsync(string id, string n, string v, string pak,
                                                  bool enabled, CancellationToken ct)
@@ -71,6 +74,27 @@ public class BuildRealServiceTests : IDisposable
         var service = new FakeService();
         if (installResult is { } placed) service.InstallResult = placed;
         return (new BuildViewModel(changes, projects: projects, service: service), projects, service);
+    }
+
+    [AvaloniaFact]
+    public async Task A_project_section_is_sent_with_the_build()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape ES", "MaxStackSize", "10", "25", projects.Current!.Id);
+        var sections = new CraftingSectionStore();
+        sections.Add(projects.Current!.FolderPath,
+            new CraftingSection(Guid.NewGuid(), "SCMW Mods", "CraftingCategory.Items.SCMW_Mods",
+                DateTime.UtcNow));
+        var service = new FakeService();
+        var vm = new BuildViewModel(changes, projects: projects, service: service, sections: sections);
+
+        await vm.BuildCommand.ExecuteAsync(null);
+
+        var sent = Assert.Single(service.SentSections!);
+        Assert.Equal("SCMW Mods", sent.Name);
+        Assert.Equal("CraftingCategory.Items.SCMW_Mods", sent.Tag);
     }
 
     [AvaloniaFact]

@@ -99,6 +99,18 @@ public class CraftingGroupEditorTests
         return (vm, changes, projects, root);
     }
 
+    private static (WorkspaceViewModel Vm, ItemChangeStore Changes, ProjectStore Projects, string Root,
+                    CraftingSectionStore Sections) ReadyWithSections(RecipeSource source)
+    {
+        var (projects, root) = TestProjects.With("Olive Press Mod");
+        var changes = TestProjects.ChangeStore(projects);
+        var sections = new CraftingSectionStore();
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                        changes: changes, projects: projects, newAssets: new NewAssetStore(),
+                                        menu: Menu(), sections: sections);
+        return (vm, changes, projects, root, sections);
+    }
+
     /// <summary>Make one new recipe from the fake donor, then open it.</summary>
     private static async Task<WorkspaceViewModel> NewRecipeOpen(WorkspaceViewModel vm)
     {
@@ -144,8 +156,7 @@ public class CraftingGroupEditorTests
 
     [AvaloniaFact]
     public async Task Picking_a_shelf_records_the_tag_on_the_recipes_own_path()
-    {
-        var (vm, changes, projects, root) = Ready(new RecipeSource());
+    {        var (vm, changes, projects, root) = Ready(new RecipeSource());
         try
         {
             await NewRecipeOpen(vm);
@@ -159,6 +170,46 @@ public class CraftingGroupEditorTests
             Assert.Equal("CraftingCategory.Items.Clothing.ClothingRepairs", record.NewValue);
             Assert.Equal("CraftingCategory.Items.MeleeWeapons", record.OldValue);
             Assert.Equal(vm.SelectedAsset!.AssetId, record.AssetPath);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_new_section_is_saved_and_given_to_the_open_recipe()
+    {
+        var (vm, changes, projects, root, sections) = ReadyWithSections(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+
+            vm.NewSectionName = "SCMW Mods";
+            vm.CreateSectionCommand.Execute(null);
+
+            var saved = Assert.Single(sections.Load(projects.Current!.FolderPath));
+            Assert.Equal("SCMW Mods", saved.Name);
+            Assert.Equal("CraftingCategory.Items.SCMW_Mods", saved.Tag);
+            Assert.Equal(saved.Tag, vm.CraftingGroup?.Tag);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath),
+                                       r => r.FieldTechnicalName == "CraftingCategoryTag.TagName");
+            Assert.Equal(saved.Tag, record.NewValue);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_section_whose_name_is_already_a_shelf_is_refused()
+    {
+        var (vm, _, projects, root, sections) = ReadyWithSections(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+
+            vm.NewSectionName = "Melee Weapons";
+            vm.CreateSectionCommand.Execute(null);
+
+            Assert.Contains("already", vm.CraftingGroupNotice, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(sections.Load(projects.Current!.FolderPath));
         }
         finally { TestProjects.Cleanup(root); }
     }

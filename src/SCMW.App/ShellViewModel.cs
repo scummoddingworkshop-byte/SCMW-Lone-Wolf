@@ -34,6 +34,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly ProjectsView _projectsView;
     private readonly ItemChangeStore _itemChanges;
     private readonly INewAssetStore _newAssets;
+    private readonly ICraftingSectionStore _sections;
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
     private readonly BuildView _buildView;
@@ -78,10 +79,11 @@ public partial class ShellViewModel : ObservableObject
 
         _itemChanges = new ItemChangeStore(new ProjectChangeStore(), _projectStore);
         _newAssets = new NewAssetStore();
+        _sections = new CraftingSectionStore();
         _workspaceVm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), ContentSource,
                                               new ContentCatalog(ContentSource, ContentSource.Icons),
                                               changes: _itemChanges, projects: _projectStore,
-                                              newAssets: _newAssets);
+                                              newAssets: _newAssets, sections: _sections);
         _workspaceView = new WorkspaceView { DataContext = _workspaceVm };
         _bulk = new BulkTableViewModel(FieldLibraryLoader.LoadDefault(), ContentSource,
                                        new ContentCatalog(ContentSource, ContentSource.Icons),
@@ -98,7 +100,7 @@ public partial class ShellViewModel : ObservableObject
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves,
-                                    newAssets: _newAssets);
+                                    newAssets: _newAssets, sections: _sections);
         _buildView = new BuildView { DataContext = _build };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
         _modsView = new ModsView { DataContext = _mods };
