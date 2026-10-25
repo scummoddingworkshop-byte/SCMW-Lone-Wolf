@@ -49,7 +49,7 @@ public static class CraftingSectionNaming
         var current = new System.Text.StringBuilder();
         foreach (var c in plainName ?? string.Empty)
         {
-            if (char.IsLetterOrDigit(c))
+            if (c < 128 && char.IsLetterOrDigit(c))
             {
                 current.Append(c);
             }

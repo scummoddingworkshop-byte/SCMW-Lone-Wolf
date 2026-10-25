@@ -319,11 +319,13 @@ public sealed class ModBuilder : IModBuilder
         if (!_reader.TryReadFile(CraftingMenuWriter.TagsIniPath, out var tagsFile) || tagsFile is null)
             return (false, "The game's tag list could not be read, so a new menu section cannot be added.");
 
-        var ini = CraftingMenuWriter.AddTags(System.Text.Encoding.UTF8.GetString(tagsFile),
-            sections.Select(s => s.Tag));
+        var ini = System.Text.Encoding.UTF8.GetString(tagsFile);
+        if (!CraftingMenuWriter.TryAddTags(ini, sections.Select(s => s.Tag), out var updatedIni, out var tagError))
+            return (false, tagError ?? "The game's tag list could not be changed.");
+
         var iniTarget = Path.Combine(staging, "SCUM", "Config", "DefaultGameplayTags.ini");
         Directory.CreateDirectory(Path.GetDirectoryName(iniTarget)!);
-        File.WriteAllText(iniTarget, ini, new System.Text.UTF8Encoding(false));
+        File.WriteAllText(iniTarget, updatedIni, new System.Text.UTF8Encoding(false));
 
         if (!_reader.TryReadPackage(CraftingMenuWriter.MenuDataPath, out var files) || files is null
             || files.Count == 0)

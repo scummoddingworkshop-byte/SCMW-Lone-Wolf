@@ -1011,15 +1011,20 @@ public partial class WorkspaceViewModel : ObservableObject
             .FirstOrDefault(s => string.Equals(s.Tag, choice.Tag, StringComparison.OrdinalIgnoreCase));
         if (stored is null) return;
 
+        var openPath = SelectedAsset?.AssetId;
         var inUse = _changes?.For(project.FolderPath).Any(r =>
             string.Equals(r.FieldTechnicalName, CraftingGroupField, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(r.NewValue, stored.Tag, StringComparison.OrdinalIgnoreCase)) == true;
+            && string.Equals(r.NewValue, stored.Tag, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(r.AssetPath, openPath, StringComparison.OrdinalIgnoreCase)) == true;
         if (inUse)
         {
             CraftingGroupNotice = "A new recipe still uses this section. Move it to another shelf first.";
             return;
         }
 
+        // The open recipe is the only user; dropping its shelf change keeps it from pointing at a
+        // section that is about to disappear.
+        UndoSetOnOpenRecipe(CraftingGroupField);
         _sections.Undo(project.FolderPath, stored.Id);
         CraftingGroupChoices.Remove(choice);
         _fillingCraftingGroup = true;

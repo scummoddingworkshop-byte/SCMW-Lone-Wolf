@@ -14,6 +14,10 @@ public class CraftingSectionTests
     public void A_name_with_no_letters_or_digits_has_no_tag() =>
         Assert.Null(CraftingSectionNaming.TagFor("---"));
 
+    [Fact] // tags stay ASCII, so the game's string handling can never garble one
+    public void Accented_letters_are_left_out_of_the_tag() =>
+        Assert.Equal("CraftingCategory.Items.Caf_Mods", CraftingSectionNaming.TagFor("Café Mods"));
+
     [Fact] // the words shown on screen are the owner's words, tidied
     public void The_shown_words_are_the_name_tidied() =>
         Assert.Equal("SCMW Mods", CraftingSectionNaming.WordsFor("  SCMW   Mods "));

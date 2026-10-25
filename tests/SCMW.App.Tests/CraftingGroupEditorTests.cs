@@ -215,6 +215,62 @@ public class CraftingGroupEditorTests
     }
 
     [AvaloniaFact]
+    public async Task Removing_a_section_this_recipe_uses_takes_it_away()
+    {
+        var (vm, changes, projects, root, sections) = ReadyWithSections(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+            vm.NewSectionName = "SCMW Mods";
+            vm.CreateSectionCommand.Execute(null);
+            Assert.True(vm.CanRemoveSection);
+
+            vm.RemoveSectionCommand.Execute(null);
+
+            Assert.Empty(sections.Load(projects.Current!.FolderPath));
+            Assert.DoesNotContain(changes.For(projects.Current.FolderPath),
+                r => r.NewValue == "CraftingCategory.Items.SCMW_Mods");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Removing_a_section_another_recipe_uses_is_refused()
+    {
+        var (vm, changes, projects, root, sections) = ReadyWithSections(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+            vm.NewSectionName = "SCMW Mods";
+            vm.CreateSectionCommand.Execute(null);
+            changes.RecordEdit("OtherRecipe", "CraftingCategoryTag.TagName", "Old",
+                "CraftingCategory.Items.SCMW_Mods", projects.Current!.Id, assetPath: "OtherRecipe");
+
+            vm.RemoveSectionCommand.Execute(null);
+
+            Assert.Contains("still uses", vm.CraftingGroupNotice, StringComparison.OrdinalIgnoreCase);
+            Assert.Single(sections.Load(projects.Current.FolderPath));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Removing_a_game_shelf_does_nothing()
+    {
+        var (vm, _, projects, root, sections) = ReadyWithSections(new RecipeSource());
+        try
+        {
+            await NewRecipeOpen(vm);
+
+            Assert.False(vm.CanRemoveSection);
+            vm.RemoveSectionCommand.Execute(null);
+
+            Assert.Empty(sections.Load(projects.Current!.FolderPath));
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
     public async Task Picking_a_place_records_the_order_number()
     {
         var (vm, changes, projects, root) = Ready(new RecipeSource());
