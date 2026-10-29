@@ -19,7 +19,7 @@ public class ShellLayoutTests
             Assert.True(labels.Contains(area), $"missing '{area}' in: [{string.Join(" | ", labels)}]");
         }
 
-        Assert.Contains("LAUNCH MODDED", labels);
-        Assert.Contains("LAUNCH UNMODDED", labels);
+        Assert.Contains("PLAY WITH MODS", labels);
+        Assert.Contains("PLAY CLEAN / ONLINE", labels);
     }
 }

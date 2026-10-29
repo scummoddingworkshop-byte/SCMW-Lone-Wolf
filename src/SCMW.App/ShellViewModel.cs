@@ -48,6 +48,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly HelpView _helpView;
     private IGameLauncher _launcher;
     private IModsService? _modsService;
+    private IUe4ssSwitch _ue4ss;
+    private readonly bool _ue4ssInjected;
     private IBuildService? _buildService;
     private readonly ISettingsStore _settingsStore;
     private readonly SCMW.Core.Workspace.WorkspacePaths _workspace;
@@ -57,7 +59,7 @@ public partial class ShellViewModel : ObservableObject
                           IScumSources? scumSources = null, ProjectStore? projects = null,
                           SCMW.Core.Content.IContentSource? contentSource = null,
                           IGameLauncher? launcher = null, IModsService? modsService = null,
-                          ISaveBackupsService? saves = null)
+                          ISaveBackupsService? saves = null, IUe4ssSwitch? ue4ss = null)
     {
         _nav = nav ?? NavigationHost.Shared;
         _projectStore = projects ?? ProjectStore.Default();
@@ -74,6 +76,12 @@ public partial class ShellViewModel : ObservableObject
         _modsInjected = modsService is not null;
         _launcher = launcher ?? new ScumLauncher(settings.GamePath);
         _modsService = modsService ?? new ModsService(settings.GamePath, workspace.Root);
+        _ue4ss = ue4ss ?? new Ue4ssSwitch(settings.GamePath);
+        _ue4ssInjected = ue4ss is not null;
+
+        // A clean launch switches UE4SS off; put it back as soon as the app is opened again, so a
+        // crash or a forgotten switch can never leave the game without its mod loader.
+        _ue4ss.TurnOn();
         CanLaunch = _launcher.IsAvailable;
         LaunchNote = CanLaunch ? "" : "Set your SCUM folder in Settings to launch.";
 
@@ -232,6 +240,13 @@ public partial class ShellViewModel : ObservableObject
         _buildService = BuildService.Create(settings, _workspace, ContentSource);
         if (!_launcherInjected) _launcher = new ScumLauncher(settings.GamePath);
         if (!_modsInjected) _modsService = new ModsService(settings.GamePath, _workspace.Root);
+        if (!_ue4ssInjected)
+        {
+            // Follow the game path when it is first set or changed, and never leave a new install
+            // without its mod loader (a previous clean launch may have switched it off).
+            _ue4ss = new Ue4ssSwitch(settings.GamePath);
+            _ue4ss.TurnOn();
+        }
 
         // The Backups screen is built from the game path too — refresh it for first-time setup.
         _backups.UseService(new BackupsService(settings.GamePath, _workspace.Root),
@@ -322,7 +337,7 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>Hides the levels strip for this session (mirrors the Home welcome card).</summary>
     [RelayCommand] private void DismissOnTheWay() => ShowOnTheWay = false;
 
-    /// <summary>Switches the mods on/off as asked, starts SCUM (through Steam), and says what happened.</summary>
+    /// <summary>Switches the mods (and UE4SS for a clean launch) as asked, starts SCUM, and says what happened.</summary>
     private async Task RunLaunchAsync(bool modded)
     {
         LaunchNote = "";
@@ -341,12 +356,23 @@ public partial class ShellViewModel : ObservableObject
             }
         }
 
+        // UE4SS only goes off for a clean launch. Restoring it before a modded launch means the mods
+        // really do load, even if an earlier clean session left it switched off.
+        var ue4ss = modded ? _ue4ss.TurnOn() : _ue4ss.TurnOff();
+        if (!ue4ss.Ok)
+        {
+            LaunchNote = ue4ss.Error ?? "The mod loader could not be switched.";
+            return;
+        }
+
         var result = modded
             ? await _launcher.LaunchModdedAsync()
             : await _launcher.LaunchUnmoddedAsync();
         LaunchNote = result.Ok
-            ? (modded ? saveNote : "Mods switched off — SCUM started as vanilla.")
-            : (result.Error ?? "SCUM could not be started.");
+            ? (modded ? saveNote : "Mods and UE4SS switched off — SCUM started clean for online play.")
+            : (modded
+                ? (result.Error ?? "SCUM could not be started.")
+                : "Mods and UE4SS are switched off. " + (result.Error ?? "SCUM could not be started."));
     }
 
     partial void OnSelectedEntryChanged(NavItem value) => _nav.GoTo(value.Key);

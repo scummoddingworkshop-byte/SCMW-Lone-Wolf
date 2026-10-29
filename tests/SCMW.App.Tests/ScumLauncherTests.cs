@@ -24,6 +24,7 @@ public class ScumLauncherTests : IDisposable
     private sealed class FakeProcesses : IProcessLauncher
     {
         public bool SteamRunning { get; set; } = true;
+        public bool SteamReady { get; set; } = true;
         public string? SteamExe { get; set; } = @"C:\Steam\steam.exe";
         public bool ThrowOnStart { get; set; }
         public readonly List<(string Exe, string? Args)> Started = new();
@@ -34,7 +35,7 @@ public class ScumLauncherTests : IDisposable
             if (ThrowOnStart) throw new InvalidOperationException("start refused");
             Started.Add((exe, args));
         }
-        public Task<bool> WaitForSteamAsync(TimeSpan timeout) { Waited = true; SteamRunning = true; return Task.FromResult(true); }
+        public Task<bool> WaitForSteamAsync(TimeSpan timeout) { Waited = true; SteamRunning = true; return Task.FromResult(SteamReady); }
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class ScumLauncherTests : IDisposable
     }
 
     [Fact]
-    public async Task Unmodded_launches_the_game_program_directly_with_no_flags()
+    public async Task Unmodded_launches_clean_through_steam_so_battleye_runs()
     {
         MakeGame();
         var proc = new FakeProcesses();
@@ -60,7 +61,7 @@ public class ScumLauncherTests : IDisposable
         var result = await launcher.LaunchUnmoddedAsync();
 
         Assert.True(result.Ok, result.Error);
-        Assert.Equal((Exe, (string?)null), Assert.Single(proc.Started));
+        Assert.Equal((proc.SteamExe, "-applaunch 513710"), Assert.Single(proc.Started));
     }
 
     [Fact]
@@ -115,6 +116,34 @@ public class ScumLauncherTests : IDisposable
 
         Assert.False(result.Ok);
         Assert.Equal("SCUM could not be started.", result.Error);
+    }
+
+    [Fact]
+    public async Task A_clean_launch_without_steam_fails_plainly()
+    {
+        MakeGame();
+        var proc = new FakeProcesses { SteamExe = null };
+        var launcher = new ScumLauncher(GameRoot, proc);
+
+        var result = await launcher.LaunchUnmoddedAsync();
+
+        Assert.False(result.Ok);
+        Assert.Contains("Steam", result.Error);
+        Assert.Empty(proc.Started);                              // never started without BattlEye
+    }
+
+    [Fact]
+    public async Task Steam_not_ready_stops_the_launch()
+    {
+        MakeGame();
+        var proc = new FakeProcesses { SteamReady = false };
+        var launcher = new ScumLauncher(GameRoot, proc);
+
+        var result = await launcher.LaunchModdedAsync();
+
+        Assert.False(result.Ok);
+        Assert.Contains("Steam", result.Error);
+        Assert.Empty(proc.Started);
     }
 
     [Fact]

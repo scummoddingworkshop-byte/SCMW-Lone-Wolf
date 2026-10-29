@@ -103,6 +103,9 @@ public sealed class SystemProcessLauncher : IProcessLauncher
 /// </summary>
 public sealed class ScumLauncher : IGameLauncher
 {
+    /// <summary>SCUM's Steam application id (used for a clean launch through Steam).</summary>
+    public const string ScumSteamAppId = "513710";
+
     private const string ModdedArguments = "-nobattleye -fileopenlog";
     private static readonly TimeSpan SteamStartupWait = TimeSpan.FromSeconds(45);
     private const string MissingExe =
@@ -126,27 +129,38 @@ public sealed class ScumLauncher : IGameLauncher
     public async Task<LaunchResult> LaunchModdedAsync()
     {
         if (!IsAvailable) return new LaunchResult(false, MissingExe);
-        return await StartAsync(ModdedArguments).ConfigureAwait(false);
-    }
-
-    public async Task<LaunchResult> LaunchUnmoddedAsync()
-    {
-        if (!IsAvailable) return new LaunchResult(false, MissingExe);
-        return await StartAsync(null).ConfigureAwait(false);
+        return await StartAsync(ModdedArguments, viaSteam: false).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Starts SCUM's own program directly, making sure Steam is running first (the game needs
-    /// Steam signed in, but must not be started through Steam). Going through Steam's
-    /// <c>-applaunch</c> hands the launch to <c>SCUM_Launcher.exe</c>, which switches BattlEye on;
-    /// BattlEye blocks UE4SS's <c>dwmapi.dll</c> and the game dies with <c>0xc000009a</c> before it
-    /// starts. Starting <c>SCUM.exe</c> itself keeps BattlEye out of the way.
+    /// Starts a clean game through Steam so BattlEye runs (servers need it). The caller must have
+    /// switched UE4SS and the mods off first; BattlEye blocks UE4SS's proxy otherwise.
     /// </summary>
-    private async Task<LaunchResult> StartAsync(string? args)
+    public async Task<LaunchResult> LaunchUnmoddedAsync()
+    {
+        if (!IsAvailable) return new LaunchResult(false, MissingExe);
+        return await StartAsync(null, viaSteam: true).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Makes sure Steam is running and signed in, then starts the game. <b>Modded</b> starts
+    /// <c>SCUM.exe</c> directly with BattlEye off (going through Steam's <c>-applaunch</c> hands the
+    /// launch to <c>SCUM_Launcher.exe</c>, which switches BattlEye on; BattlEye blocks UE4SS's
+    /// <c>dwmapi.dll</c> and the game dies with <c>0xc000009a</c>). <b>Clean</b> goes through Steam on
+    /// purpose, so BattlEye does run.
+    /// </summary>
+    private async Task<LaunchResult> StartAsync(string? args, bool viaSteam)
     {
         try
         {
             var steam = _process.FindSteamExe();
+
+            if (viaSteam && steam is null)
+            {
+                return new LaunchResult(false,
+                    "Steam wasn't found, so BattlEye can't start. Set up Steam, then try again.");
+            }
+
             if (steam is not null)
             {
                 if (!_process.SteamRunning)
@@ -156,10 +170,21 @@ public sealed class ScumLauncher : IGameLauncher
 
                 // Wait even when Steam is already open: it may still be on the sign-in screen,
                 // updating, or restarting, and SCUM needs a signed-in Steam.
-                await _process.WaitForSteamAsync(SteamStartupWait).ConfigureAwait(false);
+                var ready = await _process.WaitForSteamAsync(SteamStartupWait).ConfigureAwait(false);
+                if (!ready)
+                {
+                    return new LaunchResult(false, "Steam isn't ready yet — sign in, then try again.");
+                }
             }
 
-            _process.Start(_exePath, args);                            // start the game itself
+            if (viaSteam && steam is not null)
+            {
+                _process.Start(steam, $"-applaunch {ScumSteamAppId}");  // clean: let BattlEye start
+            }
+            else
+            {
+                _process.Start(_exePath, args);                        // modded: the game itself
+            }
 
             return new LaunchResult(true, null);
         }

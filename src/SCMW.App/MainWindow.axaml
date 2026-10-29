@@ -34,13 +34,13 @@
           <Button Classes="primary launch" Command="{Binding LaunchModdedCommand}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Image Source="avares://SCMW-Lone-Wolf/Assets/launch/play-on.png" Width="18" Height="18"/>
-              <TextBlock Text="LAUNCH MODDED" FontSize="12" FontWeight="Bold" LetterSpacing="0.5"/>
+              <TextBlock Text="PLAY WITH MODS" FontSize="12" FontWeight="Bold" LetterSpacing="0.5"/>
             </StackPanel>
           </Button>
           <Button Classes="secondary launch" Command="{Binding LaunchUnmoddedCommand}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Image Source="avares://SCMW-Lone-Wolf/Assets/launch/play.png" Width="18" Height="18"/>
-              <TextBlock Text="LAUNCH UNMODDED" FontSize="12" FontWeight="SemiBold" LetterSpacing="0.5"/>
+              <TextBlock Text="PLAY CLEAN / ONLINE" FontSize="12" FontWeight="SemiBold" LetterSpacing="0.5"/>
             </StackPanel>
           </Button>
           <TextBlock Text="{Binding LaunchNote}" FontSize="11" TextWrapping="Wrap"

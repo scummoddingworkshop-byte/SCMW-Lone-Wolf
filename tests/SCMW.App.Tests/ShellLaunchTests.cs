@@ -122,6 +122,50 @@ public class ShellLaunchTests
         Assert.Contains("Close the game", vm.LaunchNote);
     }
 
+    private sealed class FakeUe4ss : IUe4ssSwitch
+    {
+        public bool Off { get; private set; }
+        public SwitchResult OffResult = new(true, null);
+        public SwitchResult OnResult = new(true, null);
+        public bool IsOff => Off;
+        public SwitchResult TurnOff()
+        {
+            if (OffResult.Ok) Off = true;
+            return OffResult;
+        }
+        public SwitchResult TurnOn()
+        {
+            if (OnResult.Ok) Off = false;
+            return OnResult;
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Launch_clean_turns_ue4ss_off_and_play_with_mods_turns_it_on()
+    {
+        var ue4ss = new FakeUe4ss();
+        var vm = new ShellViewModel(new NavigationHost(), launcher: new FakeLauncher(), ue4ss: ue4ss);
+
+        await vm.LaunchUnmoddedCommand.ExecuteAsync(null);
+        Assert.True(ue4ss.IsOff);
+
+        await vm.LaunchModdedCommand.ExecuteAsync(null);
+        Assert.False(ue4ss.IsOff);
+    }
+
+    [AvaloniaFact]
+    public async Task When_ue4ss_cannot_be_switched_the_game_is_not_started()
+    {
+        var launcher = new FakeLauncher();
+        var ue4ss = new FakeUe4ss { OffResult = new SwitchResult(false, "Close the game, then try again.") };
+        var vm = new ShellViewModel(new NavigationHost(), launcher: launcher, ue4ss: ue4ss);
+
+        await vm.LaunchUnmoddedCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, launcher.Modded + launcher.Unmodded);
+        Assert.Contains("Close the game", vm.LaunchNote);
+    }
+
     private sealed class FakeSaves : ISaveBackupsService
     {
         public int Backups;
