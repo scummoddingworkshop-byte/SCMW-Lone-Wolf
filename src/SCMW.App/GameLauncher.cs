@@ -17,10 +17,10 @@ public interface IGameLauncher
     /// <summary>True when SCUM's program was found under the configured game path.</summary>
     bool IsAvailable { get; }
 
-    /// <summary>Start SCUM through Steam with the mod-load flags.</summary>
+    /// <summary>Start SCUM's own program with the mod-load flags (Steam running in the background).</summary>
     Task<LaunchResult> LaunchModdedAsync();
 
-    /// <summary>Start SCUM as a plain vanilla game.</summary>
+    /// <summary>Start SCUM's own program as a plain vanilla game.</summary>
     Task<LaunchResult> LaunchUnmoddedAsync();
 }
 
@@ -53,6 +53,7 @@ public sealed class SystemProcessLauncher : IProcessLauncher
         Process.Start(new ProcessStartInfo(exe)
         {
             Arguments = args ?? "",
+            WorkingDirectory = Path.GetDirectoryName(exe) ?? "",
             UseShellExecute = true,
         });
 
@@ -94,17 +95,15 @@ public sealed class SystemProcessLauncher : IProcessLauncher
 }
 
 /// <summary>
-/// Starts SCUM from the configured game path, through Steam, ensuring Steam is running first.
-/// <b>Modded</b> passes <c>-nobattleeye -fileopenlog</c> (both are needed: BattlEye off, and the
-/// file-open log without which SCUM reports a file-integrity error); <b>unmodded</b> starts a plain
-/// game. Switching the mods themselves on/off is done by the mods service before this is called.
+/// Starts SCUM's own program (<c>SCUM.exe</c>) from the configured game path, after making sure
+/// Steam is running and signed in. <b>Modded</b> passes <c>-nobattleye -fileopenlog</c> (both are
+/// needed: BattlEye off, and the file-open log without which SCUM reports a file-integrity error);
+/// <b>unmodded</b> starts a plain game. Switching the mods themselves on/off is done by the mods
+/// service before this is called.
 /// </summary>
 public sealed class ScumLauncher : IGameLauncher
 {
-    /// <summary>SCUM's Steam application id (used to launch through Steam).</summary>
-    public const string ScumSteamAppId = "513710";
-
-    private const string ModdedArguments = "-nobattleeye -fileopenlog";
+    private const string ModdedArguments = "-nobattleye -fileopenlog";
     private static readonly TimeSpan SteamStartupWait = TimeSpan.FromSeconds(45);
     private const string MissingExe =
         "SCUM's program (SCUM.exe) wasn't found — check the game path in Settings.";
@@ -137,8 +136,11 @@ public sealed class ScumLauncher : IGameLauncher
     }
 
     /// <summary>
-    /// Starts SCUM through Steam (making sure Steam is running first). If Steam can't be found,
-    /// falls back to starting the game's own program so launching still works.
+    /// Starts SCUM's own program directly, making sure Steam is running first (the game needs
+    /// Steam signed in, but must not be started through Steam). Going through Steam's
+    /// <c>-applaunch</c> hands the launch to <c>SCUM_Launcher.exe</c>, which switches BattlEye on;
+    /// BattlEye blocks UE4SS's <c>dwmapi.dll</c> and the game dies with <c>0xc000009a</c> before it
+    /// starts. Starting <c>SCUM.exe</c> itself keeps BattlEye out of the way.
     /// </summary>
     private async Task<LaunchResult> StartAsync(string? args)
     {
@@ -150,18 +152,14 @@ public sealed class ScumLauncher : IGameLauncher
                 if (!_process.SteamRunning)
                 {
                     _process.Start(steam, null);                       // start Steam
-                    await _process.WaitForSteamAsync(SteamStartupWait).ConfigureAwait(false);
                 }
 
-                var launchArgs = args is null
-                    ? $"-applaunch {ScumSteamAppId}"
-                    : $"-applaunch {ScumSteamAppId} {args}";
-                _process.Start(steam, launchArgs);                     // launch SCUM via Steam
+                // Wait even when Steam is already open: it may still be on the sign-in screen,
+                // updating, or restarting, and SCUM needs a signed-in Steam.
+                await _process.WaitForSteamAsync(SteamStartupWait).ConfigureAwait(false);
             }
-            else
-            {
-                _process.Start(_exePath, args);                        // no Steam found: direct
-            }
+
+            _process.Start(_exePath, args);                            // start the game itself
 
             return new LaunchResult(true, null);
         }

@@ -25,15 +25,20 @@ public class ScumLauncherTests : IDisposable
     {
         public bool SteamRunning { get; set; } = true;
         public string? SteamExe { get; set; } = @"C:\Steam\steam.exe";
+        public bool ThrowOnStart { get; set; }
         public readonly List<(string Exe, string? Args)> Started = new();
         public bool Waited;
         public string? FindSteamExe() => SteamExe;
-        public void Start(string exe, string? args) => Started.Add((exe, args));
+        public void Start(string exe, string? args)
+        {
+            if (ThrowOnStart) throw new InvalidOperationException("start refused");
+            Started.Add((exe, args));
+        }
         public Task<bool> WaitForSteamAsync(TimeSpan timeout) { Waited = true; SteamRunning = true; return Task.FromResult(true); }
     }
 
     [Fact]
-    public async Task Modded_launches_through_steam_with_the_flags()
+    public async Task Modded_launches_the_game_program_directly_with_the_flags()
     {
         MakeGame();
         var proc = new FakeProcesses();
@@ -42,11 +47,11 @@ public class ScumLauncherTests : IDisposable
         var result = await launcher.LaunchModdedAsync();
 
         Assert.True(result.Ok, result.Error);
-        Assert.Equal((proc.SteamExe, "-applaunch 513710 -nobattleeye -fileopenlog"), Assert.Single(proc.Started));
+        Assert.Equal((Exe, "-nobattleye -fileopenlog"), Assert.Single(proc.Started));
     }
 
     [Fact]
-    public async Task Unmodded_launches_a_plain_game_and_touches_no_files()
+    public async Task Unmodded_launches_the_game_program_directly_with_no_flags()
     {
         MakeGame();
         var proc = new FakeProcesses();
@@ -55,8 +60,20 @@ public class ScumLauncherTests : IDisposable
         var result = await launcher.LaunchUnmoddedAsync();
 
         Assert.True(result.Ok, result.Error);
-        Assert.Equal((proc.SteamExe, "-applaunch 513710"), Assert.Single(proc.Started));
-        Assert.True(Directory.Exists(Mods));     // the launcher no longer moves the folder
+        Assert.Equal((Exe, (string?)null), Assert.Single(proc.Started));
+    }
+
+    [Fact]
+    public async Task Steam_already_open_is_still_waited_for()
+    {
+        MakeGame();
+        var proc = new FakeProcesses { SteamRunning = true };
+        var launcher = new ScumLauncher(GameRoot, proc);
+
+        await launcher.LaunchModdedAsync();
+
+        Assert.True(proc.Waited);                                  // open is not the same as signed in
+        Assert.Equal((Exe, "-nobattleye -fileopenlog"), Assert.Single(proc.Started));
     }
 
     [Fact]
@@ -70,12 +87,12 @@ public class ScumLauncherTests : IDisposable
 
         Assert.Equal(2, proc.Started.Count);
         Assert.Equal((proc.SteamExe, null), proc.Started[0]);               // start Steam first
-        Assert.Equal((proc.SteamExe, "-applaunch 513710 -nobattleeye -fileopenlog"), proc.Started[1]);
+        Assert.Equal((Exe, "-nobattleye -fileopenlog"), proc.Started[1]);
         Assert.True(proc.Waited);
     }
 
     [Fact]
-    public async Task Without_steam_it_falls_back_to_the_game_program()
+    public async Task Without_steam_it_still_starts_the_game_program()
     {
         MakeGame();
         var proc = new FakeProcesses { SteamExe = null };
@@ -84,7 +101,20 @@ public class ScumLauncherTests : IDisposable
         var result = await launcher.LaunchModdedAsync();
 
         Assert.True(result.Ok, result.Error);
-        Assert.Equal((Exe, "-nobattleeye -fileopenlog"), Assert.Single(proc.Started));
+        Assert.Equal((Exe, "-nobattleye -fileopenlog"), Assert.Single(proc.Started));
+    }
+
+    [Fact]
+    public async Task A_failed_start_reports_a_plain_error()
+    {
+        MakeGame();
+        var proc = new FakeProcesses { ThrowOnStart = true };
+        var launcher = new ScumLauncher(GameRoot, proc);
+
+        var result = await launcher.LaunchModdedAsync();
+
+        Assert.False(result.Ok);
+        Assert.Equal("SCUM could not be started.", result.Error);
     }
 
     [Fact]
