@@ -59,6 +59,19 @@ public class WorkspaceLayoutTests
     }
 
     [Fact]
+    public void A_width_that_is_not_a_real_number_is_never_saved()
+    {
+        WorkspaceLayout.Restore(null);   // 340
+
+        // A column that has not been laid out can report infinity; the cap would swallow it as 520.
+        WorkspaceLayout.Remember(double.PositiveInfinity);
+        Assert.Equal(WorkspaceLayout.DefaultWidth, WorkspaceLayout.SavedWidth);
+
+        WorkspaceLayout.Remember(double.NaN);
+        Assert.Equal(WorkspaceLayout.DefaultWidth, WorkspaceLayout.SavedWidth);
+    }
+
+    [Fact]
     public void The_chosen_width_survives_a_restart()
     {
         var dir = Path.Combine(Path.GetTempPath(), "scmw-list-width-" + Guid.NewGuid().ToString("N"));

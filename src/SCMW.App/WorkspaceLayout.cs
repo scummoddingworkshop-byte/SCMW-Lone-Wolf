@@ -30,13 +30,23 @@ public static class WorkspaceLayout
         SCMW.Core.Logging.Log.Info($"Workspace list width restored to {SavedWidth} (saved: {saved?.ToString() ?? "none"})");
     }
 
-    /// <summary>Keeps a width between the floor and the cap.</summary>
+    /// <summary>Keeps a width between the floor and the cap. A width that is not a real number
+    /// (a column that has not been laid out yet reports infinity) falls back to the default, rather
+    /// than being squeezed to the cap and remembered as if the player had chosen it.</summary>
     public static double Clamp(double width) =>
-        double.IsNaN(width) ? DefaultWidth : Math.Clamp(width, MinWidth, MaxWidth);
+        double.IsFinite(width) ? Math.Clamp(width, MinWidth, MaxWidth) : DefaultWidth;
 
-    /// <summary>Records the width the player dragged to and tells whoever saves the settings.</summary>
+    /// <summary>Records the width the player dragged to and tells whoever saves the settings. A width
+    /// that is not a real number is ignored, so a half-laid-out column can never overwrite the width
+    /// the player actually chose.</summary>
     public static void Remember(double width)
     {
+        if (!double.IsFinite(width))
+        {
+            SCMW.Core.Logging.Log.Info($"Workspace list width ignored: not a real number ({width})");
+            return;
+        }
+
         var clamped = Clamp(width);
         if (Math.Abs(clamped - SavedWidth) < 0.5) return;   // the same width again: nothing to save
 
