@@ -17,10 +17,15 @@ public class BuildNamesTests
         => Assert.Equal("SCMW_My-first-mod_v1.0.0_P.pak", BuildNames.PakFileName("My first mod", "1.0.0"));
 
     [Fact]
-    public void A_blank_or_junk_version_falls_back_to_1_0_0()
+    public void Any_version_is_kept_and_only_a_blank_one_becomes_1_0_0()
     {
         Assert.Equal("SCMW_Mod_v1.0.0_P.pak", BuildNames.PakFileName("Mod", ""));
-        Assert.Equal("SCMW_Mod_v1.0.0_P.pak", BuildNames.PakFileName("Mod", "latest"));
+        Assert.Equal("SCMW_Mod_vlatest_P.pak", BuildNames.PakFileName("Mod", "latest"));
+        Assert.Equal("SCMW_Mod_v1.0.0-beta-2_P.pak", BuildNames.PakFileName("Mod", "v1.0.0-beta 2"));
+
+        // Anything a file name cannot hold becomes a dash, and runs are collapsed.
+        Assert.Equal("SCMW_Mod_vBig-Star_P.pak", BuildNames.PakFileName("Mod", "Big*Star"));
+        Assert.Equal("SCMW_Mod_v1.0.0_P.pak", BuildNames.PakFileName("Mod", "///"));
     }
 
     [Theory]

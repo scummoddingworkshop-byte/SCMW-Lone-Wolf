@@ -86,27 +86,60 @@ public class BuildViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_changed_items_list_scrolls_so_the_build_button_stays_in_view()
+    public void The_changed_items_list_is_never_cut_off()
     {
         var (view, _) = ShownView(ManyChanges(20));
 
         var preview = view.FindControl<PreviewView>("PreviewArea");
         Assert.NotNull(preview);
 
-        var scroll = preview!.FindControl<ScrollViewer>("PreviewScroll");
-        Assert.NotNull(scroll);
-        Assert.True(scroll!.MaxHeight < double.PositiveInfinity,
-            "the changed-items list must be capped, or a long list pushes Build off the screen");
-        Assert.True(scroll.MaxHeight <= 600);
-
-        // The change list really lives inside that scroller...
-        var list = preview.FindControl<ItemsControl>("ChangeList");
+        // The cards are laid out on the page itself — no inner scroller slicing the last row.
+        var list = preview!.FindControl<ItemsControl>("ChangeList");
         Assert.NotNull(list);
-        Assert.Contains(scroll, list!.GetVisualAncestors().OfType<ScrollViewer>());
+        Assert.Empty(list!.GetVisualAncestors().OfType<ScrollViewer>()
+                         .Where(s => s.Name == "PreviewScroll"));
 
-        // ...and with plenty of rows it is capped, so it can't push the button down.
-        Assert.True(scroll.Bounds.Height <= scroll.MaxHeight + 1,
-            $"the list grew to {scroll.Bounds.Height}, past its {scroll.MaxHeight} cap");
+        // With plenty of rows the list grows to hold them, so nothing is clipped.
+        Assert.True(list.Bounds.Height > 400,
+            $"the list only measured {list.Bounds.Height} — the cards would be cut off");
+    }
+
+    [AvaloniaFact]
+    public void A_version_that_was_built_before_is_asked_about_first()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+
+        // That exact version is already in the mods list, so it has been built before.
+        var mods = new ModList();
+        mods.Install(SCMW.Backend.Build.BuildNames.PakFileName("My first mod", "1.0.0"));
+
+        var vm = new BuildViewModel(changes, projects: projects, mods: mods);
+        Assert.True(vm.CanBuild);
+
+        vm.BuildCommand.Execute(null);
+
+        Assert.True(vm.HasDuplicateVersionNotice);          // asked, not built
+        Assert.Contains("already been built", vm.DuplicateVersionNotice);
+        Assert.NotEqual(BuildState.Running, vm.State);
+
+        // Changing the version answers the question.
+        vm.ModVersion = "1.1.0";
+        Assert.False(vm.HasDuplicateVersionNotice);
+    }
+
+    [AvaloniaFact]
+    public void An_empty_version_builds_as_1_0_0()
+    {
+        var vm = new BuildViewModel();
+        vm.ModVersion = "   ";
+
+        Assert.Equal("1.0.0", vm.EffectiveVersion);
+
+        vm.ModVersion = "My first release";
+        Assert.Equal("My first release", vm.EffectiveVersion);   // any words the player likes
     }
 
     [AvaloniaFact]

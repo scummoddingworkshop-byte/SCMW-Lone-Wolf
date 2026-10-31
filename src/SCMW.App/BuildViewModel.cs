@@ -133,6 +133,29 @@ public partial class BuildViewModel : ObservableObject
     }
 
     [ObservableProperty] private string _modVersion = "1.0.0";
+
+    /// <summary>The version that will be written: what the player typed, or 1.0.0 when they left it empty.</summary>
+    public string EffectiveVersion =>
+        string.IsNullOrWhiteSpace(ModVersion) ? "1.0.0" : ModVersion.Trim();
+
+    /// <summary>Plain warning under the version box when that version has been built before.</summary>
+    [ObservableProperty] private string _duplicateVersionNotice = string.Empty;
+
+    /// <summary>True when the warning should show.</summary>
+    public bool HasDuplicateVersionNotice => DuplicateVersionNotice.Length > 0;
+
+    partial void OnDuplicateVersionNoticeChanged(string value) =>
+        OnPropertyChanged(nameof(HasDuplicateVersionNotice));
+
+    /// <summary>The version the player has already been asked about, so the second press goes ahead.</summary>
+    private string? _versionConfirmed;
+
+    partial void OnModVersionChanged(string value)
+    {
+        // Changing the version answers the question, so the warning goes and any answer is forgotten.
+        DuplicateVersionNotice = string.Empty;
+        _versionConfirmed = null;
+    }
     [ObservableProperty] private BuildState _state = BuildState.Idle;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private string _failureWhat = "";
@@ -222,10 +245,32 @@ public partial class BuildViewModel : ObservableObject
 
     partial void OnFailureDetailsChanged(string value) => OnPropertyChanged(nameof(HasFailureDetails));
 
+    /// <summary>True when a pak for this project and version is already in the mods list.</summary>
+    private bool VersionAlreadyBuilt(string projectName, string version)
+    {
+        var fileName = SCMW.Backend.Build.BuildNames.PakFileName(projectName, version);
+        return _mods?.Mods.Any(m => string.Equals(m.Name, fileName, StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuild))]
     private async Task BuildAsync()
     {
         var project = _projects?.Chosen;
+        var version = EffectiveVersion;
+
+        // A version that has already been built is asked about once; a second press goes ahead.
+        if (project is not null
+            && !string.Equals(_versionConfirmed, version, StringComparison.OrdinalIgnoreCase)
+            && VersionAlreadyBuilt(project.Name, version))
+        {
+            _versionConfirmed = version;
+            DuplicateVersionNotice =
+                $"Version {version} has already been built — change it above, or press Build again to build it anyway.";
+            return;
+        }
+
+        DuplicateVersionNotice = string.Empty;
+
         if (_service is null || project is null)
         {
             // The bare/preview screen keeps the original simulated run.
@@ -236,13 +281,6 @@ public partial class BuildViewModel : ObservableObject
             return;
         }
 
-        if (!SCMW.Backend.Build.BuildNames.IsValidVersion(ModVersion))
-        {
-            ShowFailure("That version isn't usable.",
-                "The mod version should look like 1.0.0 — three numbers separated by dots.",
-                "Change the version on the Build screen, then press Build again.", "");
-            return;
-        }
 
         var projectId = project.Id;
         var records = _changes?.For(project.FolderPath) ?? Array.Empty<SCMW.Core.Editing.ChangeRecord>();
@@ -260,7 +298,7 @@ public partial class BuildViewModel : ObservableObject
         SCMW.Backend.Build.BuildOutcome outcome;
         try
         {
-            outcome = await _service.BuildAsync(project.Name, ModVersion, plan.Items, plan.NewAssets,
+            outcome = await _service.BuildAsync(project.Name, version, plan.Items, plan.NewAssets,
                 sections, progress, CancellationToken.None);
         }
         catch (Exception ex)
@@ -288,11 +326,11 @@ public partial class BuildViewModel : ObservableObject
         if (outcome.Ok && outcome.PakPath is not null)
         {
             BuiltPakPath = outcome.PakPath;
-            BuiltVersion = ModVersion;
+            BuiltVersion = version;
 
             // A build lands in SCUM switched off. Nothing new starts affecting the game until the
             // player switches it on in Mods Management.
-            var placed = await _service!.InstallAsync(project.Id, project.Name, ModVersion,
+            var placed = await _service!.InstallAsync(project.Id, project.Name, version,
                 outcome.PakPath, enabled: false, CancellationToken.None);
             if (!placed.Ok)
             {

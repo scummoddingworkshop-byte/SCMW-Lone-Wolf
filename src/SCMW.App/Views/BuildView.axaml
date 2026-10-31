@@ -30,6 +30,10 @@
         <StackPanel Grid.Column="0" Spacing="6">
           <TextBlock Text="Mod version" Classes="dim"/>
           <TextBox Name="VersionBox" Classes="field" Text="{Binding ModVersion, Mode=TwoWay}"/>
+          <!-- A version that has been built before is asked about here, once, before anything is made. -->
+          <TextBlock Name="DuplicateVersionText" Text="{Binding DuplicateVersionNotice}" TextWrapping="Wrap"
+                     Classes="dim" Foreground="{StaticResource WarningBrush}"
+                     IsVisible="{Binding HasDuplicateVersionNotice}"/>
         </StackPanel>
         <Button Grid.Column="2" Name="BuildButton" Classes="primary" Content="Build"
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"

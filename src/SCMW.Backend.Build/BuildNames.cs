@@ -16,10 +16,21 @@ public static class BuildNames
         return collapsed.Length == 0 ? "mod" : collapsed;
     }
 
+    /// <summary>
+    /// A version as it goes into a file name. Any words the player wants are kept; only characters a
+    /// file name cannot hold are turned into dashes. An empty version becomes <c>1.0.0</c>.
+    /// </summary>
     public static string NormalizeVersion(string version)
     {
         var trimmed = (version ?? "").Trim().TrimStart('v', 'V');
-        return ValidVersion.IsMatch(trimmed) ? trimmed : "1.0.0";
+        if (trimmed.Length == 0) return "1.0.0";
+
+        var mapped = new string(trimmed
+            .Select(c => char.IsLetterOrDigit(c) && c < 128 || c is '.' or '-' or '_' ? c : '-')
+            .ToArray());
+
+        var collapsed = Regex.Replace(mapped, "-+", "-").Trim('-', '.', '_');
+        return collapsed.Length == 0 ? "1.0.0" : collapsed;
     }
 
     /// <summary>True when a version reads like <c>1.2.3</c> (an optional leading "v" is allowed).</summary>
@@ -45,11 +56,11 @@ public static class BuildNames
     /// <summary>True only for another version of THIS project's pak — never a prefix look-alike or another tool's.</summary>
     public static bool IsOlderPakOfProject(string fileName, string projectName)
     {
-        var pattern = "^SCMW_" + Regex.Escape(SafeName(projectName)) + @"_v\d+\.\d+\.\d+_P\.pak$";
+        var pattern = "^SCMW_" + Regex.Escape(SafeName(projectName)) + @"_v.+_P\.pak$";
         return Regex.IsMatch(fileName ?? "", pattern, RegexOptions.IgnoreCase);
     }
 
-    private static readonly Regex OurPak = new(@"^SCMW_.+_v\d+\.\d+\.\d+_P\.pak$", RegexOptions.IgnoreCase);
+    private static readonly Regex OurPak = new(@"^SCMW_.+_v.+_P\.pak$", RegexOptions.IgnoreCase);
 
     /// <summary>True for a pak THIS app made (any project) — never a mod from somewhere else.</summary>
     public static bool IsOurPak(string fileName) => OurPak.IsMatch(fileName ?? "");
