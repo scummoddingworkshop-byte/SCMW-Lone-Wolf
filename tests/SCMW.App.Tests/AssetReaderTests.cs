@@ -20,14 +20,46 @@ public class AssetReaderTests
         Assert.Equal("Tomato", row.Name);
     }
 
+    [Fact]
+    public async Task ReadAllAsync_reads_the_catalogue_once_per_session()
+    {
+        var source = new ScanFirstSource();
+
+        await AssetReader.ReadAllAsync(source);
+        await AssetReader.ReadAllAsync(source);
+        await AssetReader.ReadAllAsync(source);
+
+        // Three list switches, one read of the catalogue: the rest come from memory.
+        Assert.Equal(1, source.PagesRead);
+    }
+
+    [Fact]
+    public async Task ReadAllAsync_reads_again_after_a_game_change_or_a_forced_refresh()
+    {
+        var source = new ScanFirstSource();
+        await AssetReader.ReadAllAsync(source);
+
+        // A different game build: the old list is no longer the truth.
+        source.Build = "2";
+        await AssetReader.ReadAllAsync(source);
+        Assert.Equal(2, source.PagesRead);
+
+        // "Read Game Data" asks for a fresh read even when the build has not changed.
+        AssetReader.Forget(source);
+        await AssetReader.ReadAllAsync(source);
+        Assert.Equal(3, source.PagesRead);
+    }
+
     /// <summary>A source that only returns rows once it has been scanned — so a reader that skips
     /// the scan sees nothing (the old bug: a stale or silently-empty list).</summary>
     private sealed class ScanFirstSource : IContentSource
     {
         public bool Scanned;
+        public string Build = "1";
+        public int PagesRead;
         private bool _ready;
 
-        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", "1");
+        public ContentSourceStatus Status => new(ContentSourceState.Ready, "mounted", Build);
         public ScanInfo? LastScan => null;
         public IIconCache Icons => throw new NotSupportedException();
         public IReadOnlyList<string> Categories => Array.Empty<string>();
@@ -41,9 +73,13 @@ public class AssetReaderTests
         }
 
         public Task<IReadOnlyList<AssetSummary>> SearchAsync(string q, string? c, int s = 0, int t = 100, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<AssetSummary>>(!_ready || s > 0
-                ? Array.Empty<AssetSummary>()
-                : new[] { new AssetSummary("id", "Tomato", "Food", StatusKind.Editable, 1, "id.uasset", null) });
+        {
+            if (!_ready || s > 0) return Task.FromResult<IReadOnlyList<AssetSummary>>(Array.Empty<AssetSummary>());
+
+            PagesRead++;
+            return Task.FromResult<IReadOnlyList<AssetSummary>>(
+                new[] { new AssetSummary("id", "Tomato", "Food", StatusKind.Editable, 1, "id.uasset", null) });
+        }
 
         public Task<IReadOnlyList<AssetField>> FieldsAsync(string id, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<AssetField>>(Array.Empty<AssetField>());

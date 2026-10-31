@@ -304,6 +304,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 var paks = Path.Combine(path, "SCUM", "Content", "Paks");
                 _content.Configure(paks, key, buildId);
+                AssetReader.Forget(_content);   // a different game or key: the held catalogue is not this one
                 var status = await _content.ScanAsync();
                 return status.State == ContentSourceState.Ready
                     ? ("That key works — SCUM's files can be read.", true)
@@ -441,6 +442,7 @@ public partial class SettingsViewModel : ObservableObject
 
             RefreshStorage();
             CacheNote = "Saved game data cleared. Re-reading your items from SCUM…";
+            if (_content is not null) AssetReader.Forget(_content);   // read the list from SCUM again
             IsRefreshing = true;
             CacheCleared?.Invoke();
         }
