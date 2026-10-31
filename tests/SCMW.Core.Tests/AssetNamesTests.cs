@@ -5,6 +5,16 @@ namespace SCMW.Core.Tests;
 public class AssetNamesTests
 {
     [Fact]
+    public void A_file_name_is_the_last_part_of_its_path()
+    {
+        Assert.Equal("Nails_ES",
+            AssetNames.FileName("SCUM/Content/ConZ_Files/Items/Equipment/Active_Items/Nails_ES"));
+        Assert.Equal("Nails_ES", AssetNames.FileName("SCUM\\Content\\Items\\Nails_ES"));
+        Assert.Equal("Nails_ES", AssetNames.FileName("Nails_ES"));       // already just a name
+        Assert.Equal("", AssetNames.FileName(null));
+    }
+
+    [Fact]
     public void A_base_element_name_is_marked_so_it_cannot_collide_with_the_item()
     {
         // A placeable exists as both an item and a base element; the "(base)" marker keeps the

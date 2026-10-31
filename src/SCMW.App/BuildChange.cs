@@ -27,6 +27,10 @@ public partial class BuildChange : ObservableObject
     /// <summary>The item's full game path (the record's path, or its recorded name when none).</summary>
     public string Path { get; }
 
+    /// <summary>The file's own name (the last part of the path), short enough to read on a narrow
+    /// window. The full path stays available as the tooltip.</summary>
+    public string FileName => SCMW.Core.Content.AssetNames.FileName(Path);
+
     /// <summary>True when this row is a brand-new asset the project creates, rather than an edit to a
     /// game file. Such a row shows even before the asset has any value edits.</summary>
     public bool IsNewAsset { get; set; }

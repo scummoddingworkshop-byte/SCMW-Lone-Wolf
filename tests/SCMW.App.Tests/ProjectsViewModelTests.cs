@@ -201,9 +201,10 @@ public class ProjectsViewModelTests
             Assert.Equal(2, rowA.ChangeCount);          // A has its own two
             Assert.Equal(1, rowB.ChangeCount);          // B has its own one
 
-            // The chosen project's list is the one shown (here B, one change).
-            var row = Assert.Single(vm.Changes);
-            Assert.Equal("Batteries", row.Asset);
+            // The chosen project's list is the one shown (here B, one change, one card).
+            var group = Assert.Single(vm.Changes);
+            Assert.Equal("Bat", group.FileName);              // the file's own name, not the path
+            Assert.Equal("/b/Bat", Assert.Single(group.Rows).Path);
         }
         finally { Cleanup(root); }
     }
@@ -224,13 +225,20 @@ public class ProjectsViewModelTests
             changes.RecordEdit("Duct Tape", "Weight", "5", "3", project.Id, assetPath: "/a/Duct_Tape");
 
             var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
-            Assert.Equal(2, vm.Changes.Count);
 
-            var first = vm.Changes[0];
+            // One card per item, holding all of that item's changes.
+            var group = Assert.Single(vm.Changes);
+            Assert.Equal("Duct_Tape", group.FileName);
+            Assert.Equal("2 changes", group.ChangeCountText);
+            Assert.Equal(2, group.Rows.Count);
+
+            var first = group.Rows[0];
             vm.UndoChangeCommand.Execute(first);
 
-            var left = Assert.Single(vm.Changes);
+            group = Assert.Single(vm.Changes);
+            var left = Assert.Single(group.Rows);
             Assert.NotEqual(first.Id, left.Id);                       // the other change stayed
+            Assert.Equal("1 change", group.ChangeCountText);
             var folder = store.All().Single(p => p.Id == project.Id).FolderPath;
             Assert.DoesNotContain(changes.For(folder), r => r.Id == first.Id);
             Assert.Equal(1, vm.VisibleProjects.Single(p => p.Id == project.Id).ChangeCount);

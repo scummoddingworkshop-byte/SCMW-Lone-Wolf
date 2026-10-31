@@ -22,6 +22,20 @@ public static class AssetNames
         && assetName.StartsWith(BaseElementPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// The file's own name: the last part of a game path, so
+    /// <c>SCUM/Content/…/Active_Items/Nails_ES</c> reads <c>Nails_ES</c>. Used where a full path would
+    /// be cut off on a narrow window; the full path stays available as the tooltip.
+    /// </summary>
+    public static string FileName(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return string.Empty;
+
+        var trimmed = path.TrimEnd('/', '\\');
+        var cut = Math.Max(trimmed.LastIndexOf('/'), trimmed.LastIndexOf('\\'));
+        return cut >= 0 && cut + 1 < trimmed.Length ? trimmed[(cut + 1)..] : trimmed;
+    }
+
+    /// <summary>
     /// The friendly name for a base element: <c>BP_Base_Improvised_Wooden_Chest</c> →
     /// <c>Improvised Wooden Chest (base)</c>, and <c>BP_Table_Improvised_Wood</c> →
     /// <c>Table Improvised Wood (base)</c>.

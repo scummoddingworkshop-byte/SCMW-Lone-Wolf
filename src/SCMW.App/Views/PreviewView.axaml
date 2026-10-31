@@ -66,7 +66,7 @@
                         <TextBlock Text="{Binding ChangeCountText}" FontSize="12"
                                    Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
                       </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding Path, StringFormat='({0})'}" FontSize="11"
+                      <TextBlock Grid.Column="1" Text="{Binding FileName}" FontSize="11"
                                  Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
                     </Grid>

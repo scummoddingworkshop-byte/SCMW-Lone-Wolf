@@ -64,21 +64,24 @@ public partial class ProjectsViewModel : ObservableObject
     /// <summary>The projects currently shown (the filtered view of the workspace).</summary>
     public ObservableCollection<ProjectSummary> VisibleProjects { get; }
 
-    /// <summary>The chosen project's recorded changes, in plain words (empty when none is chosen).</summary>
-    public ObservableCollection<ProjectChangeRow> Changes { get; } = new();
+    /// <summary>The chosen project's recorded changes, one card per item (empty when none is chosen).</summary>
+    public ObservableCollection<ProjectChangeGroup> Changes { get; } = new();
+
+    /// <summary>How many changes there are in total, across every item.</summary>
+    private int ChangeCount => Changes.Sum(g => g.Rows.Count);
 
     /// <summary>True when the chosen project has at least one change.</summary>
-    public bool HasChanges => Changes.Count > 0;
+    public bool HasChanges => ChangeCount > 0;
 
     /// <summary>True when the player has chosen a project (the one this screen's list belongs to).</summary>
     public bool HasChosenProject => _store.HasChosenProject;
 
     /// <summary>Plain words for how many changes the chosen project holds.</summary>
-    public string ChangeSummary => Changes.Count switch
+    public string ChangeSummary => ChangeCount switch
     {
         0 => "No changes yet",
         1 => "1 change",
-        _ => $"{Changes.Count} changes",
+        _ => $"{ChangeCount} changes",
     };
 
     /// <summary>Search text; filters the list live.</summary>
@@ -162,14 +165,19 @@ public partial class ProjectsViewModel : ObservableObject
     private int ChangeCountFor(ProjectRecord record) =>
         _changes?.For(record.FolderPath).Count ?? 0;
 
-    /// <summary>Show the chosen project's change list, in plain words (nothing when none is chosen).</summary>
+    /// <summary>Show the chosen project's change list, one card per item, in plain words (nothing when
+    /// none is chosen).</summary>
     private void RefreshChanges(ProjectRecord? chosen)
     {
         Changes.Clear();
         if (chosen is not null && _changes is not null)
         {
-            foreach (var record in _changes.For(chosen.FolderPath))
-                Changes.Add(new ProjectChangeRow(record));
+            var rows = _changes.For(chosen.FolderPath)
+                               .Select(record => new ProjectChangeRow(record))
+                               .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in rows)
+                Changes.Add(new ProjectChangeGroup(group.ToList()));
         }
 
         OnPropertyChanged(nameof(HasChanges));
@@ -347,6 +355,7 @@ public sealed class ProjectChangeRow
     {
         Id = record.Id;
         Asset = record.AssetId;
+        Path = string.IsNullOrEmpty(record.AssetPath) ? record.AssetId : record.AssetPath;
         Field = record.FieldTechnicalName;
         Value = record.Operation switch
         {
@@ -363,12 +372,36 @@ public sealed class ProjectChangeRow
     /// <summary>The item or file the change lands on.</summary>
     public string Asset { get; }
 
+    /// <summary>The asset's game path when it has one (else its recorded id).</summary>
+    public string Path { get; }
+
     /// <summary>The field that changed.</summary>
     public string Field { get; }
 
     /// <summary>The change in plain words ("→ 25", "×2", "added an entry").</summary>
     public string Value { get; }
 
+    /// <summary>The file's own name (the last part of its path), e.g. <c>Nails_ES</c>.</summary>
+    public string FileName => SCMW.Core.Content.AssetNames.FileName(Path);
+
     /// <summary>One plain line: "Duct Tape · Max stack → 25".</summary>
-    public string Summary => $"{Asset} · {Field} {Value}";
+    public string Summary => $"{FileName} · {Field} {Value}";
+}
+
+/// <summary>
+/// One card in the Projects screen's change list: an item and every change recorded on it, laid out
+/// the same way as Build's "What's in this mod" so the two screens read alike.
+/// </summary>
+public sealed class ProjectChangeGroup
+{
+    public ProjectChangeGroup(IReadOnlyList<ProjectChangeRow> rows) => Rows = rows;
+
+    /// <summary>Every change recorded on this item, in the order they were recorded.</summary>
+    public IReadOnlyList<ProjectChangeRow> Rows { get; }
+
+    /// <summary>The file's own name (the last part of its game path), e.g. <c>Nails_ES</c>.</summary>
+    public string FileName => Rows[0].FileName;
+
+    /// <summary>How many changes this item holds, in plain words.</summary>
+    public string ChangeCountText => Rows.Count == 1 ? "1 change" : $"{Rows.Count} changes";
 }

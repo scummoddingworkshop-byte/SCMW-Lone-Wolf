@@ -93,7 +93,11 @@ public class ProjectsViewTests
                 .Select(t => t.Text).ToList();
 
             Assert.Contains("What this mod changes", texts);
-            Assert.Contains(texts, t => t is not null && t.Contains("Duct Tape") && t.Contains("25"));
+            Assert.Contains("Duct_Tape", texts);                       // the file's own name, no path
+            Assert.Contains("Max stack", texts);                       // the value that changed
+            Assert.Contains("→ 25", texts);                            // what it became
+            Assert.Contains("1 change", texts);                        // how many on that item
+            Assert.DoesNotContain(texts, t => t is not null && t.Contains("/a/Duct_Tape"));
         }
         finally { Cleanup(root); }
     }
