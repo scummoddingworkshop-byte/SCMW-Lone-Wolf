@@ -572,6 +572,53 @@ public class CookingEditorTests
         Assert.Empty(view.GetVisualDescendants().OfType<Button>().Where(b => b.Name == "ResetCookingResource" && b.IsVisible));
     }
 
+    [AvaloniaFact]
+    public void An_ingredient_title_that_is_a_key_reads_as_untitled()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Cooking", "Dish Salad Tomato", new[]
+        {
+            Field("MainIngredients[0].IngredientTitle", "Ingredient_Tomato"),
+            Field("MainIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+            Field("MainIngredients[1].IngredientTitle", "9B87358E4207E2F557C29890465D67A1"),
+            Field("MainIngredients[1].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+        });
+
+        // A real title is shown as it is; a bare string-table key is not worth showing the owner.
+        Assert.Equal("Ingredient_Tomato", vm.CookingSlots[0].Title!.Value);
+        Assert.Equal("Untitled", vm.CookingSlots[1].Title!.Value);
+        Assert.False(vm.CookingSlots[1].Title!.IsChanged);   // and it does not read as a change either
+    }
+
+    [AvaloniaFact]
+    public async Task Naming_an_untitled_ingredient_records_the_new_title()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var source = new DishSource(new[]
+            {
+                Field("MainIngredients[0].IngredientTitle", "9B87358E4207E2F557C29890465D67A1"),
+                Field("MainIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+            });
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), TestProjects.ChangeStore(projects), projects);
+
+            await vm.OpenKindAsync("Cooking");
+            await vm.OpenAsync(vm.VisibleAssets.Single());
+
+            var title = vm.CookingSlots[0].Title!;
+            vm.BeginEditCommand.Execute(title);
+            title.Draft = "Ingredient_Pepper";
+            vm.CommitEditCommand.Execute(title);
+
+            var record = Assert.Single(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath));
+            Assert.Equal("MainIngredients[0].IngredientTitle", record.FieldTechnicalName);
+            Assert.Equal("Ingredient_Pepper", record.NewValue);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     /// <summary>Open the fake dish in a workspace with a chosen project; returns the view model.</summary>
     private static async Task<(WorkspaceViewModel Vm, DishSource Source)> DishOpened(ProjectStore? projects)
     {

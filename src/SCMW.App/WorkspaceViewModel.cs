@@ -2276,6 +2276,31 @@ public partial class WorkspaceViewModel : ObservableObject
         return new RecipeTag(file, RecipeTags.Label(file), slash >= 0 ? text : null);
     }
 
+    /// <summary>
+    /// The plain words for a dish ingredient's title. Some dishes store the title as a string-table
+    /// key (a bare 32-character hex id) rather than words; showing that to the owner says nothing, so
+    /// it reads as "Untitled" and can be named from the box.
+    /// </summary>
+    public static string PlainTitle(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "Untitled";
+
+        var text = raw.Trim();
+        return IsKey(text) ? "Untitled" : text;
+    }
+
+    /// <summary>True for a bare string-table key: 32 characters, all hex.</summary>
+    private static bool IsKey(string text)
+    {
+        if (text.Length != 32) return false;
+        foreach (var c in text)
+        {
+            if (!Uri.IsHexDigit(c)) return false;
+        }
+
+        return true;
+    }
+
     /// <summary>The owner-facing label for a skill tier.</summary>
     private static string SkillLabel(SkillLevel level) => level switch
     {
@@ -2347,13 +2372,13 @@ public partial class WorkspaceViewModel : ObservableObject
             if (ingredient.Title is not null)
             {
                 var path = CookingIngredients.TitlePath(isMain, index);
-                var gameValue = ingredient.Title.CurrentValue;
+                var gameValue = PlainTitle(ingredient.Title.CurrentValue);
                 var applied = string.IsNullOrEmpty(assetPath)
                     ? gameValue
-                    : AppliedValue.ResolveForAsset(records, assetPath, title, path, gameValue) ?? gameValue;
+                    : PlainTitle(AppliedValue.ResolveForAsset(records, assetPath, title, path, gameValue) ?? gameValue);
                 var original = string.IsNullOrEmpty(assetPath)
                     ? gameValue
-                    : AppliedValue.OriginalForAsset(records, assetPath, title, path) ?? gameValue;
+                    : PlainTitle(AppliedValue.OriginalForAsset(records, assetPath, title, path) ?? gameValue);
 
                 titleField = new WorkspaceField(
                     label: "Title", unit: string.Empty, value: gameValue,
