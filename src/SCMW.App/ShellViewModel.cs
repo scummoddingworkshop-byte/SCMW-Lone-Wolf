@@ -97,7 +97,8 @@ public partial class ShellViewModel : ObservableObject
         _bulkView = new BulkTableView { DataContext = _bulk };
         _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
                                           gameReady: () => IsScumConfigured(store),
-                                          source: ContentSource);
+                                          source: ContentSource,
+                                          openItem: OpenItemInWorkspace);
         _projectsView = new ProjectsView { DataContext = _projects };
         _modList = new ModList();
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
@@ -516,6 +517,16 @@ public partial class ShellViewModel : ObservableObject
     private bool MatchesKind(NavItem item) =>
         !item.Creates
         && (item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal));
+
+    /// <summary>Opens one of the chosen mod's items in the Workspace, ready to edit (the Projects
+    /// screen's change cards call this).</summary>
+    private void OpenItemInWorkspace(string assetPath) => _ = OpenItemInWorkspaceAsync(assetPath);
+
+    private async Task OpenItemInWorkspaceAsync(string assetPath)
+    {
+        if (await _workspaceVm.OpenAssetByPathAsync(assetPath).ConfigureAwait(true))
+            _nav.GoTo(ScreenKey.Workspace);
+    }
 
     /// <summary>Remembers the current screen so the next launch can reopen on it.</summary>
     private void SaveLastScreen(ScreenKey key)

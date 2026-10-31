@@ -2584,6 +2584,73 @@ public partial class WorkspaceViewModel : ObservableObject
         HasFields = Fields.Count > 0;
     }
 
+    /// <summary>
+    /// Open the item whose game path is given, in whichever list holds it, so a change can be opened
+    /// straight from the Projects screen. Returns false when no list holds it.
+    /// </summary>
+    public async System.Threading.Tasks.Task<bool> OpenAssetByPathAsync(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return false;
+
+        var original = SelectedKind;
+
+        // The list already open is tried first, so the common case costs nothing.
+        var order = new System.Collections.Generic.List<string> { SelectedKind };
+        order.AddRange(Kinds.Where(k => !string.Equals(k, SelectedKind, StringComparison.Ordinal)));
+
+        foreach (var kind in order)
+        {
+            await OpenKindAsync(kind).ConfigureAwait(true);
+
+            // The list is filled on the UI thread; let that finish before searching it.
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { });
+
+            var asset = VisibleAssets.FirstOrDefault(a => SameAssetPath(a.AssetId, assetPath));
+            if (asset is null)
+            {
+                SCMW.Core.Logging.Log.Info(
+                    $"open by path: no match for '{assetPath}' in {kind} ({VisibleAssets.Count} assets); " +
+                    $"first: {VisibleAssets.FirstOrDefault()?.AssetId}");
+                continue;
+            }
+
+            SelectedAsset = asset;
+            await OpenAsync(asset).ConfigureAwait(true);
+            return true;
+        }
+
+        // No list holds it: put the Workspace back where the player left it.
+        if (!string.Equals(SelectedKind, original, StringComparison.Ordinal))
+            await OpenKindAsync(original).ConfigureAwait(true);
+
+        return false;
+    }
+
+    /// <summary>Two entries name the same asset when their paths match, when their file names match,
+    /// or when one is the item and the other its <c>_ES</c> class file.</summary>
+    private static bool SameAssetPath(string? left, string right)
+    {
+        if (string.IsNullOrEmpty(left)) return false;
+
+        if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase)) return true;
+
+        var a = BareName(left);
+        var b = BareName(right);
+        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return string.Equals(a + "_ES", b, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(a, b + "_ES", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>An entry's own name without its folder or its <c>.Package</c> suffix, so a game path
+    /// and a recorded asset name for the same thing compare equal.</summary>
+    private static string BareName(string path)
+    {
+        var name = SCMW.Core.Content.AssetNames.FileName(path);
+        var dot = name.LastIndexOf('.');
+        return dot > 0 ? name[..dot] : name;
+    }
+
     /// <summary>Open a file: remember it, then read and show ITS own fields from the game — the
     /// rows come from the file itself, never a fixed list for its kind. Never throws.</summary>
     public async System.Threading.Tasks.Task OpenAsync(ItemSummary asset)

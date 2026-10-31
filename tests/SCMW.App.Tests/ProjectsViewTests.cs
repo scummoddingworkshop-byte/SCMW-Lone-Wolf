@@ -94,7 +94,7 @@ public class ProjectsViewTests
 
             Assert.Contains("What this mod changes", texts);
             Assert.Contains("Duct Tape", texts);                       // the friendly name, like Build
-            Assert.Contains("Max stack", texts);                       // the value that changed
+            Assert.Contains(vm.Changes[0].Rows[0].Field, texts);        // the value that changed, in words
             Assert.Contains("→ 25", texts);                            // what it became
             Assert.Contains("1 change", texts);                        // how many on that item
             Assert.DoesNotContain(texts, t => t is not null && t.Contains("/a/Duct_Tape"));

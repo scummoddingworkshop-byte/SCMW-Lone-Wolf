@@ -177,6 +177,56 @@ public class ProjectsViewModelTests
         finally { Cleanup(root); }
     }
 
+    [AvaloniaFact] // a change's value is named the way the Modify screen names it
+    public void A_changed_value_is_named_in_plain_words_not_its_technical_name()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "GridInventoryRowSpan", "2", "1", project.Id,
+                               assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            var row = Assert.Single(Assert.Single(vm.Changes).Rows);
+
+            Assert.Equal("Height in grid", row.Field);               // the words the Modify screen uses
+            Assert.Equal("GridInventoryRowSpan", row.FieldTechnical); // the game's own name stays for the tip
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // clicking a change card asks the shell to open that item
+    public void Opening_a_change_card_asks_for_that_item()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id,
+                               assetPath: "/a/Duct_Tape_ES");
+
+            string? asked = null;
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes,
+                                           openItem: path => asked = path);
+
+            vm.OpenItemCommand.Execute(Assert.Single(vm.Changes));
+
+            Assert.Equal("/a/Duct_Tape_ES", asked);
+        }
+        finally { Cleanup(root); }
+    }
+
     [AvaloniaFact] // "one project = one mod": each project holds its own change list
     public void Two_projects_keep_their_own_change_lists()
     {

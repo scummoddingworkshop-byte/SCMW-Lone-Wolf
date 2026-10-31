@@ -24,18 +24,22 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly ItemChangeStore? _changes;
     private readonly Func<bool>? _gameReady;
     private readonly SCMW.Core.Content.IContentSource? _source;
+    private readonly Action<string>? _openItem;
+    private readonly SCMW.Core.Knowledge.FieldLibrary _library = SCMW.Core.Knowledge.FieldLibraryLoader.LoadDefault();
     private bool _welcomeDismissed;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
 
     public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null,
-                             Func<bool>? gameReady = null, SCMW.Core.Content.IContentSource? source = null)
+                             Func<bool>? gameReady = null, SCMW.Core.Content.IContentSource? source = null,
+                             Action<string>? openItem = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
         _changes = changes;
         _gameReady = gameReady;
         _source = source;
+        _openItem = openItem;
         _store.Changed += Refresh;
         if (_changes is not null) _changes.Changed += Refresh;
 
@@ -175,7 +179,8 @@ public partial class ProjectsViewModel : ObservableObject
         if (chosen is not null && _changes is not null)
         {
             var groups = _changes.For(chosen.FolderPath)
-                                .Select(record => new ProjectChangeRow(record))
+                                .Select(record => new ProjectChangeRow(
+                                    record, _library.LabelFor(record.FieldTechnicalName)))
                                 .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
 
             foreach (var group in groups)
@@ -328,6 +333,16 @@ public partial class ProjectsViewModel : ObservableObject
         _store.SetCurrent(project.Id);
     }
 
+    /// <summary>Opens one of this mod's items in the Workspace, ready to edit it. The shell does the
+    /// walking; this screen only says which item was asked for.</summary>
+    [RelayCommand]
+    private void OpenItem(ProjectChangeGroup? group)
+    {
+        if (group is null || string.IsNullOrEmpty(group.Path)) return;
+
+        _openItem?.Invoke(group.Path);
+    }
+
     /// <summary>Undo one recorded change (Task 4.2) — removes exactly that record, nothing else.</summary>
     [RelayCommand]
     private void UndoChange(ProjectChangeRow? row)
@@ -377,12 +392,13 @@ public partial class ProjectsViewModel : ObservableObject
 /// </summary>
 public sealed class ProjectChangeRow
 {
-    public ProjectChangeRow(ChangeRecord record)
+    public ProjectChangeRow(ChangeRecord record, string? label = null)
     {
         Id = record.Id;
         Asset = record.AssetId;
         Path = string.IsNullOrEmpty(record.AssetPath) ? record.AssetId : record.AssetPath;
-        Field = record.FieldTechnicalName;
+        FieldTechnical = record.FieldTechnicalName;
+        Field = label ?? SCMW.Core.Content.ChangeWords.For(record.FieldTechnicalName);
         Value = record.Operation switch
         {
             ChangeOperation.Multiply => "×" + record.NewValue,
@@ -401,8 +417,11 @@ public sealed class ProjectChangeRow
     /// <summary>The asset's game path when it has one (else its recorded id).</summary>
     public string Path { get; }
 
-    /// <summary>The field that changed.</summary>
+    /// <summary>The field that changed, in the words the Modify screen uses ("Height in grid rows").</summary>
     public string Field { get; }
+
+    /// <summary>The field's own game name ("GridInventoryRowSpan"), kept for the tooltip.</summary>
+    public string FieldTechnical { get; }
 
     /// <summary>The change in plain words ("→ 25", "×2", "added an entry").</summary>
     public string Value { get; }
@@ -441,6 +460,9 @@ public sealed class ProjectChangeGroup
 
     /// <summary>The file's own name (the last part of its game path), e.g. <c>Nails_ES</c>.</summary>
     public string FileName => Rows[0].FileName;
+
+    /// <summary>The item's full game path — what the shell opens when the card is clicked.</summary>
+    public string Path => Rows[0].Path;
 
     /// <summary>How many changes this item holds, in plain words.</summary>
     public string ChangeCountText => Rows.Count == 1 ? "1 change" : $"{Rows.Count} changes";

@@ -120,7 +120,9 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ProjectChangeGroup">
-                <Border Classes="card" Padding="14,12">
+                <Border Classes="card" Padding="14,12" Classes.clickable="True"
+                        PointerReleased="OnChangeCardReleased"
+                        ToolTip.Tip="Open this item in the Modify screen">
                   <StackPanel Spacing="10">
 
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
@@ -152,7 +154,8 @@
                               <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding Field}" FontSize="12"
-                                       Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
+                                       Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
+                                       ToolTip.Tip="{Binding FieldTechnical}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12"
                                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <Button Grid.Column="2" Classes="secondary" Content="Undo"

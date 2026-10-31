@@ -194,6 +194,10 @@
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
   </Style>
 
+  <!-- A card that does something when clicked: its border lights up on hover, like a rail row. -->
+  <Style Selector="Border.clickable:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
   <!-- Quick-action tile: a button that lights its border on hover. -->
   <Style Selector="Button.quickaction">
     <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>

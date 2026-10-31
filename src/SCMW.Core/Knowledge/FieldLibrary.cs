@@ -35,6 +35,25 @@ public sealed class FieldLibrary
         return null;
     }
 
+    /// <summary>The label the app shows for a field name, looked up across every kind. Used where a
+    /// screen holds a change record but not the kind it came from (the Projects screen).</summary>
+    public string? LabelFor(string? fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName)) return null;
+
+        var wanted = fieldName.Trim();
+        foreach (var fields in _byKind.Values)
+        {
+            foreach (var field in fields)
+            {
+                if (string.Equals(field.Name, wanted, StringComparison.OrdinalIgnoreCase))
+                    return field.Label;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Every field the library describes for <paramref name="kind"/>, in file order.
     /// Empty when the kind has no described fields.</summary>
     public IReadOnlyList<FieldDefinition> ForKind(string kind)
