@@ -139,10 +139,13 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- What can be done in this list, in plain words, brighter than a caption. -->
-      <TextBlock Grid.Row="1" Name="BrowsingLine" Classes="hint" Text="{Binding BrowsingLine}"
-                 TextWrapping="Wrap" Margin="0,2,0,6"
-                 ToolTip.Tip="The list you are in"/>
+      <!-- What can be done in this list: a band like the rail's MAKE / SHIP headings, with a line
+           above and below so it sits clear of the buttons and the search box. -->
+      <Border Grid.Row="1" Name="BrowsingBand" Margin="0,4,0,4" Padding="0,8"
+              BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,1">
+        <TextBlock Name="BrowsingLine" Classes="bandNote" Text="{Binding BrowsingLine}"
+                   TextWrapping="Wrap" ToolTip.Tip="The list you are in"/>
+      </Border>
 
       <TextBox Grid.Row="2" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
                Text="{Binding Search, Mode=TwoWay}"/>

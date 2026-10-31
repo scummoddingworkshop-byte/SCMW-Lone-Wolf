@@ -43,6 +43,15 @@
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
   </Style>
+  <!-- A note that reads as a band heading, like the rail's MAKE / SHIP labels: letter-spaced and
+       upper-case, but bright enough to be read as a full sentence. -->
+  <Style Selector="TextBlock.bandNote">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    <Setter Property="LetterSpacing" Value="1"/>
+    <Setter Property="app:UppercaseText.Enabled" Value="True"/>
+  </Style>
   <!-- Good news (a folder found, a build ready) and bad news: one home, so every screen agrees. -->
   <Style Selector="TextBlock.good">
     <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>

@@ -311,6 +311,25 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
+    public void The_line_under_the_buttons_reads_as_a_band()
+    {
+        var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
+        var window = new Window { Content = view, Width = 1200, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        var band = view.FindControl<Border>("BrowsingBand");
+        Assert.NotNull(band);
+        Assert.Equal(new Thickness(0, 1, 0, 1), band!.BorderThickness);   // a line above and below
+        Assert.NotNull(band.BorderBrush);
+        Assert.True(band.Padding.Top >= 6 && band.Padding.Bottom >= 6);   // room above and below the words
+
+        var line = band.Child as TextBlock;
+        Assert.NotNull(line);
+        Assert.Contains("bandNote", line!.Classes);
+    }
+
+    [AvaloniaFact]
     public void The_four_job_buttons_are_all_the_same_size()
     {
         var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
