@@ -4,11 +4,12 @@ using System.Linq;
 
 namespace SCMW.App;
 
-/// <summary>The rail's bands, top to bottom (design §5). <see cref="Home"/> is a single row above
-/// the labelled bands.</summary>
+/// <summary>The rail's bands, top to bottom (design §5). <see cref="Home"/> is the unlabelled group at
+/// the top, which holds the places a player goes rather than the work they do.</summary>
 public enum NavBand
 {
     Home,
+    Modify,
     Make,
     Ship,
     App,
@@ -18,31 +19,22 @@ public enum NavBand
 public sealed record NavBandGroup(NavBand Band, IReadOnlyList<NavItem> Items);
 
 /// <summary>
-/// One source of truth for which band an area sits in, and the grouping that builds the rail
-/// from it. Rows are ordered as the design lists them; empty bands are dropped.
+/// One source of truth for which band a row sits in, and the grouping that builds the rail from it.
+/// Rows keep the order they were built in, so the rail reads exactly like the list the shell builds.
 /// </summary>
 public static class NavBands
 {
     /// <summary>The bands in rail order.</summary>
     public static IReadOnlyList<NavBand> All { get; } =
-        new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App };
-
-    /// <summary>The rail rows in the order the design lists them. Home sits above the bands.</summary>
-    private static readonly ScreenKey[] RailOrder =
-    {
-        ScreenKey.Home,
-        ScreenKey.Workspace, ScreenKey.BulkEdit, ScreenKey.Projects,
-        ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups,
-        ScreenKey.Settings, ScreenKey.Help,
-    };
+        new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App };
 
     /// <summary>The band an area sits in. Every area has one — adding a screen forces a choice here.</summary>
     public static NavBand For(ScreenKey key) => key switch
     {
         ScreenKey.Home => NavBand.Home,
-        ScreenKey.Workspace => NavBand.Make,
-        ScreenKey.BulkEdit => NavBand.Make,
-        ScreenKey.Projects => NavBand.Make,
+        ScreenKey.Projects => NavBand.Home,      // a place to go, so it sits with Home
+        ScreenKey.Workspace => NavBand.Modify,   // the four modifying jobs
+        ScreenKey.BulkEdit => NavBand.Modify,
         ScreenKey.Build => NavBand.Ship,
         ScreenKey.Mods => NavBand.Ship,
         ScreenKey.Backups => NavBand.Ship,
@@ -51,19 +43,15 @@ public static class NavBands
         _ => NavBand.App,
     };
 
-    /// <summary>Groups rail rows under their band, in band order, each band in the design's row order.</summary>
+    /// <summary>The band a row sits in: creating something new has its own band, whatever screen it opens.</summary>
+    public static NavBand For(NavItem item) => item.Creates ? NavBand.Make : For(item.Key);
+
+    /// <summary>Groups rail rows under their band, in band order, keeping each band's own order.</summary>
     public static IReadOnlyList<NavBandGroup> Group(IEnumerable<NavItem> items)
     {
         var byBand = items.ToLookup(i => i.Band);
         return All.Where(b => byBand[b].Any())
-                  .Select(b => new NavBandGroup(b, byBand[b].OrderBy(i => Rank(i.Key)).ToList()))
+                  .Select(b => new NavBandGroup(b, byBand[b].ToList()))
                   .ToList();
-    }
-
-    /// <summary>A row's position in the design's rail order; unknown areas sort last.</summary>
-    private static int Rank(ScreenKey key)
-    {
-        var index = Array.IndexOf(RailOrder, key);
-        return index < 0 ? int.MaxValue : index;
     }
 }

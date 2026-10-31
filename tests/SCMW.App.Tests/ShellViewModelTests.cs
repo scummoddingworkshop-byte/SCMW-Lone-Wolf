@@ -5,19 +5,20 @@ namespace SCMW.App.Tests;
 public class ShellViewModelTests
 {
     [AvaloniaFact]
-    public void Sidebar_lists_the_areas_in_order()
+    public void Sidebar_lists_the_places_then_the_jobs_then_the_rest()
     {
         var vm = new ShellViewModel(new NavigationHost());
 
         Assert.Equal(
             new[]
             {
-                ScreenKey.Home,
-                ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace,
-                ScreenKey.BulkEdit, ScreenKey.Projects,
-                ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,
+                "Home", "Projects",
+                "Modify an item's value", "Modify a base part", "Modify a crafting recipe", "Modify a cooking recipe",
+                "New item", "New base part", "New crafting recipe", "New cooking recipe",
+                "Modify in bulk",
+                "Build", "Mods Management", "Backups", "Settings", "Help",
             },
-            vm.Sidebar.Select(i => i.Key));
+            vm.Sidebar.Select(i => i.Label));
     }
 
     [AvaloniaFact]

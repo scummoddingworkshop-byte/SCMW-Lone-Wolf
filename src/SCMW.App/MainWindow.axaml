@@ -64,7 +64,8 @@
                          SelectedItem="{Binding Selected, Mode=TwoWay}">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:NavItem">
-                      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+                                  Classes.comingSoon="{Binding ComingSoon}">
                         <Panel Width="18" Height="18" VerticalAlignment="Center">
                           <Image Source="{Binding Icon}" Width="18" Height="18" Stretch="Uniform"
                                  IsVisible="{Binding !$parent[ListBoxItem].IsSelected}"/>
@@ -72,6 +73,10 @@
                                  IsVisible="{Binding $parent[ListBoxItem].IsSelected}"/>
                         </Panel>
                         <TextBlock Text="{Binding Label}" FontSize="14" VerticalAlignment="Center"/>
+                        <!-- A described idea that is not built yet says so, instead of doing nothing quietly. -->
+                        <TextBlock Text="SOON" FontSize="9" FontWeight="SemiBold" LetterSpacing="0.6"
+                                   Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
+                                   Margin="0,2,0,0" IsVisible="{Binding ComingSoon}"/>
                       </StackPanel>
                     </DataTemplate>
                   </ListBox.ItemTemplate>
@@ -106,6 +111,10 @@
       <Setter Property="Margin" Value="0,1"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <!-- A "coming soon" idea is dimmed and carries a SOON tag; the shell also refuses to pick it. -->
+    <Style Selector="StackPanel.comingSoon">
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="ListBox.rail ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>

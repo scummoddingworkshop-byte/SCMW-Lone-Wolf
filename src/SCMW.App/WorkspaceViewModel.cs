@@ -815,6 +815,17 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Open one list and start a brand-new asset of the kind that list creates. Used by the rail's
+    /// MAKE rows, so the player never has to say twice what they want to make.
+    /// </summary>
+    public async System.Threading.Tasks.Task StartCreatingAsync(string kind)
+    {
+        if (!IsLoadedKind(kind)) await OpenKindAsync(kind).ConfigureAwait(true);
+
+        OpenNewRecipe();
+    }
+
+    /// <summary>
     /// Record one brand-new asset from the typed name and the picked donor, then open it for editing.
     /// Refused (nothing recorded) with a plain reason when there is no project, no donor, no usable
     /// name, or the name is already taken.

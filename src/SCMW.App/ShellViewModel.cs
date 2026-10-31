@@ -123,17 +123,26 @@ public partial class ShellViewModel : ObservableObject
 
         Sidebar = new[]
         {
+            // The top group: the places a player goes, with no band heading over them.
             Nav(ScreenKey.Home, "Home"),
-            // The four jobs took the old "Workspace" row's place: each one opens the Workspace on
-            // the list it edits, so the job is picked before the page is even reached.
+            Nav(ScreenKey.Projects, "Projects"),
+
+            // MODIFY: change something that already exists.
             Job("Items"),
             Job("Base building"),
             Job("Recipes"),
             Job("Cooking"),
+
+            // MAKE: create something new. The last two are described but not built yet, so they show
+            // greyed with "soon" rather than pretending to work.
+            Create("Items", "New item"),
+            Create("Base building", "New base part", comingSoon: true),
+            Create("Recipes", "New crafting recipe"),
+            Create("Cooking", "New cooking recipe", comingSoon: true),
+
             // "Modify in bulk" is hidden from the rail for now — its screen and mechanics stay in
             // place, so dropping the hidden flag brings the row back when we review it.
             Nav(ScreenKey.BulkEdit, "Modify in bulk", hidden: true),
-            Nav(ScreenKey.Projects, "Projects"),
             Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods Management"),
             Nav(ScreenKey.Backups, "Backups"),
@@ -229,6 +238,18 @@ public partial class ShellViewModel : ObservableObject
         var chip = KindChip.All.First(c => string.Equals(c.Key, kind, StringComparison.Ordinal));
         var (light, dark) = RailIcons.ForKind(kind);
         return new NavItem(ScreenKey.Workspace, chip.Label, light, dark) { Kind = kind };
+    }
+
+    /// <summary>One of the MAKE rows: open that list and start a brand-new asset of its kind.</summary>
+    private static NavItem Create(string kind, string label, bool comingSoon = false)
+    {
+        var (light, dark) = RailIcons.ForKind(kind);
+        return new NavItem(ScreenKey.Workspace, label, light, dark)
+        {
+            Kind = kind,
+            Creates = true,
+            ComingSoon = comingSoon,
+        };
     }
 
     /// <summary>True once the player has told us where SCUM is and given an unlock key.</summary>
@@ -398,10 +419,21 @@ public partial class ShellViewModel : ObservableObject
 
     partial void OnSelectedEntryChanged(NavItem value)
     {
+        if (!value.CanPick)
+        {
+            // A "coming soon" idea was clicked: put the highlight back where the open screen is.
+            SyncRailSelection();
+            return;
+        }
+
         // A job row picks the Workspace list as well as opening the screen.
         if (value.Kind is { } kind) _workspaceVm.SelectedKind = kind;
 
         _nav.GoTo(value.Key);
+
+        // A MAKE row goes one step further: it starts a brand-new asset of that list's kind.
+        if (value is { Creates: true, Kind: { } creating })
+            _ = _workspaceVm.StartCreatingAsync(creating);
     }
 
     /// <summary>A rail row was clicked in one of the bands: make it the current screen.</summary>
@@ -488,9 +520,11 @@ public partial class ShellViewModel : ObservableObject
         }
     }
 
-    /// <summary>True for a row with no list of its own, or the one whose list is open.</summary>
+    /// <summary>True for a row with no list of its own, or the modify row whose list is open. The MAKE
+    /// rows share the same list but are never the lit one.</summary>
     private bool MatchesKind(NavItem item) =>
-        item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal);
+        !item.Creates
+        && (item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal));
 
     /// <summary>Remembers the current screen so the next launch can reopen on it.</summary>
     private void SaveLastScreen(ScreenKey key)

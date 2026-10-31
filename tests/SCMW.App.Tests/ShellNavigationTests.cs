@@ -14,14 +14,15 @@ namespace SCMW.App.Tests;
 public class ShellNavigationTests
 {
     [Fact]
-    public void Bands_run_Home_Make_Ship_App_in_order()
-        => Assert.Equal(new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App }, NavBands.All);
+    public void Bands_run_Home_Modify_Make_Ship_App_in_order()
+        => Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
+                        NavBands.All);
 
     [Theory]
     [InlineData(ScreenKey.Home, NavBand.Home)]
-    [InlineData(ScreenKey.Workspace, NavBand.Make)]
-    [InlineData(ScreenKey.BulkEdit, NavBand.Make)]
-    [InlineData(ScreenKey.Projects, NavBand.Make)]
+    [InlineData(ScreenKey.Workspace, NavBand.Modify)]
+    [InlineData(ScreenKey.BulkEdit, NavBand.Modify)]
+    [InlineData(ScreenKey.Projects, NavBand.Home)]
     [InlineData(ScreenKey.Build, NavBand.Ship)]
     [InlineData(ScreenKey.Mods, NavBand.Ship)]
     [InlineData(ScreenKey.Backups, NavBand.Ship)]
@@ -45,19 +46,20 @@ public class ShellNavigationTests
             new NavItem(ScreenKey.Settings, "Settings"),
             new NavItem(ScreenKey.Mods, "Mods Management"),
             new NavItem(ScreenKey.Backups, "Backups"),
-            new NavItem(ScreenKey.Workspace, "Workspace"),
+            new NavItem(ScreenKey.Workspace, "Modify an item's value"),
         };
 
         var groups = NavBands.Group(items);
 
-        Assert.Equal(new[] { NavBand.Make, NavBand.Ship, NavBand.App },
+        // Bands come in rail order; the rows inside a band keep the order they were given.
+        Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Ship, NavBand.App },
                      groups.Select(g => g.Band));
-        Assert.Equal(new[] { ScreenKey.Workspace, ScreenKey.Projects },
-                     groups[0].Items.Select(i => i.Key));
+        Assert.Equal(new[] { "Projects" }, groups[0].Items.Select(i => i.Label));
+        Assert.Equal(new[] { "Modify an item's value" }, groups[1].Items.Select(i => i.Label));
         Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
-                     groups[1].Items.Select(i => i.Key));
-        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      groups[2].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Help, ScreenKey.Settings },   // the order they were given
+                     groups[3].Items.Select(i => i.Key));
     }
 
     [AvaloniaFact]
@@ -65,17 +67,15 @@ public class ShellNavigationTests
     {
         var vm = new ShellViewModel(new NavigationHost());
 
-        Assert.Equal(new[] { NavBand.Home, NavBand.Make, NavBand.Ship, NavBand.App },
+        Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
                      vm.Bands.Select(b => b.Band));
-        Assert.Equal(new[] { ScreenKey.Home }, vm.Bands[0].Items.Select(i => i.Key));
-        Assert.Equal(
-            new[] { ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace,
-                    ScreenKey.Projects },
-            vm.Bands[1].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Home, ScreenKey.Projects }, vm.Bands[0].Items.Select(i => i.Key));
+        Assert.All(vm.Bands[1].Items, i => Assert.False(i.Creates));
+        Assert.All(vm.Bands[2].Items, i => Assert.True(i.Creates));
         Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
-                     vm.Bands[2].Items.Select(i => i.Key));
-        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      vm.Bands[3].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
+                     vm.Bands[4].Items.Select(i => i.Key));
     }
 
     [AvaloniaFact]
