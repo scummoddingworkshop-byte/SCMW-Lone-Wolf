@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -58,6 +59,23 @@ public partial class App : Application
             // Reopen at the size and place the player last left it.
             WindowPlacement.Apply(window, settingsStore.Load());
             window.Closing += (_, _) => WindowPlacement.Save(window, settingsStore);
+
+            // The Workspace's divider: start at the width the player last chose, and save each drag.
+            WorkspaceLayout.Restore(settingsStore.Load().WorkspaceListWidth);
+            WorkspaceLayout.WidthChanged += width =>
+            {
+                try
+                {
+                    settingsStore.Save(settingsStore.Load() with
+                    {
+                        WorkspaceListWidth = (int)Math.Round(width),
+                    });
+                }
+                catch
+                {
+                    // Remembering the divider must never get in the way of using the app.
+                }
+            };
 
             // Let "Restart as administrator" close this window cleanly (so its place is remembered).
             WindowsElevation.Default.Shutdown = () => desktop.Shutdown();

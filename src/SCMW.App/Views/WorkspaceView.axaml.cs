@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
@@ -20,6 +21,22 @@ public partial class WorkspaceView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
         DataContextChanged += (_, _) => HookViewModel();
+        HookDivider();
+    }
+
+    /// <summary>
+    /// Starts the list at the width the player last chose, and records any drag of the divider so
+    /// the next launch opens the same way.
+    /// </summary>
+    private void HookDivider()
+    {
+        if (this.FindControl<Grid>("WorkspaceColumns") is not { } columns) return;
+        if (columns.ColumnDefinitions.Count == 0 || columns.ColumnDefinitions[0] is not { } list) return;
+
+        list.Width = new GridLength(WorkspaceLayout.SavedWidth);
+
+        if (this.FindControl<GridSplitter>("ListSplitter") is { } splitter)
+            splitter.DragCompleted += (_, _) => WorkspaceLayout.Remember(list.ActualWidth);
     }
 
     /// <summary>Follow the view model so the New-recipe panel's dropdown can be rebuilt per open.</summary>

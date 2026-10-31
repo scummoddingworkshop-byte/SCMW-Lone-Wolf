@@ -1,8 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SCMW.App.Controls.ItemRow">
-  <StackPanel Orientation="Horizontal" Spacing="10">
-    <Border Classes="thumb" Width="32" Height="32" VerticalAlignment="Center">
+  <!-- A grid, not a stack, so a long name gets the rest of the row's width and ends in "…"
+       instead of spilling past the list when the column is dragged narrow. -->
+  <Grid ColumnDefinitions="Auto,*">
+    <Border Grid.Column="0" Classes="thumb" Width="32" Height="32" VerticalAlignment="Center"
+            Margin="0,0,10,0">
       <Panel>
         <TextBlock Name="DefaultMark" Text="SCMW" FontSize="8"
                    Foreground="{StaticResource TextDimBrush}"
@@ -10,9 +13,9 @@
         <Image Name="Picture" Stretch="UniformToFill" IsVisible="False"/>
       </Panel>
     </Border>
-    <StackPanel VerticalAlignment="Center">
-      <TextBlock Name="NameText" FontSize="13"/>
-      <TextBlock Name="CategoryText" Classes="dim"/>
+    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+      <TextBlock Name="NameText" FontSize="13" TextTrimming="CharacterEllipsis"/>
+      <TextBlock Name="CategoryText" Classes="dim" TextTrimming="CharacterEllipsis"/>
     </StackPanel>
-  </StackPanel>
+  </Grid>
 </UserControl>

@@ -10,7 +10,8 @@ public sealed record AppSettings(string? WorkspacePath, string? GamePath, string
                                  int? WindowWidth = null, int? WindowHeight = null,
                                  bool WindowMaximized = false,
                                  bool SkipIntroVideos = false,
-                                 string? LastScreen = null);
+                                 string? LastScreen = null,
+                                 int? WorkspaceListWidth = null);
 
 public interface ISettingsStore
 {

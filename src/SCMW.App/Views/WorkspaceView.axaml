@@ -102,7 +102,14 @@
   </UserControl.Resources>
   <!-- The adapting Workspace: find a file by name and the game's own category, tick "only
        changeable" to hide the rest, then its real fields show, explained, on the right. -->
-  <Grid ColumnDefinitions="2*,12,3*" RowDefinitions="Auto,*" Margin="28,8,28,24">
+  <Grid Name="WorkspaceColumns" RowDefinitions="Auto,*" Margin="28,8,28,24">
+    <Grid.ColumnDefinitions>
+      <!-- The list column: a fixed width the player can drag, kept between a floor and a cap so
+           the page can never be dragged into something unusable. -->
+      <ColumnDefinition Width="340" MinWidth="260" MaxWidth="520"/>
+      <ColumnDefinition Width="14"/>
+      <ColumnDefinition Width="*" MinWidth="420"/>
+    </Grid.ColumnDefinitions>
 
     <!-- "One project = one mod": with nothing chosen, editing is refused and explained here. -->
     <Border Grid.Row="0" Grid.ColumnSpan="3" Name="NeedsProjectWarning" Classes="card"
@@ -173,6 +180,16 @@
         <TextBlock Text="Nothing matches that" Classes="dim"/>
       </Border>
     </Grid>
+
+    <!-- The divider between the list and the file: a thin line the player can drag. The line stays
+         one pixel so it reads as a border, while the splitter around it is wide enough to grab. -->
+    <Panel Grid.Row="1" Grid.Column="1" Margin="0,4,0,0">
+      <Border Name="ListDivider" Width="1" HorizontalAlignment="Center"
+              Background="{StaticResource BorderBrush}"/>
+      <GridSplitter Name="ListSplitter" Background="Transparent"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+    </Panel>
 
     <!-- Right: the open file's real fields, explained -->
     <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,Auto,*">
