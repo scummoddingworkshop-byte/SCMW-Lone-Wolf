@@ -21,6 +21,19 @@ public partial class InstalledMod : ObservableObject
     /// <summary>The on-disk file name (e.g. "B.pak.disabled"), or null for a sample row.</summary>
     public string? FileName { get; }
 
+    /// <summary>The project this mod was built from, when it is one of ours. Null for a mod that came
+    /// from elsewhere, or when no project of that name is open any more.</summary>
+    public string? ProjectName { get; init; }
+
+    /// <summary>True when the row has a project name to show above the file name.</summary>
+    public bool HasProjectName => !string.IsNullOrEmpty(ProjectName);
+
+    /// <summary>The words on the row: the project's name when known, else the file's own name.</summary>
+    public string ShownName => HasProjectName ? ProjectName! : Name;
+
+    /// <summary>The pak's file name, shown in brackets under the project's name.</summary>
+    public string PakUnder => HasProjectName && !string.IsNullOrEmpty(FileName) ? $"({FileName})" : "";
+
     /// <summary>True for a mod that came from elsewhere (not built here).</summary>
     public bool IsExternal { get; }
 

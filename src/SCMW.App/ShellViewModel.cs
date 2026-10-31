@@ -108,7 +108,8 @@ public partial class ShellViewModel : ObservableObject
                                     newAssets: _newAssets, sections: _sections);
         _build.Preview.OpenItemRequested += OpenItemInWorkspace;
         _buildView = new BuildView { DataContext = _build };
-        _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default);
+        _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default,
+                                  projects: _projectStore);
         _modsView = new ModsView { DataContext = _mods };
         _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore,
                                          saves: new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root));

@@ -20,17 +20,19 @@ public partial class ModsViewModel : ObservableObject
     private readonly INavigation _nav;
     private IModsService? _service;
     private readonly IElevation? _elevation;
+    private readonly ProjectStore? _projects;
     private readonly ObservableCollection<InstalledMod> _real = new();
     private bool _syncing;
     private int _added;
 
     public ModsViewModel(ModList? mods = null, INavigation? nav = null, IModsService? service = null,
-                         IElevation? elevation = null)
+                         IElevation? elevation = null, ProjectStore? projects = null)
     {
         _mods = mods ?? new ModList();
         _nav = nav ?? NavigationHost.Shared;
         _service = service;
         _elevation = elevation;
+        _projects = projects;
         _mods.PropertyChanged += (_, _) => RaiseAll();
         LoadFromService();
 
@@ -98,12 +100,32 @@ public partial class ModsViewModel : ObservableObject
         foreach (var entry in _service.List())
         {
             var mod = new InstalledMod(entry.DisplayName, entry.IsExternal, entry.IsOn, entry.FileName,
-                                       entry.Managed, entry.Location);
+                                       entry.Managed, entry.Location)
+            {
+                ProjectName = ProjectFor(entry.FileName),
+            };
             mod.PropertyChanged += OnModChanged;
             _real.Add(mod);
         }
 
         RaiseAll();
+    }
+
+    /// <summary>
+    /// The project a built pak came from. A pak is named from its project, so the project whose safe
+    /// name the file carries is the one; null when the mod came from elsewhere.
+    /// </summary>
+    private string? ProjectFor(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName) || _projects is null) return null;
+
+        foreach (var project in _projects.All())
+        {
+            var safe = SCMW.Backend.Build.BuildNames.SafeName(project.Name);
+            if (fileName.Contains(safe, StringComparison.OrdinalIgnoreCase)) return project.Name;
+        }
+
+        return null;
     }
 
     /// <summary>The row's on/off switch was flipped: rename the file, or put the switch back.</summary>

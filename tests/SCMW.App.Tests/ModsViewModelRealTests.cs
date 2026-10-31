@@ -43,6 +43,39 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
+    public void A_mod_row_names_the_project_and_shows_the_pak_file_under_it()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var svc = new FakeMods();
+            svc.Entries.Add(new ModsEntry(
+                "SCMW_My-first-mod_v1.0.0_P.pak", "SCMW_My-first-mod_v1.0.0_P", true, false));
+
+            var vm = new ModsViewModel(service: svc, projects: projects);
+            var row = Assert.Single(vm.Mods);
+
+            Assert.Equal("My first mod", row.ShownName);                        // the project's words
+            Assert.Equal("(SCMW_My-first-mod_v1.0.0_P.pak)", row.PakUnder);     // the pak, in brackets
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void A_mod_from_elsewhere_keeps_its_own_file_name()
+    {
+        var svc = new FakeMods();
+        svc.Entries.Add(new ModsEntry("SomeoneElsesMod.pak", "SomeoneElsesMod", true, true));
+
+        var vm = new ModsViewModel(service: svc);
+        var row = Assert.Single(vm.Mods);
+
+        Assert.Equal("SomeoneElsesMod", row.ShownName);
+        Assert.False(row.HasProjectName);
+        Assert.Equal("", row.PakUnder);
+    }
+
+    [AvaloniaFact]
     public void UseService_wakes_the_screen_when_the_game_is_configured()
     {
         var vm = new ModsViewModel();                    // preview mode: no service
