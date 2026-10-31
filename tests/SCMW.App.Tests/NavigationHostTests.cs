@@ -3,8 +3,8 @@ namespace SCMW.App.Tests;
 public class NavigationHostTests
 {
     [Fact]
-    public void Starts_on_Home()
-        => Assert.Equal(ScreenKey.Home, new NavigationHost().Current);
+    public void Starts_on_Projects()
+        => Assert.Equal(ScreenKey.Projects, new NavigationHost().Current);
 
     [Fact]
     public void GoTo_changes_screen_and_raises_Changed()
@@ -26,7 +26,7 @@ public class NavigationHostTests
         var raised = 0;
         nav.Changed += () => raised++;
 
-        nav.GoTo(ScreenKey.Home);
+        nav.GoTo(ScreenKey.Projects);
 
         Assert.Equal(0, raised);
     }

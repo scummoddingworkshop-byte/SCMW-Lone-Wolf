@@ -22,19 +22,43 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly ProjectStore _store;
     private readonly INavigation _nav;
     private readonly ItemChangeStore? _changes;
+    private readonly Func<bool>? _gameReady;
+    private bool _welcomeDismissed;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
 
-    public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null)
+    public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null,
+                             Func<bool>? gameReady = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
         _changes = changes;
+        _gameReady = gameReady;
         _store.Changed += Refresh;
         if (_changes is not null) _changes.Changed += Refresh;
 
         VisibleProjects = new ObservableCollection<ProjectSummary>();
         Refresh();
+        RefreshWelcome();
+    }
+
+    /// <summary>Whether the "set SCUM up first" card is showing (first run, game not configured yet).</summary>
+    [ObservableProperty] private bool _showWelcome;
+
+    /// <summary>
+    /// Re-decides the welcome card: it nudges setup until the game is configured, and stays hidden
+    /// once it is (or once the player has dismissed it this session).
+    /// </summary>
+    public void RefreshWelcome() => ShowWelcome = !_welcomeDismissed && !(_gameReady?.Invoke() ?? false);
+
+    /// <summary>The first-run card sends the player to Settings (game folder + unlock key).</summary>
+    [RelayCommand] private void StartWelcome() => _nav.GoTo(ScreenKey.Settings);
+
+    [RelayCommand]
+    private void DismissWelcome()
+    {
+        _welcomeDismissed = true;
+        ShowWelcome = false;
     }
 
     /// <summary>The projects currently shown (the filtered view of the workspace).</summary>

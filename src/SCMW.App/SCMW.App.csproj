@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,15 +6,14 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>2.19.0</Version>
-    <Product>SCMW — Lone Wolf</Product>
-    <AssemblyTitle>SCMW — Lone Wolf</AssemblyTitle>
+    <Version>2.20.0</Version>
+    <Product>SCMW � Lone Wolf</Product>
+    <AssemblyTitle>SCMW � Lone Wolf</AssemblyTitle>
     <ApplicationIcon>Assets\scmw.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\scmw.png" />
-    <AvaloniaResource Include="Assets\hero.png" />
     <AvaloniaResource Include="Assets\sidebar.png" />
     <AvaloniaResource Include="Assets\launch\*.png" />
     <AvaloniaResource Include="Assets\rail\*.png" />

@@ -12,7 +12,7 @@ public sealed class NavigationHost : INavigation
     /// <summary>App-wide instance (one per running app).</summary>
     public static NavigationHost Shared { get; } = new();
 
-    private ScreenKey _current = ScreenKey.Home;
+    private ScreenKey _current = ScreenKey.Projects;
 
     public ScreenKey Current => _current;
 

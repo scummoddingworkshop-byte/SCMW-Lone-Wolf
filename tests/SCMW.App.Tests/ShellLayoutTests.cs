@@ -14,7 +14,7 @@ public class ShellLayoutTests
 
         var labels = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
 
-        foreach (var area in new[] { "Home", "Projects", "Modify an item's value", "New item", "Build", "Mods Management", "Backups", "Settings", "Help" })
+        foreach (var area in new[] { "Projects", "Modify an item's value", "New item", "Build", "Mods Management", "Backups", "Settings", "Help" })
         {
             Assert.True(labels.Contains(area), $"missing '{area}' in: [{string.Join(" | ", labels)}]");
         }

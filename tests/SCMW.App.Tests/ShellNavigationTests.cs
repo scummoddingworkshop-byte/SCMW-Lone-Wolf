@@ -14,15 +14,14 @@ namespace SCMW.App.Tests;
 public class ShellNavigationTests
 {
     [Fact]
-    public void Bands_run_Home_Modify_Make_Ship_App_in_order()
-        => Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
+    public void Bands_run_Top_Modify_Make_Ship_App_in_order()
+        => Assert.Equal(new[] { NavBand.Top, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
                         NavBands.All);
 
     [Theory]
-    [InlineData(ScreenKey.Home, NavBand.Home)]
+    [InlineData(ScreenKey.Projects, NavBand.Top)]
     [InlineData(ScreenKey.Workspace, NavBand.Modify)]
     [InlineData(ScreenKey.BulkEdit, NavBand.Modify)]
-    [InlineData(ScreenKey.Projects, NavBand.Home)]
     [InlineData(ScreenKey.Build, NavBand.Ship)]
     [InlineData(ScreenKey.Mods, NavBand.Ship)]
     [InlineData(ScreenKey.Backups, NavBand.Ship)]
@@ -52,7 +51,7 @@ public class ShellNavigationTests
         var groups = NavBands.Group(items);
 
         // Bands come in rail order; the rows inside a band keep the order they were given.
-        Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Ship, NavBand.App },
+        Assert.Equal(new[] { NavBand.Top, NavBand.Modify, NavBand.Ship, NavBand.App },
                      groups.Select(g => g.Band));
         Assert.Equal(new[] { "Projects" }, groups[0].Items.Select(i => i.Label));
         Assert.Equal(new[] { "Modify an item's value" }, groups[1].Items.Select(i => i.Label));
@@ -67,9 +66,9 @@ public class ShellNavigationTests
     {
         var vm = new ShellViewModel(new NavigationHost());
 
-        Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
+        Assert.Equal(new[] { NavBand.Top, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
                      vm.Bands.Select(b => b.Band));
-        Assert.Equal(new[] { ScreenKey.Home, ScreenKey.Projects }, vm.Bands[0].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Projects }, vm.Bands[0].Items.Select(i => i.Key));
         Assert.All(vm.Bands[1].Items, i => Assert.False(i.Creates));
         Assert.All(vm.Bands[2].Items, i => Assert.True(i.Creates));
         Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
@@ -117,23 +116,14 @@ public class ShellNavigationTests
     }
 
     [AvaloniaFact]
-    public void The_home_row_lines_up_with_the_hero_banner()
+    public void The_app_opens_on_projects_with_its_rail_row_lit()
     {
-        var nav = new NavigationHost();
-        var window = new MainWindow { DataContext = new ShellViewModel(nav) };
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
         window.Show();
-        nav.GoTo(ScreenKey.Home);
-        Dispatcher.UIThread.RunJobs();
 
-        var label = window.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "Home");
-        var row = label.GetVisualAncestors().OfType<ListBoxItem>().First();
-        var hero = window.GetVisualDescendants().OfType<Border>().First(b => b.Name == "Hero");
-
-        var rowTop = row.TranslatePoint(new Point(0, 0), window)!.Value.Y;
-        var heroTop = hero.TranslatePoint(new Point(0, 0), window)!.Value.Y;
-
-        Assert.True(Math.Abs(rowTop - heroTop) <= 2,
-            $"the Home row sat at {rowTop} but the hero banner at {heroTop} — they should line up");
+        var first = window.GetVisualDescendants().OfType<ListBoxItem>().First();
+        Assert.True(first.IsSelected);
+        Assert.Equal("Projects", (first.DataContext as NavItem)?.Label);
     }
 
     [AvaloniaFact]

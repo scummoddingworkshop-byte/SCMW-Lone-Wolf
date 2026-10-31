@@ -13,14 +13,14 @@ public class RealProjectsWiringTests
             var vm = new ShellViewModel(new NavigationHost(), projects: store);
 
             Assert.Equal("My first mod", vm.ActiveProjectText);
-            Assert.Contains(vm.Home.RecentProjects, p => p.Name == "My first mod");
+            Assert.Contains(vm.Projects.VisibleProjects, p => p.Name == "My first mod");
             Assert.Equal("My first mod", vm.Build.ProjectName);
 
             // Rename it — everything follows.
             store.Rename(store.Current!.Id, "Tape mod");
 
             Assert.Equal("Tape mod", vm.ActiveProjectText);
-            Assert.Contains(vm.Home.RecentProjects, p => p.Name == "Tape mod");
+            Assert.Contains(vm.Projects.VisibleProjects, p => p.Name == "Tape mod");
             Assert.Equal("Tape mod", vm.Build.ProjectName);
         }
         finally { TestProjects.Cleanup(root); }
@@ -36,7 +36,6 @@ public class RealProjectsWiringTests
 
             Assert.Equal("No project open", vm.ActiveProjectText);
             Assert.Equal("No project open", vm.Build.ProjectName);
-            Assert.False(vm.Home.HasProjects);
             Assert.True(vm.Projects.ShowEmptyState);
         }
         finally { TestProjects.Cleanup(root); }

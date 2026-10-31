@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace SCMW.App;
 
-/// <summary>The rail's bands, top to bottom (design §5). <see cref="Home"/> is the unlabelled group at
+/// <summary>The rail's bands, top to bottom (design §5). <see cref="Top"/> is the unlabelled group at
 /// the top, which holds the places a player goes rather than the work they do.</summary>
 public enum NavBand
 {
-    Home,
+    Top,
     Modify,
     Make,
     Ship,
@@ -26,13 +26,12 @@ public static class NavBands
 {
     /// <summary>The bands in rail order.</summary>
     public static IReadOnlyList<NavBand> All { get; } =
-        new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App };
+        new[] { NavBand.Top, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App };
 
     /// <summary>The band an area sits in. Every area has one — adding a screen forces a choice here.</summary>
     public static NavBand For(ScreenKey key) => key switch
     {
-        ScreenKey.Home => NavBand.Home,
-        ScreenKey.Projects => NavBand.Home,      // a place to go, so it sits with Home
+        ScreenKey.Projects => NavBand.Top,       // the place the app opens on
         ScreenKey.Workspace => NavBand.Modify,   // the four modifying jobs
         ScreenKey.BulkEdit => NavBand.Modify,
         ScreenKey.Build => NavBand.Ship,

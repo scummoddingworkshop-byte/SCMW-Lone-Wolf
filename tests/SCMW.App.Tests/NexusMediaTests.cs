@@ -47,14 +47,6 @@ public class NexusMediaTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void Media_home()
-    {
-        var vm = ConfiguredShell("Duct Tape Expanded", "Military Backpack+", "Ammo Stack Adjustments");
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Home);
-        Save(new MainWindow { DataContext = vm }, "nexus-home");
-    }
-
-    [AvaloniaFact]
     public void Media_projects()
     {
         var vm = Shell("Duct Tape Expanded", "Military Backpack+", "Ammo Stack Adjustments");

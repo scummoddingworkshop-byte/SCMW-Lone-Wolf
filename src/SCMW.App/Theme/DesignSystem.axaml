@@ -194,13 +194,6 @@
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
   </Style>
 
-  <!-- Home hero band (art slot ready on top). -->
-  <Style Selector="Border.hero">
-    <Setter Property="Background" Value="{StaticResource HeroBrush}"/>
-    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="10"/>
-  </Style>
   <!-- Quick-action tile: a button that lights its border on hover. -->
   <Style Selector="Button.quickaction">
     <Setter Property="Background" Value="{StaticResource BgCardBrush}"/>

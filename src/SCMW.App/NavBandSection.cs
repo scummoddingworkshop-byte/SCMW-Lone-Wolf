@@ -18,15 +18,15 @@ public partial class NavBandSection : ObservableObject
     /// <summary>Which band this is.</summary>
     public NavBand Band { get; }
 
-    /// <summary>The band's label, upper-cased for the rail heading (empty for the Home row, which
+    /// <summary>The band's label, upper-cased for the rail heading (empty for the top row, which
     /// sits above the labelled bands with no heading).</summary>
-    public string Title => Band == NavBand.Home ? "" : Band.ToString().ToUpperInvariant();
+    public string Title => Band == NavBand.Top ? "" : Band.ToString().ToUpperInvariant();
 
-    /// <summary>True when this band shows a heading (every band except Home).</summary>
+    /// <summary>True when this band shows a heading (every band except the top one).</summary>
     public bool HasTitle => Title.Length > 0;
 
-    /// <summary>True for the single Home row above the bands (it gets extra breathing room).</summary>
-    public bool IsHome => Band == NavBand.Home;
+    /// <summary>True for the single top row above the bands (it gets extra breathing room).</summary>
+    public bool IsHome => Band == NavBand.Top;
 
     /// <summary>The rows in this band, in rail order.</summary>
     public IReadOnlyList<NavItem> Items { get; }

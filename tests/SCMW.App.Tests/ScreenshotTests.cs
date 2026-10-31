@@ -36,36 +36,6 @@ public class ScreenshotTests
     }
 
     [AvaloniaFact]
-    public void Capture_home()
-    {
-        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
-        window.Width = 1200;
-        window.Height = 1080;
-        window.Show();
-
-        var path = Screenshot.Capture(window, "home");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
-    public void Capture_home_empty()
-    {
-        var home = new HomeView
-        {
-            DataContext = new HomeViewModel(new NavigationHost(), Array.Empty<ProjectSummary>()),
-        };
-        var window = new Window { Content = home, Width = 1100, Height = 800 };
-        window.Show();
-
-        var path = Screenshot.Capture(window, "home-empty");
-
-        Assert.True(File.Exists(path), path);
-        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
-    }
-
-    [AvaloniaFact]
     public void Capture_projects()
     {
         var nav = new NavigationHost();

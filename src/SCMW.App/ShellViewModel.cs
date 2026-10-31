@@ -24,8 +24,6 @@ public partial class ShellViewModel : ObservableObject
 {
     private readonly INavigation _nav;
     private readonly ProjectStore _projectStore;
-    private readonly HomeViewModel _home;
-    private readonly HomeView _homeView;
     private readonly WorkspaceViewModel _workspaceVm;
     private readonly WorkspaceView _workspaceView;
     private readonly BulkTableViewModel _bulk;
@@ -97,11 +95,8 @@ public partial class ShellViewModel : ObservableObject
                                        new ContentCatalog(ContentSource, ContentSource.Icons),
                                        changes: _itemChanges, projects: _projectStore);
         _bulkView = new BulkTableView { DataContext = _bulk };
-        _home = new HomeViewModel(_nav, store: _projectStore,
-                                  gameReady: () => IsScumConfigured(store),
-                                  workspace: _workspaceVm);
-        _homeView = new HomeView { DataContext = _home };
-        _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges);
+        _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
+                                          gameReady: () => IsScumConfigured(store));
         _projectsView = new ProjectsView { DataContext = _projects };
         _modList = new ModList();
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
@@ -123,8 +118,7 @@ public partial class ShellViewModel : ObservableObject
 
         Sidebar = new[]
         {
-            // The top group: the places a player goes, with no band heading over them.
-            Nav(ScreenKey.Home, "Home"),
+            // The top group: the place the app opens on, with no band heading over it.
             Nav(ScreenKey.Projects, "Projects"),
 
             // MODIFY: change something that already exists.
@@ -192,11 +186,8 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>The rail rows grouped under their three bands (Make · Ship · App), for the rail to show.</summary>
     public IReadOnlyList<NavBandSection> Bands { get; }
 
-    /// <summary>Home's view model (kept alive so the welcome dismissal survives switching areas).</summary>
-    public HomeViewModel Home => _home;
-
-    /// <summary>Projects' view model (kept alive so the screen's state survives switching areas).</summary>
-    public ProjectsViewModel Projects => _projects;
+    /// <summary>The projects the app is working from.</summary>
+    public ProjectStore ProjectStore => _projectStore;
 
     /// <summary>The one store of project change records — what Build will make.</summary>
     public ItemChangeStore ItemChanges => _itemChanges;
@@ -216,8 +207,8 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>Settings' view model (kept alive so the screen's state survives switching areas).</summary>
     public SettingsViewModel Settings => _settings;
 
-    /// <summary>The projects the app is working from.</summary>
-    public ProjectStore ProjectStore => _projectStore;
+    /// <summary>Projects' view model (kept alive so the screen's state survives switching areas).</summary>
+    public ProjectsViewModel Projects => _projects;
 
     /// <summary>The Workspace's view model (kept alive so the picker state survives switching areas).</summary>
     public WorkspaceViewModel Workspace => _workspaceVm;
@@ -299,7 +290,7 @@ public partial class ShellViewModel : ObservableObject
 
         _build.UseGame(_buildService);
         _mods.UseService(_modsService);
-        _home.RefreshWelcome();                  // the "set up SCUM first" card can retire
+        _projects.RefreshWelcome();              // the "set up SCUM first" card can retire
         _ = _workspaceVm.OpenKindAsync(_workspaceVm.SelectedKind);
         _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
     }
@@ -328,10 +319,10 @@ public partial class ShellViewModel : ObservableObject
     [ObservableProperty] private NavItem _selectedEntry;
 
     /// <summary>The area currently shown.</summary>
-    [ObservableProperty] private ScreenKey _current = ScreenKey.Home;
+    [ObservableProperty] private ScreenKey _current = ScreenKey.Projects;
 
     /// <summary>Human-readable title of the active area.</summary>
-    [ObservableProperty] private string _screenTitle = "Home";
+    [ObservableProperty] private string _screenTitle = "Projects";
 
     /// <summary>The control shown in the content area (non-null from construction).</summary>
     [ObservableProperty] private Control _activeView = new AreaPlaceholderView();
@@ -476,8 +467,8 @@ public partial class ShellViewModel : ObservableObject
         // so re-read both areas every time it is opened.
         if (Current == ScreenKey.Backups) { _backups.Refresh(); _backups.RefreshSaves(); }
 
-        // Home's first-run card depends on whether SCUM is set up, which may have just changed.
-        if (Current == ScreenKey.Home) _home.RefreshWelcome();
+        // Projects' first-run card depends on whether SCUM is set up, which may have just changed.
+        if (Current == ScreenKey.Projects) _projects.RefreshWelcome();
 
         // Build re-reads the chosen project's changes (its "What's in this mod" preview) when opened.
         if (Current == ScreenKey.Build) _build.Preview.Refresh();
@@ -489,7 +480,6 @@ public partial class ShellViewModel : ObservableObject
         {
             ScreenKey.Workspace => _workspaceView,
             ScreenKey.BulkEdit => _bulkView,
-            ScreenKey.Home => _homeView,
             ScreenKey.Projects => _projectsView,
             ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,

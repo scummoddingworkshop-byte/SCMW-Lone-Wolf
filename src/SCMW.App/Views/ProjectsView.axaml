@@ -17,6 +17,23 @@
                 Command="{Binding NewProjectCommand}"/>
       </Grid>
 
+      <!-- First-run card (moved here when Home retired): points a new player at Settings, because
+           nothing can be modded until the game folder and unlock key are set. -->
+      <Border Name="WelcomeCard" Classes="card" IsVisible="{Binding ShowWelcome}">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock Text="Set up SCUM first" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="Tell SCMW — Lone Wolf where SCUM is, and add your unlock key — then you're ready to start modding."
+                       Classes="dim" TextWrapping="Wrap"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="primary" Content="Open Settings" Command="{Binding StartWelcomeCommand}"/>
+            <Button Content="✕" ToolTip.Tip="Dismiss" Command="{Binding DismissWelcomeCommand}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
       <TextBlock Name="ListMessageText" Text="{Binding ListMessage}" TextWrapping="Wrap"
                  Foreground="{StaticResource WarningBrush}"
                  IsVisible="{Binding ShowListMessage}"/>

@@ -21,17 +21,17 @@ public class RailTests
     }
 
     [AvaloniaFact]
-    public void The_rail_lists_home_first_and_the_workspace_first_under_make()
+    public void The_rail_lists_projects_first_and_the_jobs_under_modify()
     {
         var vm = new ShellViewModel(new NavigationHost());
 
         var first = vm.Sidebar.First();
-        Assert.Equal(ScreenKey.Home, first.Key);
-        Assert.Equal("Home", first.Label);
+        Assert.Equal(ScreenKey.Projects, first.Key);
+        Assert.Equal("Projects", first.Label);
         Assert.NotNull(first.Icon);
 
-        var make = vm.Bands.Single(b => b.Band == NavBand.Make);
-        Assert.Equal(ScreenKey.Workspace, make.Items.First().Key);
+        var modify = vm.Bands.Single(b => b.Band == NavBand.Modify);
+        Assert.Equal(ScreenKey.Workspace, modify.Items.First().Key);
     }
 
     [AvaloniaFact]
@@ -109,11 +109,11 @@ public class RailTests
         var vm = new ShellViewModel(new NavigationHost());
         var bands = vm.Bands;
 
-        Assert.Equal(new[] { NavBand.Home, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
+        Assert.Equal(new[] { NavBand.Top, NavBand.Modify, NavBand.Make, NavBand.Ship, NavBand.App },
                      bands.Select(b => b.Band));
 
         // Home and Projects share the unlabelled top group.
-        Assert.Equal(new[] { ScreenKey.Home, ScreenKey.Projects }, bands[0].Items.Select(i => i.Key));
+        Assert.Equal(new[] { ScreenKey.Projects }, bands[0].Items.Select(i => i.Key));
 
         // MODIFY: the four jobs that change what already exists.
         Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
@@ -137,7 +137,7 @@ public class RailTests
         vm.SelectedEntry = soon;
 
         Assert.False(soon.CanPick);
-        Assert.Equal(ScreenKey.Home, nav.Current);   // nothing happened
+        Assert.Equal(ScreenKey.Projects, nav.Current);   // nothing happened
     }
 
     [AvaloniaFact]
@@ -169,7 +169,7 @@ public class RailTests
         Assert.All(vm.Sidebar, item => Assert.NotNull(item.Icon));   // the icons loaded
 
         var home = window.GetVisualDescendants().OfType<ListBoxItem>()
-                          .Single(i => i.DataContext is NavItem n && n.Key == ScreenKey.Home);
+                          .Single(i => i.DataContext is NavItem n && n.Key == ScreenKey.Projects);
         Assert.True(home.IsSelected);                                // Home starts selected
 
         var images = home.GetVisualDescendants().OfType<Image>().ToList();

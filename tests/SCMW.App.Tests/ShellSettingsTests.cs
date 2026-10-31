@@ -28,7 +28,7 @@ public class ShellSettingsTests
         var vm = new ShellViewModel(new NavigationHost());
 
         vm.Settings.UnlockKey = "KEEP";
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Home);
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
         vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Settings);
 
         Assert.Equal("KEEP", vm.Settings.UnlockKey);     // the screen kept its state
