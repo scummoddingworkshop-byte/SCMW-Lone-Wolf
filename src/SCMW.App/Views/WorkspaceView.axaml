@@ -181,15 +181,16 @@
       </Border>
     </Grid>
 
-    <!-- The divider between the list and the file: a thin line the player can drag. The line stays
-         one pixel so it reads as a border, while the splitter around it is wide enough to grab. -->
-    <Panel Grid.Row="1" Grid.Column="1" Margin="0,4,0,0">
-      <Border Name="ListDivider" Width="1" HorizontalAlignment="Center"
-              Background="{StaticResource BorderBrush}"/>
-      <GridSplitter Name="ListSplitter" Background="Transparent"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
-    </Panel>
+    <!-- The divider between the list and the file: a thin line the player can drag. Both sit
+         directly in this grid, which is what lets the splitter move the columns; the line is not
+         hit-testable, so it never steals the grab. -->
+    <Border Grid.Row="1" Grid.Column="1" Name="ListDivider" Width="1" Margin="0,4,0,0"
+            HorizontalAlignment="Center" Background="{StaticResource BorderBrush}"
+            IsHitTestVisible="False"/>
+    <GridSplitter Grid.Row="1" Grid.Column="1" Name="ListSplitter" Margin="0,4,0,0"
+                  Background="Transparent"
+                  HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
 
     <!-- Right: the open file's real fields, explained -->
     <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,Auto,*">

@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using SCMW.App.Views;
 using SCMW.Core.Settings;
 
@@ -70,6 +72,31 @@ public class WorkspaceLayoutTests
         {
             try { Directory.Delete(dir, true); } catch { /* a temp folder left behind is harmless */ }
         }
+    }
+
+    [AvaloniaFact]
+    public void Dragging_the_divider_moves_the_list_wider()
+    {
+        WorkspaceLayout.Restore(null);
+
+        var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
+        var window = new Window { Content = view, Width = 1200, Height = 600 };
+        window.Show();
+        window.UpdateLayout();
+
+        var columns = view.FindControl<Grid>("WorkspaceColumns")!;
+        var before = columns.ColumnDefinitions[0].Width.Value;
+
+        var splitter = view.FindControl<GridSplitter>("ListSplitter")!;
+        var grab = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, 100), window)!.Value;
+
+        window.MouseDown(grab, MouseButton.Left);
+        window.MouseMove(grab + new Point(60, 0));
+        window.MouseUp(grab + new Point(60, 0), MouseButton.Left);
+        window.UpdateLayout();
+
+        // Dragged 60 pixels right: the list should be 60 pixels wider, so the main area gets less.
+        Assert.Equal(before + 60, columns.ColumnDefinitions[0].Width.Value, 1);
     }
 
     [AvaloniaFact]
