@@ -26,8 +26,7 @@ public partial class PreviewViewModel : ObservableObject
     public PreviewViewModel(ItemChangeStore? changes = null, ProjectStore? projects = null,
                             IContentSource? source = null,
                             SCMW.Core.Editing.INewAssetStore? newAssets = null)
-    {
-        _changes = changes;
+    {        _changes = changes;
         _projects = projects;
         _source = source;
         _newAssets = newAssets;
@@ -121,6 +120,18 @@ public partial class PreviewViewModel : ObservableObject
         if (row is null || folder is null || _changes is null) return;
 
         _changes.RemoveItem(folder, row.Path);   // raises Changed → Refresh
+    }
+
+    /// <summary>Raised when the player clicks a card: the shell then opens that item for editing.</summary>
+    public event Action<string>? OpenItemRequested;
+
+    /// <summary>One card was clicked: ask the shell to open that item in the Modify screen.</summary>
+    [RelayCommand]
+    private void OpenItem(BuildChange? row)
+    {
+        if (row is null || string.IsNullOrEmpty(row.Path)) return;
+
+        OpenItemRequested?.Invoke(row.Path);
     }
 
     /// <summary>Extract the changed items' icons into the cache, then point each row at its picture.</summary>

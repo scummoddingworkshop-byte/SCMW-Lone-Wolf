@@ -70,7 +70,7 @@ public static class ChangeDiff
             _ => Shown(last.NewValue),
         };
 
-        return new BuildValueChange(ChangeWords.For(field.Key), before, after, last.Operation);
+        return new BuildValueChange(FieldLabels.Of(field.Key), before, after, last.Operation);
     }
 
     /// <summary>

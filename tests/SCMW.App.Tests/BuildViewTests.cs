@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SCMW.App.Views;
@@ -108,7 +110,35 @@ public class BuildViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_field_tags_line_up_in_the_right_third_beside_the_name()
+    public void Clicking_a_build_card_asks_to_open_that_item()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        _roots.Add(root);
+        var changes = TestProjects.ChangeStore(projects);
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id,
+                           assetPath: "/a/Duct_Tape_ES");
+
+        var vm = new BuildViewModel(changes, projects: projects);
+        string? asked = null;
+        vm.Preview.OpenItemRequested += path => asked = path;
+
+        var view = new BuildView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1280, Height = 900 };
+        window.Show();
+        window.UpdateLayout();
+
+        var card = view.GetVisualDescendants().OfType<Border>()
+            .First(b => b.Classes.Contains("card") && b.DataContext is BuildChange);
+
+        var point = card.TranslatePoint(new Point(20, 20), window)!.Value;
+        window.MouseDown(point, MouseButton.Left);
+        window.MouseUp(point, MouseButton.Left);
+
+        Assert.Equal("/a/Duct_Tape_ES", asked);
+    }
+
+    [AvaloniaFact]
+    public void A_build_card_lists_the_item_and_its_changed_values()
     {
         var (projects, root) = TestProjects.With("My first mod");
         _roots.Add(root);
@@ -122,8 +152,8 @@ public class BuildViewTests : IDisposable
 
         var texts = view.GetVisualDescendants().OfType<TextBlock>().ToList();
         var name = texts.First(t => t.Text == "Duct Tape");
-        var tag1 = texts.First(t => t.Text == "Max Stack");
-        var tag2 = texts.First(t => t.Text == "Weight");
+        var tag1 = texts.First(t => t.Text == FieldLabels.Of("Max stack"));
+        var tag2 = texts.First(t => t.Text == FieldLabels.Of("Weight"));
         var value1 = texts.First(t => t.Text == "10 → 25");
         var value2 = texts.First(t => t.Text == "5 → 3");
 
@@ -131,20 +161,13 @@ public class BuildViewTests : IDisposable
         Assert.Equal(tag1.Bounds.X, tag2.Bounds.X);
         Assert.Equal(value1.Bounds.X, value2.Bounds.X);
 
+        // The changed values sit under the item's name, inside the same card.
         var card = tag1.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("card"));
-        var fields = tag1.GetVisualAncestors().OfType<ItemsControl>().First();
-        var atFields = fields.TranslatePoint(new Point(0, 0), card)!.Value;
         var atName = name.TranslatePoint(new Point(0, 0), card)!.Value;
+        var atTag = tag1.TranslatePoint(new Point(0, 0), card)!.Value;
 
-        // The changed fields sit in the right third, beside the item's name...
-        Assert.True(atFields.X > card.Bounds.Width / 2,
-            $"the fields sat at {atFields.X} of {card.Bounds.Width} — they should be in the right third");
-
-        // ...and share a middle line with the icon and name.
-        var fieldsMiddle = atFields.Y + fields.Bounds.Height / 2;
-        var nameMiddle = atName.Y + name.Bounds.Height / 2;
-        Assert.True(Math.Abs(fieldsMiddle - nameMiddle) < 2,
-            $"the fields' middle was {fieldsMiddle} but the name's was {nameMiddle} — they should match");
+        Assert.True(atTag.Y > atName.Y,
+            $"the values sat at {atTag.Y} but the name at {atName.Y} — they should be below it");
     }
 
     [AvaloniaFact]

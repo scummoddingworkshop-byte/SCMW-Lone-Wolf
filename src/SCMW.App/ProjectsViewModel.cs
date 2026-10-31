@@ -25,7 +25,6 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly Func<bool>? _gameReady;
     private readonly SCMW.Core.Content.IContentSource? _source;
     private readonly Action<string>? _openItem;
-    private readonly SCMW.Core.Knowledge.FieldLibrary _library = SCMW.Core.Knowledge.FieldLibraryLoader.LoadDefault();
     private bool _welcomeDismissed;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
@@ -179,8 +178,7 @@ public partial class ProjectsViewModel : ObservableObject
         if (chosen is not null && _changes is not null)
         {
             var groups = _changes.For(chosen.FolderPath)
-                                .Select(record => new ProjectChangeRow(
-                                    record, _library.LabelFor(record.FieldTechnicalName)))
+                                .Select(record => new ProjectChangeRow(record))
                                 .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
 
             foreach (var group in groups)
@@ -398,7 +396,7 @@ public sealed class ProjectChangeRow
         Asset = record.AssetId;
         Path = string.IsNullOrEmpty(record.AssetPath) ? record.AssetId : record.AssetPath;
         FieldTechnical = record.FieldTechnicalName;
-        Field = label ?? SCMW.Core.Content.ChangeWords.For(record.FieldTechnicalName);
+        Field = label ?? FieldLabels.Of(record.FieldTechnicalName);
         Value = record.Operation switch
         {
             ChangeOperation.Multiply => "×" + record.NewValue,

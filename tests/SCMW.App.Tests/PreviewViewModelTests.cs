@@ -70,8 +70,8 @@ public class PreviewViewModelTests
             var can = Assert.Single(vm.Changes);            // one item, one card — not two
             Assert.Equal("/a/Watering_Can_ES", can.Path);
             Assert.Equal(2, can.Values.Count);
-            Assert.Contains(can.Values, v => v.ValueName == "Max Stack");
-            Assert.Contains(can.Values, v => v.ValueName == "Auto Destruct Time");
+            Assert.Contains(can.Values, v => v.ValueName == FieldLabels.Of("MaxStackSize"));
+            Assert.Contains(can.Values, v => v.ValueName == FieldLabels.Of("_autoDestructTime"));
         }
         finally { TestProjects.Cleanup(root); }
     }
