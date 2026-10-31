@@ -12,12 +12,20 @@ public class AssetNamesTests
         Assert.Equal("Improvised Wooden Chest (base)",
             AssetNames.BaseElementFriendly("BP_Base_Improvised_Wooden_Chest"));
         Assert.Equal("Well (base)", AssetNames.BaseElementFriendly("BP_Base_Well"));
+
+        // Plenty of base parts are not named BP_Base_…: the table and stool are BP_Table_/BP_Stool_.
+        Assert.Equal("Table Improvised Wood (base)",
+            AssetNames.BaseElementFriendly("BP_Table_Improvised_Wood"));
+        Assert.Equal("Stool Improvised Wood (base)",
+            AssetNames.BaseElementFriendly("BP_Stool_Improvised_Wood"));
     }
 
     [Fact]
     public void A_base_element_is_recognised_and_an_item_is_not()
     {
         Assert.True(AssetNames.IsBaseElementName("BP_Base_Well"));
+        Assert.True(AssetNames.IsBaseElementName("BP_Table_Improvised_Wood"));
+        Assert.True(AssetNames.IsBaseElementName("BP_Bed_Coffin"));
         Assert.False(AssetNames.IsBaseElementName("Improvised_Wooden_Chest"));
         Assert.False(AssetNames.IsBaseElementName(""));
     }

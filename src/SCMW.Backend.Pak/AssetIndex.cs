@@ -20,7 +20,7 @@ public sealed class AssetIndex : IAssetIndex
     // Bumped whenever the set of things we index changes (a new folder, a new rule), so an
     // up-to-date index from an older app version is rebuilt instead of silently missing them.
     private const string IndexVersionKey = "index_version";
-    private const int CurrentIndexVersion = 2;
+    private const int CurrentIndexVersion = 3;
 
     // Idempotent by construction (IF NOT EXISTS): missing pieces heal on the
     // next call, repeated calls are cheap no-ops.

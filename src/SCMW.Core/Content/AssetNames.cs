@@ -6,16 +6,25 @@ namespace SCMW.Core.Content;
 /// </summary>
 public static class AssetNames
 {
-    private const string BaseElementPrefix = "BP_Base_";
+    private const string BaseElementPrefix = "BP_";
 
-    /// <summary>True when a raw asset name is a base-building element (a <c>BP_Base_*</c> blueprint).</summary>
+    /// <summary>
+    /// True when a raw asset name is a base-building element. Everything under
+    /// <c>BaseBuilding/BaseElements/</c> is one; the file's own name only has to be a blueprint.
+    /// </summary>
+    /// <remarks>
+    /// SCUM names most of them <c>BP_Base_…</c> (BP_Base_Block), but plenty are not: the improvised
+    /// table is <c>BP_Table_Improvised_Wood</c>, the stool <c>BP_Stool_…</c>, and the beds
+    /// <c>BP_Bed_…</c>. Matching only "BP_Base_" hid those whole families from the app.
+    /// </remarks>
     public static bool IsBaseElementName(string assetName) =>
         !string.IsNullOrEmpty(assetName)
         && assetName.StartsWith(BaseElementPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The friendly name for a base element: <c>BP_Base_Improvised_Wooden_Chest</c> →
-    /// <c>Improvised Wooden Chest (base)</c>.
+    /// <c>Improvised Wooden Chest (base)</c>, and <c>BP_Table_Improvised_Wood</c> →
+    /// <c>Table Improvised Wood (base)</c>.
     /// <para>
     /// The <c>(base)</c> marker is deliberate: a placeable usually exists as **both** an item and a
     /// base element, and they would share a name otherwise. The build finds an asset by name, so two
@@ -24,9 +33,12 @@ public static class AssetNames
     /// </summary>
     public static string BaseElementFriendly(string assetName)
     {
-        var name = IsBaseElementName(assetName)
-            ? assetName[BaseElementPrefix.Length..]
-            : assetName;
+        var name = assetName;
+        if (name.StartsWith("BP_Base_", StringComparison.OrdinalIgnoreCase))
+            name = name["BP_Base_".Length..];
+        else if (name.StartsWith(BaseElementPrefix, StringComparison.OrdinalIgnoreCase))
+            name = name[BaseElementPrefix.Length..];
+
         name = name.Replace('_', ' ').Trim();
         return name.Length == 0 ? name : name + " (base)";
     }
