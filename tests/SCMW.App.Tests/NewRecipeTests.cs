@@ -416,11 +416,12 @@ public class NewRecipeTests
             await vm.OpenKindAsync("Recipes");
             window.UpdateLayout();
 
-            var button = view.FindControl<Button>("NewRecipeButton");
+            var button = view.FindControl<Button>("StartMakeNew");
             Assert.NotNull(button);
             Assert.True(button!.IsVisible);
 
-            vm.OpenNewRecipeCommand.Execute(null);
+            vm.StartMakeNewCommand.Execute(null);
+            await Task.Delay(100);   // the command switches list first when needed
             window.UpdateLayout();
 
             var card = view.FindControl<Border>("NewRecipeCard");

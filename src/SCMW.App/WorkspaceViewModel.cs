@@ -785,21 +785,9 @@ public partial class WorkspaceViewModel : ObservableObject
         NewRecipeNotice = string.Empty;
     }
 
-    // --- The four starting points (polish pass 4) ------------------------------------------------
-    // The player's own words for the four things people come here to do, so nobody has to work out
-    // which list something lives in.
-
-    /// <summary>Change a value on an item.</summary>
-    [RelayCommand]
-    private void StartChangeValue() => SelectedKind = "Items";
-
-    /// <summary>Change a crafting recipe.</summary>
-    [RelayCommand]
-    private void StartChangeRecipe() => SelectedKind = "Recipes";
-
-    /// <summary>Change a cooking dish.</summary>
-    [RelayCommand]
-    private void StartChangeCooking() => SelectedKind = "Cooking";
+    // --- The starting point (polish pass 4) ------------------------------------------------------
+    // The chips say what the player wants to do (Change a value, Change a recipe…). Making something
+    // new is an action, not a list, so it sits beside them as one button.
 
     /// <summary>
     /// Make something new: an item from the Items list, a recipe from a recipe list. Anywhere else the

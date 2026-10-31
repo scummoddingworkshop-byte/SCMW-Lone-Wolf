@@ -13,11 +13,15 @@ namespace SCMW.App;
 public sealed record KindChip(string Key, string Label)
 {
     /// <summary>The chips, in the order they are shown.</summary>
+    /// <remarks>
+    /// The chips say what the player wants to do, not what the list is called: a player looking for a
+    /// crafting recipe should not have to work out whether that lives under "Recipes" or "Cooking".
+    /// </remarks>
     public static readonly IReadOnlyList<KindChip> All = new[]
     {
-        new KindChip("Items", "Items"),
-        new KindChip("Base building", "Base building"),
-        new KindChip("Recipes", "Items Recipes"),
-        new KindChip("Cooking", "Cooking Recipes"),
+        new KindChip("Items", "Change a value"),
+        new KindChip("Base building", "Change a base part"),
+        new KindChip("Recipes", "Change a recipe"),
+        new KindChip("Cooking", "Change a cooking dish"),
     };
 }

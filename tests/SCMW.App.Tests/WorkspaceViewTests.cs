@@ -278,22 +278,23 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_four_starting_points_go_to_the_right_list()
+    public void The_chips_say_what_the_player_wants_to_do()
     {
         var vm = new WorkspaceViewModel();
 
-        vm.StartChangeValueCommand.Execute(null);
-        Assert.Equal("Items", vm.SelectedKind);
+        Assert.Equal(new[] { "Change a value", "Change a base part", "Change a recipe", "Change a cooking dish" },
+                     vm.KindChips.Select(c => c.Label).ToArray());
 
-        vm.StartChangeRecipeCommand.Execute(null);
-        Assert.Equal("Recipes", vm.SelectedKind);
+        // The keys behind them are untouched, so nothing stored against a project moves.
+        Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
+                     vm.KindChips.Select(c => c.Key).ToArray());
 
-        vm.StartChangeCookingCommand.Execute(null);
+        vm.SelectedKindChip = vm.KindChips.Single(c => c.Key == "Cooking");
         Assert.Equal("Cooking", vm.SelectedKind);
     }
 
     [AvaloniaFact]
-    public void The_workspace_offers_the_four_starting_buttons_and_the_full_tick()
+    public void The_workspace_offers_one_row_of_jobs_and_one_make_something_new_button()
     {
         var vm = new WorkspaceViewModel();
         var view = new WorkspaceView { DataContext = vm };
@@ -301,28 +302,13 @@ public class WorkspaceViewTests
         window.Show();
         window.UpdateLayout();
 
-        foreach (var name in new[] { "StartChangeValue", "StartChangeRecipe", "StartChangeCooking", "StartMakeNew" })
-            Assert.NotNull(view.FindControl<Button>(name));
-
+        Assert.NotNull(view.FindControl<ListBox>("KindChips"));
+        Assert.NotNull(view.FindControl<Button>("StartMakeNew"));
+        Assert.False(vm.FullMode);
         Assert.NotNull(view.FindControl<CheckBox>("FullModeTick"));
     }
 
     // --- The kind picker + making the Workspace reachable (Task 3.0) ----------------------------
-
-    [AvaloniaFact]
-    public void The_kind_chips_say_which_list_a_recipe_belongs_to()
-    {
-        var vm = new WorkspaceViewModel();
-
-        Assert.Equal(new[] { "Items", "Base building", "Items Recipes", "Cooking Recipes" },
-                     vm.KindChips.Select(c => c.Label).ToArray());
-        Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
-                     vm.KindChips.Select(c => c.Key).ToArray());   // the keys stay as they were
-
-        // Picking a chip picks the kind, and picking a kind moves the chip.
-        vm.SelectedKindChip = vm.KindChips.Single(c => c.Key == "Cooking");
-        Assert.Equal("Cooking", vm.SelectedKind);
-    }
 
     [AvaloniaFact]
     public async Task Switching_kind_clears_the_file_that_was_open()
