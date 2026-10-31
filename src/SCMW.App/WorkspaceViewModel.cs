@@ -54,6 +54,8 @@ public partial class WorkspaceViewModel : ObservableObject
         // on screen (and never takes edits) while another project is chosen.
         if (_projects is not null)
             _projects.Changed += OnProjectChanged;
+
+        SelectedKindChip = KindChips[0];
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -229,6 +231,35 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when the "What it does" group has something to show (the file's own values).</summary>
     public bool HasWhatItDoes => HasFields || ShowPermanentTick;
 
+    /// <summary>
+    /// Every row the open file produced, before the locked ones are filtered out of the list.
+    /// </summary>
+    private readonly List<WorkspaceField> _allFieldRows = new();
+
+    /// <summary>
+    /// True when values that cannot be changed are listed. Off by default: a padlocked row is noise
+    /// for a player, who came to change something. The owner can ask to see everything the file has.
+    /// </summary>
+    [ObservableProperty] private bool _showLockedFields;
+
+    partial void OnShowLockedFieldsChanged(bool value) => ApplyFieldFilter();
+
+    /// <summary>True when the open file has at least one value we cannot change (so the tick is useful).</summary>
+    public bool HasLockedFields => _allFieldRows.Any(row => !row.Writable);
+
+    /// <summary>Show the rows the filter allows: everything, or only the ones we can change.</summary>
+    private void ApplyFieldFilter()
+    {
+        Fields.Clear();
+        foreach (var row in _allFieldRows)
+        {
+            if (ShowLockedFields || row.Writable) Fields.Add(row);
+        }
+
+        HasFields = Fields.Count > 0;
+        OnPropertyChanged(nameof(HasLockedFields));
+    }
+
     /// <summary>True when the "How it is made or sold" group has something to show (ingredients, makes, shelf).</summary>
     public bool HasHowItsMade =>
         HasIngredients || HasCookingIngredients || ShowOpenMakes || ShowCraftingGroup;
@@ -351,6 +382,23 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>The kinds the picker offers, in the order they are shown.</summary>
     public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes", "Cooking" };
 
+    /// <summary>
+    /// A chip on the picker: the kind's known key (what the rest of the app uses) and the words the
+    /// player reads. Both recipe families say "recipe" out loud, so nobody has to guess which list a
+    /// dish lives in.
+    /// </summary>
+    /// <remarks>The record itself lives beside this class, so the view can bind to its type.</remarks>
+    public IReadOnlyList<KindChip> KindChips { get; } = KindChip.All;
+
+    /// <summary>The chip on screen (kept in step with <see cref="SelectedKind"/>).</summary>
+    [ObservableProperty] private KindChip? _selectedKindChip;
+
+    partial void OnSelectedKindChipChanged(KindChip? value)
+    {
+        if (value is not null && !string.Equals(value.Key, SelectedKind, StringComparison.Ordinal))
+            SelectedKind = value.Key;
+    }
+
     /// <summary>The kind being browsed (always one of <see cref="Kinds"/>).</summary>
     [ObservableProperty] private string _selectedKind = DefaultKind;
 
@@ -360,6 +408,9 @@ public partial class WorkspaceViewModel : ObservableObject
         OnPropertyChanged(nameof(NewButtonText));
         OnPropertyChanged(nameof(NewPanelTitle));
         if (!ShowNewRecipeButton) ShowNewRecipe = false;   // the panel belongs to recipes and items
+
+        var chip = KindChips.FirstOrDefault(c => string.Equals(c.Key, value, StringComparison.Ordinal));
+        if (chip is not null && !ReferenceEquals(chip, SelectedKindChip)) SelectedKindChip = chip;
 
         if (!_loadingKind && !string.IsNullOrEmpty(value))
         {
@@ -447,15 +498,42 @@ public partial class WorkspaceViewModel : ObservableObject
 
         RunOnUi(() =>
         {
-            Fields.Clear();
-            Title = string.Empty;
-            HasFields = false;
+            // A new kind means nothing is chosen in it yet. Without this the page kept showing the
+            // file picked in the old list, which read as if it belonged to the new kind.
+            SelectedAsset = null;
+            ClearDetail();
+
             CategoryDonors.Clear();
             foreach (var category in _gameCategories) CategoryDonors.Add(category);
             NewCategoryDonor = CategoryDonors.FirstOrDefault();
             ShowNewCategoryForm = false;
             Browse(family.ToString(), assets);
         });
+    }
+
+    /// <summary>Empty the detail pane: no file open, no cards, no rows. Used when the kind changes
+    /// and before another file's fields arrive.</summary>
+    private void ClearDetail()
+    {
+        Title = string.Empty;
+        Fields.Clear();
+        _allFieldRows.Clear();
+        IngredientSlots.Clear();
+        CookingSlots.Clear();
+        HasFields = false;
+        ShowItemIdentity = false;
+        ShowItemCategories = false;
+        AddableFields.Clear();
+        PermanentAdd = null;
+
+        _showOpenMakes = false;
+        _showCraftingGroup = false;
+        OnPropertyChanged(nameof(ShowOpenMakes));
+        OnPropertyChanged(nameof(ShowCraftingGroup));
+
+        OnPropertyChanged(nameof(HasAddableFields));
+        OnPropertyChanged(nameof(HasLockedFields));
+        NotifyPermanent();
     }
 
     /// <summary>
@@ -1963,6 +2041,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
         Title = title;
         Fields.Clear();
+        _allFieldRows.Clear();
         IngredientSlots.Clear();
         CookingSlots.Clear();
 
@@ -2005,8 +2084,10 @@ public partial class WorkspaceViewModel : ObservableObject
         foreach (var field in fields)
         {
             if (owned.Contains(field.TechnicalName)) continue;
-            Fields.Add(Describe(kind, field));
+            _allFieldRows.Add(Describe(kind, field));
         }
+
+        ApplyFieldFilter();   // locked rows stay out of the list unless the owner asks for them
 
         // Show the project's recorded values for this file, addressed by its own PATH (Task 3.1).
         // The shared lookup is path-first, so two files that share a name never see each other's

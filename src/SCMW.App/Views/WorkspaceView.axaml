@@ -114,16 +114,16 @@
     <!-- Left: find + browse -->
     <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
       <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
-               ItemsSource="{Binding Kinds}"
-               SelectedItem="{Binding SelectedKind, Mode=TwoWay}">
+               ItemsSource="{Binding KindChips}"
+               SelectedItem="{Binding SelectedKindChip, Mode=TwoWay}">
         <ListBox.ItemsPanel>
           <ItemsPanelTemplate>
             <WrapPanel/>
           </ItemsPanelTemplate>
         </ListBox.ItemsPanel>
         <ListBox.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding}"/>
+          <DataTemplate x:DataType="vm:KindChip">
+            <TextBlock Text="{Binding Label}"/>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
@@ -389,6 +389,12 @@
 
           <!-- What it does: the file's own values, and the one field worth a tick box. -->
           <TextBlock Classes="group" Text="What it does" IsVisible="{Binding HasWhatItDoes}"/>
+
+          <!-- Locked rows are hidden by default; the owner can ask for them when they want to see
+               everything the file carries, not just what can be changed. -->
+          <CheckBox Name="ShowLockedFieldsTick" Content="Show non editable fields"
+                    IsChecked="{Binding ShowLockedFields, Mode=TwoWay}"
+                    IsVisible="{Binding HasLockedFields}" Margin="0,0,0,10"/>
 
           <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemTemplate>

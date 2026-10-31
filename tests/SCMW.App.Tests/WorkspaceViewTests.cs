@@ -89,6 +89,7 @@ public class WorkspaceViewTests
     public void A_field_the_library_does_not_describe_is_shown_honestly()
     {
         var vm = new WorkspaceViewModel();
+        vm.ShowLockedFields = true;   // an undescribed row is usually locked, and locked rows are hidden by default
         vm.Show("Items", "Odd thing", new[] { Field("SomeMysteryNumber", "42") });
         var view = new WorkspaceView { DataContext = vm };
         var window = new Window { Content = view, Width = 900, Height = 300 };
@@ -188,6 +189,7 @@ public class WorkspaceViewTests
     public async Task Two_files_of_the_same_kind_show_their_own_fields()
     {
         var vm = new WorkspaceViewModel(source: new PerFileSource());
+        vm.ShowLockedFields = true;   // the test is about each file's own rows, locked ones included
         vm.Browse("Items", new[]
         {
             new ItemSummary("Tomato", "Food", "", editable: true, assetId: "tomato-id"),
@@ -223,6 +225,7 @@ public class WorkspaceViewTests
         });
 
         var vm = new WorkspaceViewModel(source: source);
+        vm.ShowLockedFields = true;   // this family's rows are all locked for now
         vm.Browse(AssetFamily.LootAndSpawn.ToString(), assets);
         await vm.OpenAsync(vm.VisibleAssets.Single());
 
@@ -237,6 +240,77 @@ public class WorkspaceViewTests
     }
 
     // --- The kind picker + making the Workspace reachable (Task 3.0) ----------------------------
+
+    [AvaloniaFact]
+    public void The_kind_chips_say_which_list_a_recipe_belongs_to()
+    {
+        var vm = new WorkspaceViewModel();
+
+        Assert.Equal(new[] { "Items", "Base building", "Items Recipes", "Cooking Recipes" },
+                     vm.KindChips.Select(c => c.Label).ToArray());
+        Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
+                     vm.KindChips.Select(c => c.Key).ToArray());   // the keys stay as they were
+
+        // Picking a chip picks the kind, and picking a kind moves the chip.
+        vm.SelectedKindChip = vm.KindChips.Single(c => c.Key == "Cooking");
+        Assert.Equal("Cooking", vm.SelectedKind);
+    }
+
+    [AvaloniaFact]
+    public async Task Switching_kind_clears_the_file_that_was_open()
+    {
+        var vm = new WorkspaceViewModel(source: new PerFileSource());
+        vm.Browse("Items", new[]
+        {
+            new ItemSummary("Tomato", "Food", "", editable: true, assetId: "tomato-id"),
+        });
+
+        await vm.OpenAsync(vm.VisibleAssets.Single());
+        Assert.NotEmpty(vm.Fields);
+
+        // Same as clicking another chip: the new list has nothing chosen, and neither has the page.
+        vm.SelectedKind = "Base building";
+        await Task.Delay(50);   // the kind loads off-thread
+
+        Assert.Null(vm.SelectedAsset);
+        Assert.Empty(vm.Fields);
+        Assert.Equal(string.Empty, vm.Title);
+    }
+
+    [AvaloniaFact]
+    public void Locked_values_are_hidden_until_the_owner_asks_for_them()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Items", "Tomato", new[]
+        {
+            Field("Weight", "150"),                                                  // can be changed
+            new AssetField("_shelfLife", "_shelfLife", StatusKind.Unknown, "360"),   // cannot
+        }, "/a/Tomato_ES");
+
+        // Off by default: the padlocked row is noise for a player.
+        Assert.All(vm.Fields, f => Assert.True(f.Writable));
+        Assert.Single(vm.Fields);
+        Assert.True(vm.HasLockedFields);        // so the tick is offered
+
+        vm.ShowLockedFields = true;
+        Assert.Equal(2, vm.Fields.Count);
+        Assert.Contains(vm.Fields, f => !f.Writable);
+    }
+
+    [AvaloniaFact]
+    public void The_locked_values_tick_only_shows_when_there_are_locked_values()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Items", "Tomato", new[] { Field("Weight", "150") });
+
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 400 };
+        window.Show();
+        window.UpdateLayout();
+
+        Assert.False(view.FindControl<CheckBox>("ShowLockedFieldsTick")!.IsVisible);   // nothing locked here
+        Assert.False(vm.HasLockedFields);
+    }
 
     [AvaloniaFact]
     public void The_kind_picker_offers_only_the_kinds_we_can_browse()
@@ -419,6 +493,7 @@ public class WorkspaceViewTests
     public void A_string_table_key_field_is_shown_without_an_editor()
     {
         var vm = new WorkspaceViewModel();
+        vm.ShowLockedFields = true;   // a string-table key is locked, and locked rows are hidden by default
         vm.Show("Items", "Batteries", new[]
         {
             new AssetField("Caption", "Caption", StatusKind.ReadOnly, "Recipe_AnyBluntTool"),

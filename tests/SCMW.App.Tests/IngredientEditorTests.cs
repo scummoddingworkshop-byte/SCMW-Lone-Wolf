@@ -50,6 +50,7 @@ public class IngredientEditorTests
     public void The_ingredient_values_leave_the_plain_field_list()
     {
         var vm = new WorkspaceViewModel();
+        vm.ShowLockedFields = true;   // this test is about which fields the card owns, locked ones included
         vm.Show("Recipes", "Base Garden", RecipeFields());
 
         // The card owns the tag and the five amounts...
