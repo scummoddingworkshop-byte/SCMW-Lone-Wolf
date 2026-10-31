@@ -46,6 +46,9 @@ public partial class InstalledMod : ObservableObject
     /// <summary>The badge shown beside the name.</summary>
     public string Badge => !Managed ? Location : (IsExternal ? "External" : "SCMW");
 
+    /// <summary>True for a mod SCMW built itself — its badge wears the app's copper.</summary>
+    public bool IsOurs => Managed && !IsExternal;
+
     /// <summary>Whether the game should load it. Off never deletes anything.</summary>
     [ObservableProperty] private bool _isOn;
 

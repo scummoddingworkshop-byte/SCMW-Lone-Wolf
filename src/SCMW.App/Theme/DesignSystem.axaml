@@ -156,6 +156,14 @@
   <Style Selector="Border.chip.success">
     <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
   </Style>
+  <!-- The badge for a mod SCMW built: a touch of the app's copper, so it reads at a glance. -->
+  <Style Selector="Border.chip.ours">
+    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+  </Style>
+  <Style Selector="Border.chip.ours TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+  </Style>
   <Style Selector="Border.chip.warning">
     <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
   </Style>

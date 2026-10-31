@@ -43,6 +43,18 @@ public class ModsViewModelRealTests
     }
 
     [AvaloniaFact]
+    public void Only_a_mod_we_built_wears_the_copper_badge()
+    {
+        var ours = new InstalledMod("Bed", external: false);
+        var theirs = new InstalledMod("Dirtiness_P", external: true);
+
+        Assert.True(ours.IsOurs);
+        Assert.Equal("SCMW", ours.Badge);
+        Assert.False(theirs.IsOurs);
+        Assert.Equal("External", theirs.Badge);
+    }
+
+    [AvaloniaFact]
     public void A_mod_row_names_the_project_and_shows_the_pak_file_under_it()
     {
         var (projects, root) = TestProjects.With("My first mod");

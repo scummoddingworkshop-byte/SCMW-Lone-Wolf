@@ -11,7 +11,7 @@
           <StackPanel Orientation="Horizontal" Spacing="10">
             <TextBlock Name="NameText" Text="{Binding ShownName}" FontSize="14"
                        Classes="modname" Classes.off="{Binding !IsOn}" VerticalAlignment="Center"/>
-            <Border Classes="chip" VerticalAlignment="Center">
+            <Border Classes="chip" Classes.ours="{Binding IsOurs}" VerticalAlignment="Center">
               <TextBlock Name="BadgeText" Text="{Binding Badge}" Classes="dim"/>
             </Border>
           </StackPanel>
