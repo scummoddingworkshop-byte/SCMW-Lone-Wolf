@@ -63,6 +63,8 @@
                         <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsNewAsset}">
                           <TextBlock Text="new" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
                         </Border>
+                        <TextBlock Text="{Binding ChangeCountText}" FontSize="12"
+                                   Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
                       </StackPanel>
                       <TextBlock Grid.Column="1" Text="{Binding Path, StringFormat='({0})'}" FontSize="11"
                                  Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SCMW.Core;
 using SCMW.Core.Content;
 using SCMW.Core.Editing;
 
@@ -58,17 +59,32 @@ public static class ChangeDiff
     {
         var first = field.First();
         var last = field.Last();
-        var before = first.Operation == ChangeOperation.AddField ? "(not set)" : (first.OldValue ?? "");
+        var before = first.Operation == ChangeOperation.AddField ? "" : Shown(first.OldValue);
 
         var after = last.Operation switch
         {
-            ChangeOperation.Multiply => WorkOutMultiply(before, last.NewValue),
+            ChangeOperation.Multiply => Shown(WorkOutMultiply(before, last.NewValue)),
             ChangeOperation.AddEntry => "added",
             ChangeOperation.RemoveEntry => "removed",
-            _ => last.NewValue,
+            ChangeOperation.AddField => "added, set to " + Shown(last.NewValue),
+            _ => Shown(last.NewValue),
         };
 
-        return new BuildValueChange(FieldNames.Friendly(field.Key), before, after);
+        return new BuildValueChange(ChangeWords.For(field.Key), before, after, last.Operation);
+    }
+
+    /// <summary>
+    /// A value as the owner should read it: three places after the dot for a fraction, "yes"/"no" for
+    /// a switch, and the plain name for a game path (never the whole <c>/Game/…</c> string).
+    /// </summary>
+    private static string Shown(string? raw)
+    {
+        var text = PlainNumber.ForDisplay(raw ?? string.Empty);
+        if (string.Equals(text, "True", StringComparison.OrdinalIgnoreCase)) return "yes";
+        if (string.Equals(text, "False", StringComparison.OrdinalIgnoreCase)) return "no";
+        if (string.Equals(text, "None", StringComparison.OrdinalIgnoreCase)) return "none";
+        if (text.Contains('/')) return ItemSoftPaths.Label(text) ?? text;
+        return text;
     }
 
     /// <summary>Apply a stored factor to the field's game value; keep the factor if it cannot be read.</summary>

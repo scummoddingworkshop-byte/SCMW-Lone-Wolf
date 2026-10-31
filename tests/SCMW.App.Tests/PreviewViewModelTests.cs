@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using SCMW.Core.Editing;
 
 namespace SCMW.App.Tests;
 
@@ -29,8 +30,8 @@ public class PreviewViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
-    [AvaloniaFact] // Task 5.2: an added field reads "(not set) → value" in the preview
-    public void The_preview_shows_an_added_field_as_not_set_before()
+    [AvaloniaFact] // an added field reads as a sentence, not as an empty before-and-after
+    public void An_added_field_reads_as_added_and_set()
     {
         var (projects, root) = TestProjects.With("Tomato mod");
         try
@@ -44,7 +45,7 @@ public class PreviewViewModelTests
             var vm = new PreviewViewModel(changes, projects);
 
             var tomato = Assert.Single(vm.Changes);
-            Assert.Contains(tomato.Values, v => v.Summary == "(not set) → 0");
+            Assert.Contains(tomato.Values, v => v.Summary == "added, set to 0");
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -90,6 +91,72 @@ public class PreviewViewModelTests
             var line = Assert.Single(vm.Changes);
             Assert.Equal("/a/Duct_Tape_ES", line.Path);
             Assert.Equal("Duct Tape", line.FriendlyName);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the Build list speaks the same words the Cooking card uses, not a raw path
+    public void A_cooking_change_reads_in_plain_words()
+    {
+        var (projects, root) = TestProjects.With("Dish mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            const string dish = "/a/Cook_Dish_Grill_Fish";
+
+            changes.RecordEdit(dish, "OptionalIngredients[1].PossibleIngredient[0].Item", "None",
+                               "/Game/ConZ_Files/Items/Food/MiscFood/BlackPepper.BlackPepper_C", id, assetPath: dish);
+            changes.RecordEdit(dish, "OptionalIngredients[1].PossibleIngredient[0].IsResource", "True", "False",
+                               id, assetPath: dish);
+            changes.RecordListChange(dish, "OptionalIngredients[1].PossibleIngredient",
+                                     ChangeOperation.AddEntry, id, assetPath: dish);
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            var line = Assert.Single(vm.Changes);
+            Assert.Contains(line.Values, v =>
+                v.ValueName == "Optional ingredient 2 · food 1 · item" && v.Summary == "none → BlackPepper");
+            Assert.Contains(line.Values, v =>
+                v.ValueName == "Optional ingredient 2 · food 1 · is a resource" && v.Summary == "yes → no");
+            Assert.Contains(line.Values, v =>
+                v.ValueName == "Optional ingredient 2 · foods" && v.Summary == "added");
+            Assert.Equal("3 changes", line.ChangeCountText);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // a multiply is still worked out, and its answer is shown to three places
+    public void A_multiplied_value_is_shown_with_three_places()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            changes.RecordMultiply("Batteries", "Weight", "0.30000000000000004", "0.5", id, assetPath: "/a/Batteries");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            var line = Assert.Single(vm.Changes);
+            Assert.Contains(line.Values, v => v.Summary == "0.300 → 0.150");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // one change reads "1 change", not "1 changes"
+    public void A_single_change_is_counted_in_the_singular()
+    {
+        var (projects, root) = TestProjects.With("Tape mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var id = projects.Current!.Id;
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", id, assetPath: "/a/Duct_Tape");
+
+            var vm = new PreviewViewModel(changes, projects);
+
+            Assert.Equal("1 change", Assert.Single(vm.Changes).ChangeCountText);
         }
         finally { TestProjects.Cleanup(root); }
     }

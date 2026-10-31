@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SCMW.Core;
 using SCMW.Core.Content;
 using SCMW.Core.Editing;
 using SCMW.Core.Knowledge;
@@ -2679,15 +2680,16 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         // Nothing actually changed: leave the records alone (a no-op record would be listed by
-        // Build as a real change).
-        if (draft == field.OriginalValue)
+        // Build as a real change). Compared as shown, so 0.15 against a file's 0.15000000000000002
+        // is not a change either.
+        if (PlainNumber.ForDisplay(draft) == PlainNumber.ForDisplay(field.OriginalValue))
         {
-            field.Value = draft;
+            field.Value = PlainNumber.ForDisplay(draft);
             field.IsEditing = false;
             return;
         }
 
-        field.Value = draft;
+        field.Value = PlainNumber.ForDisplay(draft);
         field.IsEditing = false;
         _changes.RecordEdit(path!, field.TechnicalName, field.OriginalValue, draft, _projects!.Chosen!.Id,
                             assetPath: path);
@@ -3027,9 +3029,9 @@ public partial class WorkspaceField : ObservableObject
     {
         Label = label;
         Unit = unit;
-        _value = value;
-        _originalValue = value;
-        GameValue = value;
+        _value = PlainNumber.ForDisplay(value);
+        _originalValue = value;   // the file's own value: what a record keeps, and what "was …" rounds for display
+        GameValue = value;        // what a build works from, never the rounded display
         Risk = risk;
         Writable = writable;
         Meaning = meaning;
@@ -3084,14 +3086,16 @@ public partial class WorkspaceField : ObservableObject
     /// <summary>The add record's id, for editing/removing an added field (null otherwise).</summary>
     public Guid? AddRecordId { get; init; }
 
-    /// <summary>True when the shown value differs from the baseline (we changed it).</summary>
-    public bool IsChanged => Value != OriginalValue;
+    /// <summary>True when the shown value differs from the baseline (we changed it). Compared as shown,
+    /// so float noise (0.15000000000000002) is not mistaken for a change from 0.15.</summary>
+    public bool IsChanged =>
+        PlainNumber.ForDisplay(Value) != PlainNumber.ForDisplay(OriginalValue);
 
     /// <summary>True when the "changed" chip should show (an added field shows "added" instead).</summary>
     public bool ShowChanged => IsChanged && !IsAdded;
 
     /// <summary>Plain "was 10" line shown under a changed value.</summary>
-    public string WasText => $"was {OriginalValue}";
+    public string WasText => $"was {PlainNumber.ForDisplay(OriginalValue)}";
 
     /// <summary>True while the inline editor is open.</summary>
     [ObservableProperty] private bool _isEditing;
@@ -3141,7 +3145,7 @@ public partial class WorkspaceField : ObservableObject
     /// <summary>Set the shown value and the "was …" baseline (used when records are applied).</summary>
     public void Load(string value, string original)
     {
-        Value = value;
+        Value = PlainNumber.ForDisplay(value);
         OriginalValue = original;
     }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SCMW.Core.Editing;
 
 namespace SCMW.App;
 
@@ -43,12 +44,35 @@ public partial class BuildChange : ObservableObject
     /// <summary>True when the row has a picture to draw (else the fallback mark shows).</summary>
     public bool HasPicture => Picture is not null;
 
-    partial void OnPictureChanged(IImage? value) => OnPropertyChanged(nameof(HasPicture));
+    /// <summary>"4 changes", or "1 change", beside the item's name — so the size of the mod is visible.</summary>
+    public string ChangeCountText
+    {
+        get
+        {
+            var count = Values.Count;
+            return count switch
+            {
+                0 => string.Empty,
+                1 => "1 change",
+                _ => $"{count} changes",
+            };
+        }
+    }    partial void OnPictureChanged(IImage? value) => OnPropertyChanged(nameof(HasPicture));
 }
 
-/// <summary>One changed value on an item: its friendly name and the plain "old → new" line.</summary>
-public sealed record BuildValueChange(string ValueName, string OldValue, string NewValue)
+/// <summary>One changed value on an item: its plain name and the plain "old → new" line.</summary>
+public sealed record BuildValueChange(string ValueName, string OldValue, string NewValue,
+                                      ChangeOperation Operation = ChangeOperation.Set)
 {
-    /// <summary>Plain "10 → 25" line.</summary>
-    public string Summary => $"{OldValue} → {NewValue}";
+    /// <summary>
+    /// The line shown beside the name: "10 → 25" for a typed value, and a plain word for a list change
+    /// (an added or removed ingredient, food or field) where a before-and-after would say nothing.
+    /// </summary>
+    public string Summary => Operation switch
+    {
+        ChangeOperation.AddEntry => "added",
+        ChangeOperation.RemoveEntry => "removed",
+        ChangeOperation.AddField => NewValue,                     // "added, set to 0"
+        _ => $"{OldValue} → {NewValue}",
+    };
 }

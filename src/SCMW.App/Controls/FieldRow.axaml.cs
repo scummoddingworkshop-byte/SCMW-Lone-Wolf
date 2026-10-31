@@ -8,8 +8,8 @@ using Avalonia.Markup.Xaml;
 namespace SCMW.App.Controls;
 
 /// <summary>
-/// One field row of the Workspace. Shows the field's value, lets the owner type a new one (no
-/// padlocks), and marks a changed value. Its DataContext is the <see cref="WorkspaceField"/>.
+/// One field row of the Workspace. Shows the field's value, lets the owner type a new one, and marks a
+/// changed value. Its DataContext is the <see cref="WorkspaceField"/>.
 /// </summary>
 public partial class FieldRow : UserControl
 {
@@ -21,15 +21,6 @@ public partial class FieldRow : UserControl
 
     public static readonly StyledProperty<ICommand?> CancelEditCommandProperty =
         AvaloniaProperty.Register<FieldRow, ICommand?>(nameof(CancelEditCommand));
-
-    public static readonly StyledProperty<ICommand?> BeginMultiplyCommandProperty =
-        AvaloniaProperty.Register<FieldRow, ICommand?>(nameof(BeginMultiplyCommand));
-
-    public static readonly StyledProperty<ICommand?> CommitMultiplyCommandProperty =
-        AvaloniaProperty.Register<FieldRow, ICommand?>(nameof(CommitMultiplyCommand));
-
-    public static readonly StyledProperty<ICommand?> CancelMultiplyCommandProperty =
-        AvaloniaProperty.Register<FieldRow, ICommand?>(nameof(CancelMultiplyCommand));
 
     public ICommand? BeginEditCommand
     {
@@ -49,31 +40,12 @@ public partial class FieldRow : UserControl
         set => SetValue(CancelEditCommandProperty, value);
     }
 
-    public ICommand? BeginMultiplyCommand
-    {
-        get => GetValue(BeginMultiplyCommandProperty);
-        set => SetValue(BeginMultiplyCommandProperty, value);
-    }
-
-    public ICommand? CommitMultiplyCommand
-    {
-        get => GetValue(CommitMultiplyCommandProperty);
-        set => SetValue(CommitMultiplyCommandProperty, value);
-    }
-
-    public ICommand? CancelMultiplyCommand
-    {
-        get => GetValue(CancelMultiplyCommandProperty);
-        set => SetValue(CancelMultiplyCommandProperty, value);
-    }
-
     public FieldRow()
     {
         AvaloniaXamlLoader.Load(this);
 
         // When an editor appears, put the cursor in it so the owner can type straight away.
         FocusWhenShown("Editor");
-        FocusWhenShown("FactorEditor");
     }
 
     private void FocusWhenShown(string name)
@@ -106,34 +78,6 @@ public partial class FieldRow : UserControl
 
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => Commit();
 
-    private void OnFactorKeyDown(object? sender, KeyEventArgs e)
-    {
-        // Enter applies the factor; Escape cancels. Clicking away also applies it.
-        if (e.Key == Key.Enter)
-        {
-            CommitFactor();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape)
-        {
-            CancelFactor();
-            e.Handled = true;
-        }
-    }
-
-    private void OnFactorLostFocus(object? sender, RoutedEventArgs e) => CommitFactor();
-
-    /// <summary>A quick choice ("×2", "half", "+50%"): fill the factor, then apply it at once.</summary>
-    private void OnQuickFactor(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not WorkspaceField field) return;
-        if (sender is Button { Tag: string factor })
-        {
-            field.FactorDraft = factor;
-            CommitMultiplyCommand?.Execute(field);
-        }
-    }
-
     private void Commit()
     {
         if (DataContext is WorkspaceField field) CommitEditCommand?.Execute(field);
@@ -142,15 +86,5 @@ public partial class FieldRow : UserControl
     private void Cancel()
     {
         if (DataContext is WorkspaceField field) CancelEditCommand?.Execute(field);
-    }
-
-    private void CommitFactor()
-    {
-        if (DataContext is WorkspaceField field) CommitMultiplyCommand?.Execute(field);
-    }
-
-    private void CancelFactor()
-    {
-        if (DataContext is WorkspaceField field) CancelMultiplyCommand?.Execute(field);
     }
 }
