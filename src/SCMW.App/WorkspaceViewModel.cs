@@ -73,10 +73,18 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when the opened file's name should show (and we are not making a new recipe).</summary>
     public bool ShowTitle => HasFields && !ShowNewRecipe;
 
-    /// <summary>True when the "no values" line should show (and we are not making a new recipe).</summary>
-    public bool ShowNoFields => !HasFields && !ShowNewRecipe;
+    /// <summary>True when a file is open, so the file's own tools belong on the page.</summary>
+    [ObservableProperty] private bool _hasOpenFile;
+
+    /// <summary>True when the "no values" line should show (a file is open but carries no values).</summary>
+    public bool ShowNoFields => HasOpenFile && !HasFields && !ShowNewRecipe;
+
+    /// <summary>True when nothing is open yet, so the page invites the player to pick something.</summary>
+    public bool ShowEmptyPrompt => !HasOpenFile && !ShowNewRecipe;
 
     partial void OnHasFieldsChanged(bool value) => RefreshFileHeader();
+
+    partial void OnHasOpenFileChanged(bool value) => RefreshFileHeader();
 
     partial void OnShowNewRecipeChanged(bool value)
     {
@@ -88,6 +96,7 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ShowTitle));
         OnPropertyChanged(nameof(ShowNoFields));
+        OnPropertyChanged(nameof(ShowEmptyPrompt));
     }
 
     // --- A recipe's ingredients (the Ingredients card) -------------------------------------------
@@ -397,9 +406,8 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>The kinds the picker offers, in the order they are shown.</summary>
     public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes", "Cooking" };
 
-    /// <summary>Which list is being browsed, in plain words ("Showing: Change a recipe").</summary>
-    public string BrowsingLine =>
-        string.IsNullOrEmpty(SelectedKindChip?.Label) ? string.Empty : "Showing: " + SelectedKindChip!.Label;
+    /// <summary>Which list is being browsed, in plain words ("You can change a recipe here").</summary>
+    public string BrowsingLine => SelectedKindChip?.Blurb ?? string.Empty;
 
     /// <summary>
     /// A chip on the picker: the kind's known key (what the rest of the app uses) and the words the
@@ -546,6 +554,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private void ClearDetail()
     {
         Title = string.Empty;
+        HasOpenFile = false;
         Fields.Clear();
         _allFieldRows.Clear();
         IngredientSlots.Clear();
@@ -2086,6 +2095,7 @@ public partial class WorkspaceViewModel : ObservableObject
         }
 
         Title = title;
+        HasOpenFile = true;
         Fields.Clear();
         _allFieldRows.Clear();
         IngredientSlots.Clear();

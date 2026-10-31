@@ -123,22 +123,26 @@
       <ItemsControl Grid.Row="0" Name="KindButtons" ItemsSource="{Binding KindChips}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <WrapPanel/>
+            <!-- One per row, all the same width and height. A two-by-two grid looked tidier but cut
+                 "Change a cooking dish" in half, and worse once the list is dragged narrow. -->
+            <StackPanel/>
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:KindChip">
             <Button Classes="secondary" Content="{Binding Label}"
-                    Margin="0,0,6,6"
+                    Margin="0,0,0,6"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).SelectKindCommand}"
                     CommandParameter="{Binding Key}"/>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- Which list is being browsed, in words, so the buttons need no lit state of their own. -->
-      <TextBlock Grid.Row="1" Name="BrowsingLine" Classes="dim" Text="{Binding BrowsingLine}"
-                 Margin="0,0,0,4" ToolTip.Tip="The list you are in"/>
+      <!-- What can be done in this list, in plain words, brighter than a caption. -->
+      <TextBlock Grid.Row="1" Name="BrowsingLine" Classes="hint" Text="{Binding BrowsingLine}"
+                 TextWrapping="Wrap" Margin="0,2,0,6"
+                 ToolTip.Tip="The list you are in"/>
 
       <TextBox Grid.Row="2" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
                Text="{Binding Search, Mode=TwoWay}"/>
@@ -200,6 +204,12 @@
       <TextBlock Grid.Row="1" Classes="dim" Margin="0,8,0,0"
                  Text="This file has no values to show."
                  IsVisible="{Binding ShowNoFields}"/>
+
+      <!-- Nothing chosen yet: one plain invitation instead of the file's tools. -->
+      <TextBlock Grid.Row="1" Name="EmptyPrompt" Classes="hint" Margin="0,8,0,0"
+                 TextWrapping="Wrap"
+                 Text="Select an item in the list to modify it"
+                 IsVisible="{Binding ShowEmptyPrompt}"/>
 
       <ScrollViewer Grid.Row="2" Margin="0,12,0,0" Padding="0,0,12,0">
         <StackPanel>
@@ -280,6 +290,7 @@
           <CheckBox Name="FullModeTick" Content="Show everything, including values I can't change"
                     Margin="0,0,0,12"
                     IsChecked="{Binding FullMode, Mode=TwoWay}"
+                    IsVisible="{Binding HasOpenFile}"
                     ToolTip.Tip="Simple shows only what you can change. This adds the add-a-value card, the shelf and place card, and the values that cannot be changed"/>
 
           <!-- What it is: the words, picture and categories the game shows for it. -->

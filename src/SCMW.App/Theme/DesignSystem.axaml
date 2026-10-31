@@ -37,6 +37,12 @@
     <Setter Property="FontSize" Value="11"/>
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
   </Style>
+  <!-- A plain line that explains the page or invites an action: brighter than a caption, quieter
+       than a heading, so it is read without shouting. -->
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+  </Style>
   <!-- Good news (a folder found, a build ready) and bad news: one home, so every screen agrees. -->
   <Style Selector="TextBlock.good">
     <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>

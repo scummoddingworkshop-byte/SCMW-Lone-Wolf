@@ -14,10 +14,11 @@ namespace SCMW.App;
 /// </remarks>
 public sealed partial class KindChip : ObservableObject
 {
-    public KindChip(string key, string label)
+    public KindChip(string key, string label, string blurb)
     {
         Key = key;
         Label = label;
+        Blurb = blurb;
     }
 
     /// <summary>The kind's key, as the rest of the app knows it.</summary>
@@ -26,15 +27,18 @@ public sealed partial class KindChip : ObservableObject
     /// <summary>What the player reads.</summary>
     public string Label { get; }
 
+    /// <summary>A plain line under the buttons: what can be done in this list.</summary>
+    public string Blurb { get; }
+
     /// <summary>True for the list being browsed now (that button is lit up).</summary>
     [ObservableProperty] private bool _isCurrent;
 
     /// <summary>The buttons, in the order they are shown.</summary>
     public static readonly IReadOnlyList<KindChip> All = new[]
     {
-        new KindChip("Items", "Change a value"),
-        new KindChip("Base building", "Change a base part"),
-        new KindChip("Recipes", "Change a recipe"),
-        new KindChip("Cooking", "Change a cooking dish"),
+        new KindChip("Items", "Change a value", "You can change an item's value here"),
+        new KindChip("Base building", "Change a base part", "You can change a base part's value here"),
+        new KindChip("Recipes", "Change a recipe", "You can change a recipe here"),
+        new KindChip("Cooking", "Change a cooking dish", "You can change a cooking dish here"),
     };
 }

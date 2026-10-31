@@ -293,7 +293,68 @@ public class WorkspaceViewTests
 
         vm.SelectKindCommand.Execute("Cooking");
         Assert.Equal("Cooking", vm.SelectedKind);
-        Assert.Equal("Showing: Change a cooking dish", vm.BrowsingLine);
+        Assert.Equal("You can change a cooking dish here", vm.BrowsingLine);
+    }
+
+    [AvaloniaFact]
+    public void The_line_says_in_plain_words_what_can_be_done_here()
+    {
+        var vm = new WorkspaceViewModel();
+
+        Assert.Equal("You can change an item's value here", vm.BrowsingLine);
+        Assert.Equal("You can change a base part's value here", vm.KindChips[1].Blurb);
+        Assert.Equal("You can change a recipe here", vm.KindChips[2].Blurb);
+
+        // Nothing chosen yet: no line at all rather than a stray sentence.
+        vm.SelectedKindChip = null;
+        Assert.Equal(string.Empty, vm.BrowsingLine);
+    }
+
+    [AvaloniaFact]
+    public void The_four_job_buttons_are_all_the_same_size()
+    {
+        var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
+        var window = new Window { Content = view, Width = 1200, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        var buttons = view.GetVisualDescendants().OfType<Button>()
+            .Where(b => b.DataContext is KindChip)
+            .ToList();
+
+        Assert.Equal(4, buttons.Count);
+        var first = buttons[0].Bounds;
+        Assert.All(buttons, b => Assert.Equal(first.Width, b.Bounds.Width, 1));
+        Assert.All(buttons, b => Assert.Equal(first.Height, b.Bounds.Height, 1));
+    }
+
+    [AvaloniaFact]
+    public void Nothing_selected_asks_the_player_to_pick_something()
+    {
+        var vm = new WorkspaceViewModel();
+
+        // Nothing is open: no "no values" line, no tick, just an invitation.
+        Assert.True(vm.ShowEmptyPrompt);
+        Assert.False(vm.ShowNoFields);
+
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1200, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        var prompt = view.GetVisualDescendants().OfType<TextBlock>()
+            .FirstOrDefault(t => t.Text == "Select an item in the list to modify it");
+        Assert.NotNull(prompt);
+        Assert.True(prompt!.IsVisible);
+        Assert.False(view.FindControl<CheckBox>("FullModeTick")!.IsVisible);
+
+        // Open a file: the invitation goes, the file's own tools arrive.
+        vm.Show("Items", "Tomato", new[] { Field("Weight", "150") });
+        window.UpdateLayout();
+
+        Assert.False(vm.ShowEmptyPrompt);
+        Assert.True(view.FindControl<CheckBox>("FullModeTick")!.IsVisible);
+        Assert.False(prompt.IsVisible);
     }
 
     [AvaloniaFact]
