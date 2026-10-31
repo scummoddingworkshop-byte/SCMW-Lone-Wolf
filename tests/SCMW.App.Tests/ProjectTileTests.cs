@@ -50,15 +50,20 @@ public class ProjectTileTests
     }
 
     [AvaloniaFact]
-    public void The_menu_says_Edit_not_Rename()
+    public void The_card_offers_its_actions_as_plain_buttons()
     {
         var tile = new ProjectTile { Project = new ProjectSummary("n", "d", "w") };
         tile.Measure(new Size(300, 320));
 
-        var menu = (MenuFlyout)tile.FindControl<Button>("MenuButton")!.Flyout!;
-        var headers = menu.Items.OfType<MenuItem>().Select(item => item.Header).ToList();
-        Assert.Contains("Edit", headers);
-        Assert.DoesNotContain("Rename", headers);
+        // No menu to hunt for: the three actions are buttons on the card itself.
+        Assert.Null(tile.FindControl<Button>("MenuButton"));
+        Assert.Null(tile.FindControl<Button>("OpenButton"));
+
+        var labels = new[] { "EditButton", "DuplicateButton", "DeleteButton" }
+            .Select(name => tile.FindControl<Button>(name)?.Content as string)
+            .ToList();
+
+        Assert.Equal(new[] { "Edit", "Duplicate", "Delete" }, labels);
     }
 
     [AvaloniaFact]

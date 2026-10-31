@@ -162,7 +162,7 @@ public class ProjectsViewModelTests
     }
 
     [AvaloniaFact]
-    public void Open_makes_it_current_and_goes_to_the_workspace()
+    public void Open_makes_it_current_and_stays_on_the_projects_screen()
     {
         var (vm, store, nav, root) = NewVm(2);
         try
@@ -172,7 +172,7 @@ public class ProjectsViewModelTests
             vm.OpenProjectCommand.Execute(project);
 
             Assert.Equal(project.Id, store.Current!.Id);
-            Assert.Equal(ScreenKey.Workspace, nav.Current);   // editing lives in the Workspace now
+            Assert.Equal(ScreenKey.Projects, nav.Current);   // picking a mod never throws you out
         }
         finally { Cleanup(root); }
     }

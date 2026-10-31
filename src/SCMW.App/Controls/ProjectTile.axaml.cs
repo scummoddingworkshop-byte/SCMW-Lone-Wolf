@@ -1,16 +1,17 @@
 using System.ComponentModel;
-using System.Linq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 
 namespace SCMW.App.Controls;
 
 /// <summary>
-/// One project in the Projects grid. A plain surface (not a button) holding its
-/// details, a Current chip, an Open button and a ⋯ menu — so nothing interactive
-/// is nested inside anything else.
+/// One project in the Projects grid. A plain surface (not a button) holding its details, a Current
+/// chip, and its own Edit / Duplicate / Delete buttons. Clicking the card itself picks that project;
+/// nothing interactive is nested inside anything else.
 /// </summary>
 public partial class ProjectTile : UserControl
 {
@@ -116,9 +117,9 @@ public partial class ProjectTile : UserControl
         var defaultMark = this.FindControl<TextBlock>("DefaultMark");
         var currentChip = this.FindControl<Border>("CurrentChip");
         var confirmBar = this.FindControl<StackPanel>("ConfirmBar");
-        var menuButton = this.FindControl<Button>("MenuButton");
+        var actionsBar = this.FindControl<StackPanel>("ActionsBar");
 
-        if (nameText is null || picture is null || currentChip is null || menuButton is null)
+        if (nameText is null || picture is null || currentChip is null || actionsBar is null)
         {
             return;   // not fully loaded yet
         }
@@ -135,28 +136,29 @@ public partial class ProjectTile : UserControl
         currentChip.IsVisible = project?.IsCurrent == true;
         confirmBar!.IsVisible = project?.IsConfirmingDelete == true;
 
-        // No rename/duplicate/delete wired in (the Home screen): hide the ⋯ menu rather than offer
-        // a menu with nothing behind it.
-        menuButton.IsVisible = RenameCommand is not null || DuplicateCommand is not null
+        // With no commands wired in, show no action buttons rather than dead ones.
+        actionsBar.IsVisible = RenameCommand is not null || DuplicateCommand is not null
                                || RequestDeleteCommand is not null;
 
-        Wire("OpenButton", OpenCommand);
+        Wire("EditButton", RenameCommand);
+        Wire("DuplicateButton", DuplicateCommand);
+        Wire("DeleteButton", RequestDeleteCommand);
         Wire("ConfirmDeleteButton", ConfirmDeleteCommand);
         Wire("CancelDeleteButton", CancelDeleteCommand);
+    }
 
-        if (menuButton.Flyout is MenuFlyout menu)
+    /// <summary>Clicking the card itself picks that project (the screen stays where it is). A click
+    /// on one of the card's own buttons is left to the button.</summary>
+    private void OnCardPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.InitialPressMouseButton != MouseButton.Left) return;
+        if (e.Source is Control source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+            return;
+
+        if (OpenCommand?.CanExecute(Project) == true)
         {
-            var items = menu.Items.Cast<object>().OfType<MenuItem>().ToList();
-            if (items.Count == 3)
-            {
-                items[0].Command = RenameCommand;
-                items[1].Command = DuplicateCommand;
-                items[2].Command = RequestDeleteCommand;
-                foreach (var item in items)
-                {
-                    item.CommandParameter = project;
-                }
-            }
+            OpenCommand.Execute(Project);
+            e.Handled = true;
         }
     }
 

@@ -1,5 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using SCMW.App.Controls;
 using SCMW.App.Views;
@@ -8,10 +11,8 @@ namespace SCMW.App.Tests;
 
 public class ShellProjectsTests
 {
-    /// <summary>Proves the tile's command actually resolves through the XAML binding (the riskiest
-    /// line on the screen) — the tile is not decorative.</summary>
     [AvaloniaFact]
-    public void Clicking_a_project_tile_opens_it()
+    public void Clicking_a_project_card_picks_it_and_stays_on_projects()
     {
         var (store, root) = TestProjects.With("Duct Tape Expanded");
         try
@@ -24,12 +25,13 @@ public class ShellProjectsTests
             window.Show();
 
             var tile = window.GetVisualDescendants().OfType<ProjectTile>().First();
-            var open = tile.FindControl<Button>("OpenButton")!;
+            var onCard = tile.TranslatePoint(new Point(20, 20), window)!.Value;
 
-            Assert.NotNull(open.Command);
-            open.Command!.Execute(open.CommandParameter);
+            window.MouseDown(onCard, MouseButton.Left);
+            window.MouseUp(onCard, MouseButton.Left);
 
-            Assert.Equal(ScreenKey.Workspace, nav.Current);
+            Assert.Equal(ScreenKey.Projects, nav.Current);          // never leaves the screen
+            Assert.Equal(store.All().Single().Id, store.Current!.Id);
         }
         finally { TestProjects.Cleanup(root); }
     }

@@ -115,7 +115,7 @@
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
                 <UniformGrid ColumnSpacing="12" RowSpacing="12"
-                             Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}, ConverterParameter='560,1,4'}"/>
+                             Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}, ConverterParameter='300,1,5'}"/>
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>

@@ -323,9 +323,9 @@ public partial class ProjectsViewModel : ObservableObject
     {
         if (project is null) return;
 
-        // Choosing a project is deliberate: it becomes the mod you edit, in the Workspace.
+        // Picking a project makes it the one you work on, and its changes appear below — the screen
+        // stays where it is, so choosing a mod never throws you into the Workspace.
         _store.SetCurrent(project.Id);
-        _nav.GoTo(ScreenKey.Workspace);
     }
 
     /// <summary>Undo one recorded change (Task 4.2) — removes exactly that record, nothing else.</summary>

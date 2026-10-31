@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SCMW.App.Controls.ProjectTile">
-  <Border Classes="projecttile">
+  <Border Classes="projecttile" PointerReleased="OnCardPointerReleased">
     <Grid RowDefinitions="*,Auto">
       <!-- Everything above the buttons. This row takes the slack, so the buttons sit on the same
            line on every card, whatever the name or description is. -->
@@ -34,18 +34,14 @@
       </StackPanel>
 
       <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">
-        <!-- Actions: separate buttons side by side, never one inside another. -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Name="OpenButton" Classes="secondary" Content="Open"/>
-          <Button Name="MenuButton" Content="⋯" ToolTip.Tip="More actions">
-            <Button.Flyout>
-              <MenuFlyout>
-                <MenuItem Name="EditItem" Header="Edit"/>
-                <MenuItem Name="DuplicateItem" Header="Duplicate"/>
-                <MenuItem Name="DeleteItem" Header="Delete"/>
-              </MenuFlyout>
-            </Button.Flyout>
-          </Button>
+        <!-- The card's own actions, in plain sight: no menu to hunt for. -->
+        <StackPanel Name="ActionsBar" Orientation="Horizontal" Spacing="8">
+          <Button Name="EditButton" Classes="secondary" Content="Edit"
+                  ToolTip.Tip="Change the project's name, description or picture"/>
+          <Button Name="DuplicateButton" Classes="secondary" Content="Duplicate"
+                  ToolTip.Tip="Make a copy of this project"/>
+          <Button Name="DeleteButton" Classes="secondary" Content="Delete"
+                  ToolTip.Tip="Delete this project"/>
         </StackPanel>
 
         <!-- Inline delete confirmation. -->

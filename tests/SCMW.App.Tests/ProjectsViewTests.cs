@@ -187,12 +187,13 @@ public class ProjectsViewTests
             Assert.Same(vm.ConfirmDeleteCommand, tile.ConfirmDeleteCommand);
             Assert.Same(vm.CancelDeleteCommand, tile.CancelDeleteCommand);
 
-            // Open actually reaches the view model and navigates.
-            var openButton = tile.FindControl<Button>("OpenButton")!;
-            Assert.NotNull(openButton.Command);
-            openButton.Command!.Execute(openButton.CommandParameter);
+            // Picking the card reaches the view model and stays on this screen.
+            Assert.True(tile.OpenCommand!.CanExecute(tile.Project));
+            var picked = tile.Project!;
+            tile.OpenCommand.Execute(picked);
 
-            Assert.Equal(ScreenKey.Workspace, nav.Current);
+            Assert.Equal(ScreenKey.Projects, nav.Current);
+            Assert.True(vm.VisibleProjects.Single(p => p.Id == picked.Id).IsCurrent);   // card says "Current"
         }
         finally { TestProjects.Cleanup(root); }
     }
