@@ -96,7 +96,8 @@ public partial class ShellViewModel : ObservableObject
                                        changes: _itemChanges, projects: _projectStore);
         _bulkView = new BulkTableView { DataContext = _bulk };
         _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
-                                          gameReady: () => IsScumConfigured(store));
+                                          gameReady: () => IsScumConfigured(store),
+                                          source: ContentSource);
         _projectsView = new ProjectsView { DataContext = _projects };
         _modList = new ModList();
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);

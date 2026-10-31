@@ -108,37 +108,54 @@
           <TextBlock Text="What this mod changes" FontSize="16" FontWeight="SemiBold"
                      Foreground="{StaticResource TextPrimaryBrush}"/>
           <TextBlock Name="ChangeSummaryText" Text="{Binding ChangeSummary}" Classes="dim"/>
-          <!-- Laid out like Build's "What's in this mod": one card per item, its file name on the
-               left, its changes on the right, so the two screens read the same way. -->
+          <!-- Laid out like Build's "What's in this mod": one card per item, its picture and friendly
+               name, its changes beside them. The cards flow into as many columns as the window fits,
+               so a wide screen shows them side by side instead of one very long card. -->
           <ItemsControl Name="ChangeRows" ItemsSource="{Binding Changes}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid ColumnSpacing="12" RowSpacing="12"
+                             Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}, ConverterParameter='560,1,4'}"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:ProjectChangeGroup">
-                <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
-                  <Grid ColumnDefinitions="340,*" ColumnSpacing="20" Grid.IsSharedSizeScope="True">
+                <Border Classes="card" Padding="14,12">
+                  <StackPanel Spacing="10">
 
-                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding FileName}" FontSize="15" FontWeight="SemiBold"
-                                 Foreground="{StaticResource TextPrimaryBrush}"
-                                 TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Rows[0].Asset}"/>
-                      <TextBlock Text="{Binding ChangeCountText}" FontSize="12"
-                                 Foreground="{StaticResource TextDimBrush}"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                      <Border Grid.Column="0" Classes="thumb" Width="34" Height="34">
+                        <Panel>
+                          <TextBlock Text="SCMW" FontSize="8"
+                                     Foreground="{StaticResource TextDimBrush}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          <Image Source="{Binding Picture}" Stretch="UniformToFill"
+                                 IsVisible="{Binding HasPicture}"/>
+                        </Panel>
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding FriendlyName}" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FileName}"/>
+                        <TextBlock Text="{Binding ChangeCountText}" FontSize="12"
+                                   Foreground="{StaticResource TextDimBrush}"/>
+                      </StackPanel>
+                    </Grid>
 
-                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Rows}" VerticalAlignment="Center"
-                                  HorizontalAlignment="Left">
+                    <ItemsControl ItemsSource="{Binding Rows}" Grid.IsSharedSizeScope="True">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ProjectChangeRow">
                           <Grid ColumnSpacing="10" Margin="0,1,0,1">
                             <Grid.ColumnDefinitions>
                               <ColumnDefinition Width="Auto" SharedSizeGroup="chTag"/>
-                              <ColumnDefinition Width="Auto" SharedSizeGroup="chValue"/>
+                              <ColumnDefinition Width="*"/>
                               <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding Field}" FontSize="12"
                                        Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12"
                                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Classes="secondary" Content="Undo" Margin="6,0,0,0"
+                            <Button Grid.Column="2" Classes="secondary" Content="Undo"
                                     ToolTip.Tip="Undo just this change"
                                     Command="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).UndoChangeCommand}"
                                     CommandParameter="{Binding}"/>
@@ -147,7 +164,7 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                  </Grid>
+                  </StackPanel>
                 </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

@@ -229,6 +229,7 @@ public class ProjectsViewModelTests
             // One card per item, holding all of that item's changes.
             var group = Assert.Single(vm.Changes);
             Assert.Equal("Duct_Tape", group.FileName);
+            Assert.Equal("Duct Tape", group.FriendlyName);      // the same words Build's list uses
             Assert.Equal("2 changes", group.ChangeCountText);
             Assert.Equal(2, group.Rows.Count);
 

@@ -23,17 +23,19 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly INavigation _nav;
     private readonly ItemChangeStore? _changes;
     private readonly Func<bool>? _gameReady;
+    private readonly SCMW.Core.Content.IContentSource? _source;
     private bool _welcomeDismissed;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
 
     public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null,
-                             Func<bool>? gameReady = null)
+                             Func<bool>? gameReady = null, SCMW.Core.Content.IContentSource? source = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
         _changes = changes;
         _gameReady = gameReady;
+        _source = source;
         _store.Changed += Refresh;
         if (_changes is not null) _changes.Changed += Refresh;
 
@@ -172,17 +174,41 @@ public partial class ProjectsViewModel : ObservableObject
         Changes.Clear();
         if (chosen is not null && _changes is not null)
         {
-            var rows = _changes.For(chosen.FolderPath)
-                               .Select(record => new ProjectChangeRow(record))
-                               .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
+            var groups = _changes.For(chosen.FolderPath)
+                                .Select(record => new ProjectChangeRow(record))
+                                .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
 
-            foreach (var group in rows)
-                Changes.Add(new ProjectChangeGroup(group.ToList()));
+            foreach (var group in groups)
+            {
+                var path = group.First().Path;
+                Changes.Add(new ProjectChangeGroup(
+                    group.ToList(),
+                    ContentCatalog.FriendlyItemName(path),
+                    LoadIcon(path)));
+            }
         }
 
         OnPropertyChanged(nameof(HasChanges));
         OnPropertyChanged(nameof(HasChosenProject));
         OnPropertyChanged(nameof(ChangeSummary));
+    }
+
+    /// <summary>The item's cached icon, trying its class file ("X" for "X_ES") too. Never throws.</summary>
+    private IImage? LoadIcon(string assetId)
+    {
+        try
+        {
+            var path = _source?.Icons.GetIconPath(assetId);
+            if (path is null && !assetId.EndsWith("_ES", StringComparison.OrdinalIgnoreCase))
+                path = _source?.Icons.GetIconPath(assetId + "_ES");
+
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+            return new Bitmap(path);
+        }
+        catch
+        {
+            return null;   // no icon is fine — the card shows its fallback mark
+        }
     }
 
     [RelayCommand]
@@ -394,10 +420,24 @@ public sealed class ProjectChangeRow
 /// </summary>
 public sealed class ProjectChangeGroup
 {
-    public ProjectChangeGroup(IReadOnlyList<ProjectChangeRow> rows) => Rows = rows;
+    public ProjectChangeGroup(IReadOnlyList<ProjectChangeRow> rows, string friendlyName, IImage? picture = null)
+    {
+        Rows = rows;
+        FriendlyName = friendlyName;
+        Picture = picture;
+    }
 
     /// <summary>Every change recorded on this item, in the order they were recorded.</summary>
     public IReadOnlyList<ProjectChangeRow> Rows { get; }
+
+    /// <summary>The item's friendly name ("Nails"), the same words Build's list uses.</summary>
+    public string FriendlyName { get; }
+
+    /// <summary>The item's picture once found; null shows the fallback mark.</summary>
+    public IImage? Picture { get; }
+
+    /// <summary>True when the card has a picture to draw (else the fallback mark shows).</summary>
+    public bool HasPicture => Picture is not null;
 
     /// <summary>The file's own name (the last part of its game path), e.g. <c>Nails_ES</c>.</summary>
     public string FileName => Rows[0].FileName;
