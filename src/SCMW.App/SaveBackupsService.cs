@@ -24,6 +24,9 @@ public interface ISaveBackupsService
     /// <summary>Where SCUM keeps its saves (shown to the player).</summary>
     string SaveFolder { get; }
 
+    /// <summary>The workspace folder the kept copies live in, so it can be opened in Explorer.</summary>
+    string Folder => "";
+
     /// <summary>
     /// The kept saves, newest first. Listing also trims to the newest few (see
     /// <see cref="BackupRetention"/>), so the folder can never grow into a pile.
@@ -78,6 +81,9 @@ public sealed class SaveBackupsService : ISaveBackupsService
 
     public string SaveFolder => _saveFolder;
 
+    /// <summary>The folder the kept copies live in.</summary>
+    public string Folder => _savesRoot;
+
     private string? CurrentSavePath()
     {
         if (_saveFolder.Length == 0) return null;
@@ -108,8 +114,21 @@ public sealed class SaveBackupsService : ISaveBackupsService
             .ThenByDescending(s => s.Id, StringComparer.Ordinal)
             .ToList();
 
+        // The same save copied more than once in a row is one copy, not several: the extra copies are
+        // identical, so keeping them all just made the list look wrong.
+        var distinct = BackupRetention.KeepFirstPer(
+            newestFirst,
+            s => $"{s.SizeBytes}|{LastWriteOf(s.Path):O}",
+            s => s.Path);
+
         // Only the newest few are kept: the game keeps its own copies, so a deep stack is just clutter.
-        return BackupRetention.KeepNewest(newestFirst, BackupRetention.Keep, s => s.Path);
+        return BackupRetention.KeepNewest(distinct, BackupRetention.Keep, s => s.Path);
+    }
+
+    private static DateTime LastWriteOf(string path)
+    {
+        try { return File.GetLastWriteTimeUtc(path); }
+        catch (Exception ex) when (IsExpectedIoFailure(ex)) { return DateTime.MinValue; }
     }
 
     public string? BackUp()
@@ -117,6 +136,9 @@ public sealed class SaveBackupsService : ISaveBackupsService
         var current = CurrentSavePath();
         if (current is null)
             return "SCUM's saved game wasn't found. Is SCUM installed and has it been played?";
+
+        // Nothing new to keep: the save has not been written since the newest copy was taken.
+        if (NewestCopy() is { } newest && SameSave(current, newest)) return null;
 
         try
         {
@@ -127,6 +149,40 @@ public sealed class SaveBackupsService : ISaveBackupsService
         catch (Exception ex) when (IsExpectedIoFailure(ex))
         {
             return "The saved game could not be copied. If SCUM is running, close it and try again.";
+        }
+    }
+
+    /// <summary>The most recently taken copy, or null when none is kept yet.</summary>
+    private string? NewestCopy()
+    {
+        try
+        {
+            if (!Directory.Exists(_savesRoot)) return null;
+
+            return Directory.GetFiles(_savesRoot, "*.db")
+                            .OrderByDescending(File.GetLastWriteTimeUtc)
+                            .ThenByDescending(f => f, StringComparer.Ordinal)
+                            .FirstOrDefault();
+        }
+        catch (Exception ex) when (IsExpectedIoFailure(ex))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>True when the kept copy already holds this exact save: same size, and the game has not
+    /// written the save since. Prevents three actions in a row keeping three copies of one save.</summary>
+    private static bool SameSave(string current, string copy)
+    {
+        try
+        {
+            var live = new FileInfo(current);
+            var kept = new FileInfo(copy);
+            return live.Length == kept.Length && live.LastWriteTimeUtc <= kept.LastWriteTimeUtc;
+        }
+        catch (Exception ex) when (IsExpectedIoFailure(ex))
+        {
+            return false;   // unsure means keep a copy, never risk losing the only one
         }
     }
 

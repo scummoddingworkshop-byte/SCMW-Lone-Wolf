@@ -21,6 +21,12 @@ public interface IBackupsService
     /// <summary>The workspace's Backups folder, so it can be opened in Explorer.</summary>
     string Folder { get; }
 
+    /// <summary>The folder removed mods are kept in (the Backups folder when a service does not say).</summary>
+    string ModsFolder => Folder;
+
+    /// <summary>The folder deleted projects are kept in (the Backups folder when a service does not say).</summary>
+    string ProjectsFolder => Folder;
+
     /// <summary>
     /// The kept backups, newest first. Listing also trims to the newest few copies of each mod or
     /// project (see <see cref="BackupRetention"/>), so the folder can never grow into a pile.
@@ -68,6 +74,12 @@ public sealed class BackupsService : IBackupsService
 
     public string Folder => _backupsRoot;
 
+    /// <summary>The folder removed mods are kept in.</summary>
+    public string ModsFolder => _modsBackups;
+
+    /// <summary>The folder deleted projects are kept in.</summary>
+    public string ProjectsFolder => _projectsBackups;
+
     public IReadOnlyList<BackupEntry> List()
     {
         var entries = new List<BackupEntry>();
@@ -93,10 +105,14 @@ public sealed class BackupsService : IBackupsService
 
         var newestFirst = entries.OrderByDescending(e => e.WhenUtc).ToList();
 
-        // Only the newest few copies of each mod or project are kept, so the folder cannot pile up.
+        // Only the newest few copies of each mod or project are kept, so the folder cannot pile up:
+        // one per mod, three per project.
         var kept = new List<BackupEntry>();
         foreach (var group in newestFirst.GroupBy(e => (e.Kind, e.DisplayName)))
-            kept.AddRange(BackupRetention.KeepNewest(group.ToList(), BackupRetention.Keep, e => e.Path));
+        {
+            var keep = group.Key.Kind == BackupKind.Mod ? BackupRetention.KeepMod : BackupRetention.KeepProject;
+            kept.AddRange(BackupRetention.KeepNewest(group.ToList(), keep, e => e.Path));
+        }
 
         return kept.OrderByDescending(e => e.WhenUtc).ToList();
     }

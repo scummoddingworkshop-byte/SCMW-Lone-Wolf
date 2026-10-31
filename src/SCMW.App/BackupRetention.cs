@@ -17,6 +17,31 @@ internal static class BackupRetention
     /// </summary>
     internal const int Keep = 3;
 
+    /// <summary>Only the newest copy of each mod is kept: a mod's older builds are clutter.</summary>
+    internal const int KeepMod = 1;
+
+    /// <summary>A project keeps a few copies, in case a delete was a mistake made twice.</summary>
+    internal const int KeepProject = 3;
+
+    /// <summary>
+    /// Keeps the first of each <paramref name="keyOf"/> and deletes the rest — used for identical
+    /// copies of one save, so a save copied three times in a row is shown (and kept) once.
+    /// </summary>
+    internal static IReadOnlyList<T> KeepFirstPer<T>(IReadOnlyList<T> newestFirst,
+                                                     Func<T, string> keyOf, Func<T, string> pathOf)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var kept = new List<T>(newestFirst.Count);
+
+        foreach (var item in newestFirst)
+        {
+            if (seen.Add(keyOf(item))) kept.Add(item);
+            else DeleteQuietly(pathOf(item));
+        }
+
+        return kept;
+    }
+
     /// <summary>
     /// Keeps the first <paramref name="keep"/> of <paramref name="newestFirst"/> and deletes the rest
     /// (each is a file or a folder). Returns the entries that were kept, so a caller can show exactly

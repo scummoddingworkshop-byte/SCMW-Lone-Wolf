@@ -39,6 +39,44 @@ public class SaveBackupsServiceTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Identical_copies_of_one_save_are_kept_once()
+    {
+        Directory.CreateDirectory(SavesRoot);
+
+        // The old behaviour: the same, unchanged save copied three times in a row.
+        for (var i = 1; i <= 3; i++)
+        {
+            var path = Path.Combine(SavesRoot, $"SCUM_20261031-2119{i:00}.db");
+            File.WriteAllText(path, "same save");
+            File.SetLastWriteTimeUtc(path, new DateTime(2026, 10, 31, 14, 1, 39, DateTimeKind.Utc));
+        }
+
+        var kept = New().List();
+
+        Assert.Single(kept);                                   // shown once...
+        Assert.Single(Directory.GetFiles(SavesRoot, "*.db"));  // ...and the extra copies are gone
+    }
+
+    [AvaloniaFact]
+    public void An_unchanged_save_is_not_copied_again()
+    {
+        var service = New();
+
+        Assert.Null(service.BackUp());
+        Assert.Null(service.BackUp());          // nothing has changed: no second copy
+        Assert.Null(service.BackUp());
+
+        Assert.Single(service.List());
+
+        // The game writes the save (a new play session), so the next back-up keeps a fresh copy.
+        File.WriteAllText(Current, "a newer save, written later");
+        File.SetLastWriteTimeUtc(Current, DateTime.UtcNow.AddMinutes(1));
+
+        Assert.Null(service.BackUp());
+        Assert.Equal(2, service.List().Count);
+    }
+
+    [AvaloniaFact]
     public void Restoring_puts_the_chosen_save_back_and_keeps_the_current_one_first()
     {
         var service = New();
@@ -78,7 +116,11 @@ public class SaveBackupsServiceTests : IDisposable
     {
         Directory.CreateDirectory(SavesRoot);
         for (var i = 1; i <= 5; i++)
-            File.WriteAllText(Path.Combine(SavesRoot, $"SCUM_2026100{i}-101112.db"), "x");
+        {
+            var path = Path.Combine(SavesRoot, $"SCUM_2026100{i}-101112.db");
+            File.WriteAllText(path, "save " + i);
+            File.SetLastWriteTimeUtc(path, new DateTime(2026, 10, i, 10, 11, 12, DateTimeKind.Utc));
+        }
 
         var saves = New().List();
 

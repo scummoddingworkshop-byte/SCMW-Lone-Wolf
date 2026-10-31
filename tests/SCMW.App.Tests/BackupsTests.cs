@@ -79,7 +79,7 @@ public class BackupsServiceTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void Only_the_newest_few_copies_of_a_mod_are_kept()
+    public void Only_the_newest_copy_of_a_mod_is_kept()
     {
         Directory.CreateDirectory(ModsBackups);
         for (var i = 1; i <= 5; i++)
@@ -87,10 +87,9 @@ public class BackupsServiceTests : IDisposable
 
         var entries = New().List();
 
-        Assert.Equal(3, entries.Count);                            // the newest three...
-        Assert.Equal(3, Directory.GetFiles(ModsBackups).Length);   // ...and the older two are gone
-        Assert.DoesNotContain(entries, e => e.Path.Contains("20261001"));
-        Assert.DoesNotContain(entries, e => e.Path.Contains("20261002"));
+        Assert.Single(entries);                                    // the newest one...
+        Assert.Single(Directory.GetFiles(ModsBackups));            // ...and the older four are gone
+        Assert.Contains("20261005", entries[0].Path);              // the newest is the one kept
     }
 
     [AvaloniaFact]
@@ -105,7 +104,8 @@ public class BackupsServiceTests : IDisposable
 
         var entries = New().List();
 
-        Assert.Equal(6, entries.Count);      // three of each mod, not three in total
+        // One copy per mod, so two in total — not one for the whole folder, and not four each.
+        Assert.Equal(2, entries.Count);
     }
 
     [AvaloniaFact]

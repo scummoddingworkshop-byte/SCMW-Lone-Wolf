@@ -56,7 +56,12 @@
       <!-- The player's saved game (SCUM.db): the one soft spot a pak cannot undo. -->
       <Border Name="SaveCard" Classes="card" IsVisible="{Binding HasSaveService}">
         <StackPanel Spacing="10">
-          <TextBlock Text="Your saved game" Classes="section"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Your saved game" Classes="section" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Name="OpenSaveFolderButton" Classes="secondary" Content="Open folder"
+                    ToolTip.Tip="Open the folder where the save copies are kept"
+                    Command="{Binding OpenSaveFolderCommand}"/>
+          </Grid>
           <TextBlock Name="SaveNote" Text="{Binding SaveNote}" Classes="dim" TextWrapping="Wrap"/>
 
           <Button Name="BackUpSaveButton" Classes="primary" HorizontalAlignment="Left"
@@ -103,7 +108,12 @@
       <!-- Deleted projects: a copy kept, so a project is never really lost. -->
       <Border Name="ProjectCard" Classes="card">
         <StackPanel Spacing="10">
-          <TextBlock Text="Projects" Classes="section"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Projects" Classes="section" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Name="OpenProjectFolderButton" Classes="secondary" Content="Open folder"
+                    ToolTip.Tip="Open the folder where deleted projects are kept"
+                    Command="{Binding OpenProjectFolderCommand}"/>
+          </Grid>
           <TextBlock Name="ProjectNote" Text="{Binding ProjectNote}" Classes="dim" TextWrapping="Wrap"/>
 
           <ItemsControl Name="ProjectList" ItemsSource="{Binding ProjectBackups}"
@@ -118,7 +128,12 @@
       <!-- Mods we replaced in SCUM: a copy kept, so the older build can come back. -->
       <Border Name="ModCard" Classes="card">
         <StackPanel Spacing="10">
-          <TextBlock Text="Mods" Classes="section"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Mods" Classes="section" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Name="OpenModFolderButton" Classes="secondary" Content="Open folder"
+                    ToolTip.Tip="Open the folder where removed mods are kept"
+                    Command="{Binding OpenModFolderCommand}"/>
+          </Grid>
           <TextBlock Name="ModNote" Text="{Binding ModNote}" Classes="dim" TextWrapping="Wrap"/>
 
           <ItemsControl Name="ModList" ItemsSource="{Binding ModBackups}"

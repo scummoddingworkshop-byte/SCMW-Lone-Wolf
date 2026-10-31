@@ -263,8 +263,25 @@ public partial class BackupsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenFolder()
-    {
+    private void OpenFolder() =>
         Message = _folders.Open(_service?.Folder) ? "" : "There's no backups folder yet.";
-    }
+
+    /// <summary>Opens the folder the kept save copies live in.</summary>
+    [RelayCommand]
+    private void OpenSaveFolder() =>
+        Message = _saves is not null && _folders.Open(_saves.Folder) ? "" : "There's no folder for save copies yet.";
+
+    /// <summary>Opens the folder deleted projects are kept in.</summary>
+    [RelayCommand]
+    private void OpenProjectFolder() =>
+        Message = _service is not null && _folders.Open(_service.ProjectsFolder)
+            ? ""
+            : "There's no folder for project copies yet.";
+
+    /// <summary>Opens the folder removed mods are kept in.</summary>
+    [RelayCommand]
+    private void OpenModFolder() =>
+        Message = _service is not null && _folders.Open(_service.ModsFolder)
+            ? ""
+            : "There's no folder for mod copies yet.";
 }
