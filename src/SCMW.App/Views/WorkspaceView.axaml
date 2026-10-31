@@ -257,10 +257,12 @@
             </Grid>
           </Border>
 
-          <!-- Show every option: off is Simple (the everyday things), on is Full (everything). -->
-          <CheckBox Name="FullModeTick" Content="Show every option" Margin="0,0,0,12"
+          <!-- One tick for everything: Simple is the everyday view; ticking it brings back the
+               advanced cards and the values that cannot be changed. -->
+          <CheckBox Name="FullModeTick" Content="Show everything, including values I can't change"
+                    Margin="0,0,0,12"
                     IsChecked="{Binding FullMode, Mode=TwoWay}"
-                    ToolTip.Tip="Full shows the advanced cards too: shelf and place, add a value, and the values that cannot be changed"/>
+                    ToolTip.Tip="Simple shows only what you can change. This adds the add-a-value card, the shelf and place card, and the values that cannot be changed"/>
 
           <!-- What it is: the words, picture and categories the game shows for it. -->
           <TextBlock Classes="group" Text="What it is" IsVisible="{Binding HasWhatItIs}"/>
@@ -398,12 +400,6 @@
 
           <!-- What it does: the file's own values, and the one field worth a tick box. -->
           <TextBlock Classes="group" Text="What it does" IsVisible="{Binding HasWhatItDoes}"/>
-
-          <!-- Locked rows are hidden by default; the owner can ask for them when they want to see
-               everything the file carries, not just what can be changed. -->
-          <CheckBox Name="ShowLockedFieldsTick" Content="Show non editable fields"
-                    IsChecked="{Binding ShowLockedFields, Mode=TwoWay}"
-                    IsVisible="{Binding ShowLockedCard}" Margin="0,0,0,10"/>
 
           <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemTemplate>

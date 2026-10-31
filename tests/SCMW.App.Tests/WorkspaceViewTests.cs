@@ -89,7 +89,7 @@ public class WorkspaceViewTests
     public void A_field_the_library_does_not_describe_is_shown_honestly()
     {
         var vm = new WorkspaceViewModel();
-        vm.ShowLockedFields = true;   // an undescribed row is usually locked, and locked rows are hidden by default
+        vm.FullMode = true;   // an undescribed row is usually locked, and locked rows are hidden by default
         vm.Show("Items", "Odd thing", new[] { Field("SomeMysteryNumber", "42") });
         var view = new WorkspaceView { DataContext = vm };
         var window = new Window { Content = view, Width = 900, Height = 300 };
@@ -189,7 +189,7 @@ public class WorkspaceViewTests
     public async Task Two_files_of_the_same_kind_show_their_own_fields()
     {
         var vm = new WorkspaceViewModel(source: new PerFileSource());
-        vm.ShowLockedFields = true;   // the test is about each file's own rows, locked ones included
+        vm.FullMode = true;   // the test is about each file's own rows, locked ones included
         vm.Browse("Items", new[]
         {
             new ItemSummary("Tomato", "Food", "", editable: true, assetId: "tomato-id"),
@@ -225,7 +225,7 @@ public class WorkspaceViewTests
         });
 
         var vm = new WorkspaceViewModel(source: source);
-        vm.ShowLockedFields = true;   // this family's rows are all locked for now
+        vm.FullMode = true;   // this family's rows are all locked for now
         vm.Browse(AssetFamily.LootAndSpawn.ToString(), assets);
         await vm.OpenAsync(vm.VisibleAssets.Single());
 
@@ -248,14 +248,13 @@ public class WorkspaceViewTests
 
         Assert.False(vm.FullMode);        // Simple is what a player sees first
         Assert.False(vm.ShowCraftingGroupCard);
-        Assert.False(vm.ShowLockedCard);
 
         vm.FullMode = true;
         Assert.True(vm.FullMode);
     }
 
     [AvaloniaFact]
-    public void Turning_on_full_brings_back_the_locked_values()
+    public void One_tick_brings_back_the_locked_values()
     {
         var vm = new WorkspaceViewModel();
         vm.Show("Items", "Tomato", new[]
@@ -264,16 +263,16 @@ public class WorkspaceViewTests
             new AssetField("_shelfLife", "_shelfLife", StatusKind.Unknown, "360"),
         }, "/a/Tomato_ES");
 
-        Assert.False(vm.ShowLockedCard);          // Simple: no tick at all
-        vm.FullMode = true;
-        Assert.True(vm.ShowLockedCard);           // Full: the tick is offered
+        // Simple: the padlocked row is noise for a player, so it is hidden.
+        Assert.All(vm.Fields, f => Assert.True(f.Writable));
+        Assert.Single(vm.Fields);
         Assert.True(vm.HasLockedFields);
 
-        vm.ShowLockedFields = true;
+        vm.FullMode = true;                       // the one tick: everything, locked values included
         Assert.Equal(2, vm.Fields.Count);
+        Assert.Contains(vm.Fields, f => !f.Writable);
 
         vm.FullMode = false;                      // back to Simple: locked rows go again
-        Assert.False(vm.ShowLockedFields);
         Assert.Single(vm.Fields);
     }
 
@@ -336,27 +335,7 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void Locked_values_are_hidden_until_the_owner_asks_for_them()
-    {
-        var vm = new WorkspaceViewModel();
-        vm.Show("Items", "Tomato", new[]
-        {
-            Field("Weight", "150"),                                                  // can be changed
-            new AssetField("_shelfLife", "_shelfLife", StatusKind.Unknown, "360"),   // cannot
-        }, "/a/Tomato_ES");
-
-        // Off by default: the padlocked row is noise for a player.
-        Assert.All(vm.Fields, f => Assert.True(f.Writable));
-        Assert.Single(vm.Fields);
-        Assert.True(vm.HasLockedFields);        // so the tick is offered
-
-        vm.ShowLockedFields = true;
-        Assert.Equal(2, vm.Fields.Count);
-        Assert.Contains(vm.Fields, f => !f.Writable);
-    }
-
-    [AvaloniaFact]
-    public void The_locked_values_tick_only_shows_when_there_are_locked_values()
+    public void The_workspace_has_one_tick_for_everything()
     {
         var vm = new WorkspaceViewModel();
         vm.Show("Items", "Tomato", new[] { Field("Weight", "150") });
@@ -366,8 +345,10 @@ public class WorkspaceViewTests
         window.Show();
         window.UpdateLayout();
 
-        Assert.False(view.FindControl<CheckBox>("ShowLockedFieldsTick")!.IsVisible);   // nothing locked here
-        Assert.False(vm.HasLockedFields);
+        var tick = view.FindControl<CheckBox>("FullModeTick");
+        Assert.NotNull(tick);
+        Assert.Equal("Show everything, including values I can't change", tick!.Content);
+        Assert.Null(view.FindControl<CheckBox>("ShowLockedFieldsTick"));   // the second tick is gone
     }
 
     [AvaloniaFact]
@@ -551,7 +532,7 @@ public class WorkspaceViewTests
     public void A_string_table_key_field_is_shown_without_an_editor()
     {
         var vm = new WorkspaceViewModel();
-        vm.ShowLockedFields = true;   // a string-table key is locked, and locked rows are hidden by default
+        vm.FullMode = true;   // a string-table key is locked, and locked rows are hidden by default
         vm.Show("Items", "Batteries", new[]
         {
             new AssetField("Caption", "Caption", StatusKind.ReadOnly, "Recipe_AnyBluntTool"),

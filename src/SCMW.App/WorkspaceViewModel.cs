@@ -238,22 +238,18 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>
     /// True when the page shows every option. Off by default: Simple is the everyday view.
+    /// It is the only tick: turning it on brings back the advanced cards and the values that
+    /// cannot be changed, so nobody has to tick a second box to see them.
     /// </summary>
     [ObservableProperty] private bool _fullMode;
 
-    partial void OnFullModeChanged(bool value)
-    {
-        if (!value) ShowLockedFields = false;   // locked values belong to Full
-    }
+    partial void OnFullModeChanged(bool value) => ApplyFieldFilter();
 
     /// <summary>True when the "add a value" list is offered (Full only).</summary>
     public bool ShowAdvancedCard => FullMode && HasAddableFields;
 
     /// <summary>True when the shelf-and-place card shows (Full only: it only matters for a new recipe).</summary>
     public bool ShowCraftingGroupCard => FullMode && ShowCraftingGroup;
-
-    /// <summary>True when the "show non editable fields" tick shows (Full only).</summary>
-    public bool ShowLockedCard => FullMode && HasLockedFields;
 
     /// <summary>True when the "How it is made or sold" group has anything in Simple or Full.</summary>
     public bool HasHowItsMade =>
@@ -266,7 +262,6 @@ public partial class WorkspaceViewModel : ObservableObject
         OnPropertyChanged(nameof(HasHowItsMade));
         OnPropertyChanged(nameof(ShowAdvancedCard));
         OnPropertyChanged(nameof(ShowCraftingGroupCard));
-        OnPropertyChanged(nameof(ShowLockedCard));
     }
 
     /// <summary>
@@ -274,24 +269,16 @@ public partial class WorkspaceViewModel : ObservableObject
     /// </summary>
     private readonly List<WorkspaceField> _allFieldRows = new();
 
-    /// <summary>
-    /// True when values that cannot be changed are listed. Off by default: a padlocked row is noise
-    /// for a player, who came to change something. The owner can ask to see everything the file has.
-    /// </summary>
-    [ObservableProperty] private bool _showLockedFields;
-
-    partial void OnShowLockedFieldsChanged(bool value) => ApplyFieldFilter();
-
-    /// <summary>True when the open file has at least one value we cannot change (so the tick is useful).</summary>
+    /// <summary>True when the open file has at least one value we cannot change.</summary>
     public bool HasLockedFields => _allFieldRows.Any(row => !row.Writable);
 
-    /// <summary>Show the rows the filter allows: everything, or only the ones we can change.</summary>
+    /// <summary>Show the rows the filter allows: everything (Full), or only the ones we can change.</summary>
     private void ApplyFieldFilter()
     {
         Fields.Clear();
         foreach (var row in _allFieldRows)
         {
-            if (ShowLockedFields || row.Writable) Fields.Add(row);
+            if (FullMode || row.Writable) Fields.Add(row);
         }
 
         HasFields = Fields.Count > 0;
