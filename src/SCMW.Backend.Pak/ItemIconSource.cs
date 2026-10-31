@@ -14,6 +14,8 @@
 // CUE4Parse's FixPath resolves that to the mounted "SCUM/Content/" form.
 using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.UE4.Assets.Exports.Texture;
+using CUE4Parse.UE4.Assets.Objects;
+using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse_Conversion.Textures;
 using SkiaSharp;
 
@@ -137,12 +139,19 @@ public sealed class PakIconSource : IItemIconSource
             if (TryReadIconReference(asset, out var assetIcon))
                 return IconSourceResult.Resolved(assetIcon!);
 
-            // A recipe with no icon of its own: use the item it makes (its "Product"). One level only.
-            if (depth == 0 && TryReadProductPath(asset, out var productPath))
+            // A recipe with no icon of its own: use the item it makes. A crafting recipe keeps it
+            // in "Product"; a cooking dish keeps it in "ResultingFood.Item". One level only.
+            if (depth == 0)
             {
-                var fromProduct = Resolve(productPath!, depth + 1);
-                if (fromProduct.Outcome == IconSourceOutcome.Resolved)
-                    return fromProduct;
+                var made = TryReadProductPath(asset, out var productPath)
+                    ? productPath
+                    : TryReadResultingFoodPath(asset);
+                if (made is not null)
+                {
+                    var fromMade = Resolve(made, depth + 1);
+                    if (fromMade.Outcome == IconSourceOutcome.Resolved)
+                        return fromMade;
+                }
             }
 
             return IconSourceResult.NoIcon;
@@ -222,6 +231,34 @@ public sealed class PakIconSource : IItemIconSource
             return productPath is not null;
         }
         return false;
+    }
+
+    /// <summary>
+    /// A cooking recipe's <c>ResultingFood.Item</c> — the dish it makes — as a package path, or null.
+    /// SCUM keeps this nested inside the recipe's <c>ResultingFood</c> struct, where a crafting
+    /// recipe's <c>Product</c> sits on the asset itself.
+    /// </summary>
+    private static string? TryReadResultingFoodPath(UObject asset)
+    {
+        foreach (var prop in asset.Properties)
+        {
+            var name = string.IsNullOrEmpty(prop.Name.Text) ? prop.Name.ToString() : prop.Name.Text;
+            if (!string.Equals(name, "ResultingFood", StringComparison.Ordinal)) continue;
+
+            if (prop.Tag?.GenericValue is FScriptStruct script && script.StructType is FStructFallback food)
+            {
+                foreach (var inner in food.Properties)
+                {
+                    var innerName = string.IsNullOrEmpty(inner.Name.Text) ? inner.Name.ToString() : inner.Name.Text;
+                    if (!string.Equals(innerName, "Item", StringComparison.Ordinal)) continue;
+                    return NormalizeProductPath(inner.Tag?.GenericValue?.ToString());
+                }
+            }
+
+            return null;
+        }
+
+        return null;
     }
 
     /// <summary>

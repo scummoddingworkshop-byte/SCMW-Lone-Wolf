@@ -246,10 +246,11 @@ internal sealed class IconNoIconManifest
 
     /// <summary>
     /// The icon-resolution logic's version. Bump it whenever <see cref="PakIconSource"/> learns to find
-    /// an icon it could not before (e.g. recipes, base elements), so the no-icon list is discarded and
-    /// every asset is retried. Without this, a fix could never take effect for already-recorded items.
+    /// an icon it could not before (e.g. recipes, base elements, cooking dishes via
+    /// <c>ResultingFood</c>), so the no-icon list is discarded and every asset is retried. Without
+    /// this, a fix could never take effect for already-recorded items.
     /// </summary>
-    public const string ExtractVersion = "3";
+    public const string ExtractVersion = "4";
 
     private readonly string _path;
     private readonly HashSet<string> _ids;
