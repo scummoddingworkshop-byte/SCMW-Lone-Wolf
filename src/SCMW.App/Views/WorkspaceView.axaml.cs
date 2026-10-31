@@ -34,10 +34,18 @@ public partial class WorkspaceView : UserControl
         if (columns.ColumnDefinitions.Count == 0 || columns.ColumnDefinitions[0] is not { } list) return;
 
         list.Width = new GridLength(WorkspaceLayout.SavedWidth);
+        SCMW.Core.Logging.Log.Info($"Workspace list column set to {list.Width.Value}");
 
         if (this.FindControl<GridSplitter>("ListSplitter") is { } splitter)
             splitter.DragCompleted += (_, _) => WorkspaceLayout.Remember(list.ActualWidth);
     }
+
+    /// <summary>The width the list column is really using right now (the saved one before any layout).</summary>
+    public double ListWidth =>
+        this.FindControl<Grid>("WorkspaceColumns") is { ColumnDefinitions.Count: > 0 } columns
+            && columns.ColumnDefinitions[0].ActualWidth > 0
+            ? columns.ColumnDefinitions[0].ActualWidth
+            : WorkspaceLayout.SavedWidth;
 
     /// <summary>Follow the view model so the New-recipe panel's dropdown can be rebuilt per open.</summary>
     private void HookViewModel()

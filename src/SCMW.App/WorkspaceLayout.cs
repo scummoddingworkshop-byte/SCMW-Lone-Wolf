@@ -24,7 +24,11 @@ public static class WorkspaceLayout
     public static event Action<double>? WidthChanged;
 
     /// <summary>Takes the saved width (or the default when there is none) and keeps it in range.</summary>
-    public static void Restore(int? saved) => SavedWidth = Clamp(saved ?? DefaultWidth);
+    public static void Restore(int? saved)
+    {
+        SavedWidth = Clamp(saved ?? DefaultWidth);
+        SCMW.Core.Logging.Log.Info($"Workspace list width restored to {SavedWidth} (saved: {saved?.ToString() ?? "none"})");
+    }
 
     /// <summary>Keeps a width between the floor and the cap.</summary>
     public static double Clamp(double width) =>

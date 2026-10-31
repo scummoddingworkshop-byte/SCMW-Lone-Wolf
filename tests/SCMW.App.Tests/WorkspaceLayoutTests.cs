@@ -75,6 +75,60 @@ public class WorkspaceLayoutTests
     }
 
     [AvaloniaFact]
+    public void A_drag_reports_the_width_it_was_left_at()
+    {
+        WorkspaceLayout.Restore(null);
+
+        var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
+        var window = new Window { Content = view, Width = 1200, Height = 600 };
+        window.Show();
+        window.UpdateLayout();
+
+        var columns = view.FindControl<Grid>("WorkspaceColumns")!;
+        var before = columns.ColumnDefinitions[0].Width.Value;
+        var splitter = view.FindControl<GridSplitter>("ListSplitter")!;
+        var grab = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, 100), window)!.Value;
+
+        // No layout pass between the release and the read: exactly what a real drag does.
+        window.MouseDown(grab, MouseButton.Left);
+        window.MouseMove(grab + new Point(60, 0));
+        window.MouseUp(grab + new Point(60, 0), MouseButton.Left);
+
+        Assert.Equal(before + 60, view.ListWidth, 1);
+    }
+
+    [AvaloniaFact]
+    public void Dragging_twice_remembers_the_last_width()
+    {
+        WorkspaceLayout.Restore(null);
+
+        var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
+        var window = new Window { Content = view, Width = 2560, Height = 800 };
+        window.Show();
+        window.UpdateLayout();
+
+        var columns = view.FindControl<Grid>("WorkspaceColumns")!;
+        var start = columns.ColumnDefinitions[0].Width.Value;
+        var splitter = view.FindControl<GridSplitter>("ListSplitter")!;
+
+        void DragBy(double dx)
+        {
+            var grab = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, 100), window)!.Value;
+            window.MouseDown(grab, MouseButton.Left);
+            window.MouseMove(grab + new Point(dx, 0));
+            window.MouseUp(grab + new Point(dx, 0), MouseButton.Left);
+            window.UpdateLayout();
+        }
+
+        DragBy(80);     // wider
+        Assert.Equal(start + 80, columns.ColumnDefinitions[0].Width.Value, 1);
+
+        DragBy(-80);    // and back
+        Assert.Equal(start, columns.ColumnDefinitions[0].Width.Value, 1);
+        Assert.Equal(start, WorkspaceLayout.SavedWidth, 1);
+    }
+
+    [AvaloniaFact]
     public void Dragging_the_divider_moves_the_list_wider()
     {
         WorkspaceLayout.Restore(null);
@@ -97,11 +151,16 @@ public class WorkspaceLayoutTests
 
         // Dragged 60 pixels right: the list should be 60 pixels wider, so the main area gets less.
         Assert.Equal(before + 60, columns.ColumnDefinitions[0].Width.Value, 1);
+
+        // What is remembered is the width the player actually left it at.
+        Assert.Equal(columns.ColumnDefinitions[0].Width.Value, WorkspaceLayout.SavedWidth, 1);
     }
 
     [AvaloniaFact]
     public void The_page_has_a_divider_that_can_be_dragged()
     {
+        WorkspaceLayout.Restore(420);   // the width a player left behind last time
+
         var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
         var window = new Window { Content = view, Width = 1200, Height = 600 };
         window.Show();
@@ -109,7 +168,7 @@ public class WorkspaceLayoutTests
 
         var grid = view.FindControl<Grid>("WorkspaceColumns");
         Assert.NotNull(grid);
-        Assert.Equal(WorkspaceLayout.SavedWidth, grid!.ColumnDefinitions[0].Width.Value);
+        Assert.Equal(420, grid!.ColumnDefinitions[0].Width.Value);   // it opens at the saved width
         Assert.Equal(WorkspaceLayout.MinWidth, grid.ColumnDefinitions[0].MinWidth);
         Assert.Equal(WorkspaceLayout.MaxWidth, grid.ColumnDefinitions[0].MaxWidth);
 

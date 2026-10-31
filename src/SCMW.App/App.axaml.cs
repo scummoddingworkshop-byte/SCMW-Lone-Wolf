@@ -48,19 +48,8 @@ public partial class App : Application
                 ? ProjectStore.Default()
                 : new ProjectStore(new ProjectService(workspace), settingsStore);
 
-            var window = new MainWindow
-            {
-                DataContext = new ShellViewModel(
-                    settingsStore: settingsStore,
-                    scumSources: WindowsScumSources.Default,
-                    projects: projectStore),
-            };
-
-            // Reopen at the size and place the player last left it.
-            WindowPlacement.Apply(window, settingsStore.Load());
-            window.Closing += (_, _) => WindowPlacement.Save(window, settingsStore);
-
-            // The Workspace's divider: start at the width the player last chose, and save each drag.
+            // The Workspace's divider: read the saved width BEFORE anything builds the Workspace,
+            // because that screen asks for the width while it is being created.
             WorkspaceLayout.Restore(settingsStore.Load().WorkspaceListWidth);
             WorkspaceLayout.WidthChanged += width =>
             {
@@ -76,6 +65,18 @@ public partial class App : Application
                     // Remembering the divider must never get in the way of using the app.
                 }
             };
+
+            var window = new MainWindow
+            {
+                DataContext = new ShellViewModel(
+                    settingsStore: settingsStore,
+                    scumSources: WindowsScumSources.Default,
+                    projects: projectStore),
+            };
+
+            // Reopen at the size and place the player last left it.
+            WindowPlacement.Apply(window, settingsStore.Load());
+            window.Closing += (_, _) => WindowPlacement.Save(window, settingsStore);
 
             // Let "Restart as administrator" close this window cleanly (so its place is remembered).
             WindowsElevation.Default.Shutdown = () => desktop.Shutdown();
