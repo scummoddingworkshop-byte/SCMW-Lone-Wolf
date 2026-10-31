@@ -219,6 +219,48 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when the open file is an item with words to show (so the card belongs on screen).</summary>
     [ObservableProperty] private bool _showItemIdentity;
 
+    // --- The page's three groups (polish pass 2) ------------------------------------------------
+    // A page that had grown to seven cards is read in three plain groups. A group only shows when it
+    // has something in it, so an empty heading never appears.
+
+    /// <summary>True when the "What it is" group has something to show (an item's words, picture, categories).</summary>
+    public bool HasWhatItIs => ShowItemIdentity || ShowItemCategories;
+
+    /// <summary>True when the "What it does" group has something to show (the file's own values).</summary>
+    public bool HasWhatItDoes => HasFields || ShowPermanentTick;
+
+    /// <summary>True when the "How it is made or sold" group has something to show (ingredients, makes, shelf).</summary>
+    public bool HasHowItsMade =>
+        HasIngredients || HasCookingIngredients || ShowOpenMakes || ShowCraftingGroup;
+
+    private void NotifyGroups()
+    {
+        OnPropertyChanged(nameof(HasWhatItIs));
+        OnPropertyChanged(nameof(HasWhatItDoes));
+        OnPropertyChanged(nameof(HasHowItsMade));
+    }
+
+    /// <summary>Keep the three group headings in step with whatever the cards are showing.</summary>
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        switch (e.PropertyName)
+        {
+            case nameof(ShowItemIdentity):
+            case nameof(ShowItemCategories):
+            case nameof(HasFields):
+            case nameof(HasIngredients):
+            case nameof(HasCookingIngredients):
+            case nameof(ShowOpenMakes):
+            case nameof(ShowCraftingGroup):
+            case nameof(ShowPermanentTick):
+            case nameof(IsPermanent):
+                NotifyGroups();
+                break;
+        }
+    }
+
     /// <summary>The name as typed in the card.</summary>
     [ObservableProperty] private string _itemNameDraft = string.Empty;
 
@@ -1597,6 +1639,7 @@ public partial class WorkspaceViewModel : ObservableObject
             string.Equals(f.TechnicalName, DescriptionField, StringComparison.OrdinalIgnoreCase));
 
         ShowItemIdentity = isItem && (hasName || hasDescription);
+        _isItemFile = isItem;
         HasItemDescription = isItem && hasDescription;
 
         if (!ShowItemIdentity)
@@ -1945,6 +1988,20 @@ public partial class WorkspaceViewModel : ObservableObject
             owned.Add(DisplayPriorityField);
         }
 
+        // The Name & description card owns the words and the three picture links, so they leave the
+        // plain list instead of appearing twice (once in the card, once as a padlocked row).
+        var itemFile = string.Equals(kind, "Items", StringComparison.Ordinal)
+                       && assetPath is not null
+                       && assetPath.EndsWith("_ES", StringComparison.OrdinalIgnoreCase);
+        var hasWords = fields.Any(f => string.Equals(f.TechnicalName, CaptionField, StringComparison.OrdinalIgnoreCase)
+                                       || string.Equals(f.TechnicalName, DescriptionField, StringComparison.OrdinalIgnoreCase));
+        if (itemFile && hasWords)
+        {
+            owned.Add(CaptionField);
+            owned.Add(DescriptionField);
+            foreach (var icon in IconFields) owned.Add(icon);
+        }
+
         foreach (var field in fields)
         {
             if (owned.Contains(field.TechnicalName)) continue;
@@ -2011,9 +2068,22 @@ public partial class WorkspaceViewModel : ObservableObject
         AddableFields.Clear();
         if (addable is not null)
         {
-            foreach (var field in addable) AddableFields.Add(field);
+            // The auto-destruct timer has its own tick box, so it never joins the "add a value" list.
+            PermanentAdd = addable.FirstOrDefault(f =>
+                string.Equals(f.TechnicalName, PermanentFieldName, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var field in addable)
+            {
+                if (!ReferenceEquals(field, PermanentAdd)) AddableFields.Add(field);
+            }
         }
+        else
+        {
+            PermanentAdd = null;
+        }
+
         OnPropertyChanged(nameof(HasAddableFields));
+        NotifyPermanent();
     }
 
     /// <summary>The field paths the Ingredients card owns (each slot's tag and amounts).</summary>
@@ -2416,6 +2486,84 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when at least one field could be added to the open file.</summary>
     public bool HasAddableFields => AddableFields.Count > 0;
 
+    /// <summary>The one field owners ask for most: how long a placed item lasts before it vanishes
+    /// (0 means for good). It gets its own tick box, so it stays out of the "add a value" list.</summary>
+    private const string PermanentFieldName = "_autoDestructTime";
+
+    /// <summary>The auto-destruct row when the file lacks it and a donor has it. Null when the file
+    /// already has the field (then the field's own row is the one to edit).</summary>
+    [ObservableProperty] private AddableField? _permanentAdd;
+
+    /// <summary>True when the open file is an item's own "_ES" file (where the game keeps item-level
+    /// values such as the auto-destruct timer).</summary>
+    private bool _isItemFile;
+
+    /// <summary>True when the open item can be shown the "make this item permanent" tick box.</summary>
+    public bool ShowPermanentTick =>
+        _isItemFile && (PermanentAdd is not null || PermanentValueRow is not null);
+
+    /// <summary>The file's own auto-destruct row (never one this project added), or null.</summary>
+    private WorkspaceField? PermanentValueRow =>
+        Fields.FirstOrDefault(f => !f.IsAdded
+            && string.Equals(f.TechnicalName, PermanentFieldName, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Ticked when a placed item stays for good: either this project gave it the timer with 0, or the
+    /// file already has the timer and it is 0. Ticking writes the 0; unticking drops the change (or
+    /// the added field), so the item goes back to the game's own behaviour.
+    /// </summary>
+    public bool IsPermanent
+    {
+        get
+        {
+            if (PermanentAdd is { IsAdded: true }) return true;
+            return PermanentValueRow is { } row && PlainNumber.ForDisplay(row.Value) == "0";
+        }
+        set
+        {
+            var path = SelectedAsset?.AssetId ?? _shownAssetPath;
+            if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+            if (PermanentValueRow is { } row)
+            {
+                if (value)
+                {
+                    row.Draft = "0";
+                    row.IsEditing = true;
+                    CommitEdit(row);            // the same change as typing 0 by hand
+                }
+                else
+                {
+                    DropFieldChange(path!, row.TechnicalName);
+                    RefreshShown();
+                }
+
+                NotifyPermanent();
+                return;
+            }
+
+            if (PermanentAdd is not { } add) return;
+
+            if (value)
+            {
+                add.Draft = "0";
+                Add(add);
+            }
+            else if (add.IsAdded)
+            {
+                Remove(add);
+            }
+
+            NotifyPermanent();
+        }
+    }
+
+    private void NotifyPermanent()
+    {
+        OnPropertyChanged(nameof(IsPermanent));
+        OnPropertyChanged(nameof(ShowPermanentTick));
+    }
+
     /// <summary>Work out the addable fields for a file: described and flagged addable, not already
     /// present, not already added, and with a donor file somewhere in the kind. Never throws.</summary>
     private async System.Threading.Tasks.Task<IReadOnlyList<AddableField>> BuildAddableAsync(
@@ -2651,7 +2799,7 @@ public partial class WorkspaceViewModel : ObservableObject
         if (!field.IsDraftValid) return;   // stays open so it can be corrected
 
         var draft = field.Draft.Trim();
-        var path = SelectedAsset?.AssetId;
+        var path = SelectedAsset?.AssetId ?? _shownAssetPath;
 
         // Not wired to a project (a bare/preview screen): keep the change in memory only.
         if (_changes is null || string.IsNullOrEmpty(path))
@@ -2839,7 +2987,10 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Drop every recorded value change on one dish field (used when a picker returns to the
     /// game's own value, so the change is truly gone rather than a no-op record the build would still write).</summary>
-    private void UndoCookingSet(string assetPath, string fieldPath)
+    private void UndoCookingSet(string assetPath, string fieldPath) => DropFieldChange(assetPath, fieldPath);
+
+    /// <summary>Drop every recorded Set on one field path, so the file's own value stands again.</summary>
+    private void DropFieldChange(string assetPath, string fieldPath)
     {
         var folder = _projects?.Chosen?.FolderPath;
         if (_changes is null || string.IsNullOrEmpty(folder)) return;

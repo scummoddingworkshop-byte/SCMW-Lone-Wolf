@@ -253,6 +253,9 @@
             </Grid>
           </Border>
 
+          <!-- What it is: the words, picture and categories the game shows for it. -->
+          <TextBlock Classes="group" Text="What it is" IsVisible="{Binding HasWhatItIs}"/>
+
           <!-- An item's shown name, description and picture. The words live in the item's own "_ES"
                file; the picture is copied from another item the owner picks. -->
           <Border Name="ItemIdentityCard" Classes="card" Margin="0,0,0,14"
@@ -383,6 +386,75 @@
                          IsVisible="{Binding HasCategoryNotice}"/>
             </StackPanel>
           </Border>
+
+          <!-- What it does: the file's own values, and the one field worth a tick box. -->
+          <TextBlock Classes="group" Text="What it does" IsVisible="{Binding HasWhatItDoes}"/>
+
+          <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WorkspaceField">
+                <controls:FieldRow Margin="0,0,0,14"
+                    BeginEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
+                    CommitEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitEditCommand}"
+                    CancelEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelEditCommand}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- The one "add a field" worth a plain control: a placed item either lasts or it doesn't.
+               Ticking writes the game's own auto-destruct timer as 0, so nobody has to know the 0. -->
+          <Border Name="PermanentCard" Classes="card" Margin="0,0,0,14"
+                  IsVisible="{Binding ShowPermanentTick}">
+            <StackPanel Spacing="6">
+              <CheckBox Name="PermanentTick" Content="Make this item permanent"
+                        IsChecked="{Binding IsPermanent, Mode=TwoWay}"/>
+              <TextBlock Classes="dim" TextWrapping="Wrap"
+                         Text="It stays where it is put instead of vanishing. The app sets the item's auto-destruct timer to 0 for you."/>
+            </StackPanel>
+          </Border>
+
+          <!-- Anything else we could add stays out of the way, for the owner who knows what they want. -->
+          <Expander Name="AdvancedExpander" Classes="group-expander"
+                    Header="Advanced — add a value this item doesn't have"
+                    IsVisible="{Binding HasAddableFields}" Margin="0,0,0,14">
+            <ItemsControl Name="AddableList" ItemsSource="{Binding AddableFields}" Margin="0,10,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AddableField">
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,14">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6"
+                                VerticalAlignment="Top" Margin="0,7,0,0">
+                      <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextDimBrush}"/>
+                      <TextBlock Text="{Binding Unit}" Classes="dim" VerticalAlignment="Center"
+                                 IsVisible="{Binding HasUnit}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                VerticalAlignment="Top" IsVisible="{Binding ShowAdd}">
+                      <TextBox Name="AddDraft" Classes="field" MinWidth="120" MinHeight="30"
+                               Watermark="new value…" Text="{Binding Draft, Mode=TwoWay}"/>
+                      <Button Name="AddButton" Classes="primary" Content="Add"
+                              Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCommand}"
+                              CommandParameter="{Binding}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Top" IsVisible="{Binding ShowRemove}">
+                      <Border Classes="chip" VerticalAlignment="Center">
+                        <TextBlock Text="added" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
+                      </Border>
+                      <Button Name="RemoveButton" Classes="secondary" Content="Remove"
+                              Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveCommand}"
+                              CommandParameter="{Binding}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="dim"
+                               TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding Meaning}"
+                               IsVisible="{Binding HasMeaning}"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Expander>
+
+          <!-- How it is made or sold: ingredients, what it makes, and its shelf. -->
+          <TextBlock Classes="group" Text="How it is made or sold" IsVisible="{Binding HasHowItsMade}"/>
 
           <!-- What an existing NEW recipe makes (Phase 8.2 follow-up): set or change its product at
                any time. The dropdown is built fresh per recipe open, like the New panel's ones. -->
@@ -648,58 +720,6 @@
             </StackPanel>
           </Border>
 
-          <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:WorkspaceField">
-                <controls:FieldRow Margin="0,0,0,14"
-                    BeginEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).BeginEditCommand}"
-                    CommitEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CommitEditCommand}"
-                    CancelEditCommand="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).CancelEditCommand}"/>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <!-- Fields this file lacks that we can add by copying a donor item's shape (Task 5.2). -->
-          <Border Name="AddableSection" Classes="card" Margin="0,12,0,0"
-                  IsVisible="{Binding HasAddableFields}">
-            <StackPanel>
-              <TextBlock Classes="section" Text="Add a value this item doesn't have" Margin="0,0,0,10"/>
-              <ItemsControl Name="AddableList" ItemsSource="{Binding AddableFields}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:AddableField">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,14">
-                      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                  VerticalAlignment="Top" Margin="0,7,0,0">
-                        <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextDimBrush}"/>
-                        <TextBlock Text="{Binding Unit}" Classes="dim" VerticalAlignment="Center"
-                                   IsVisible="{Binding HasUnit}"/>
-                      </StackPanel>
-                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                  VerticalAlignment="Top" IsVisible="{Binding ShowAdd}">
-                        <TextBox Name="AddDraft" Classes="field" MinWidth="120" MinHeight="30"
-                                 Watermark="new value…" Text="{Binding Draft, Mode=TwoWay}"/>
-                        <Button Name="AddButton" Classes="primary" Content="Add"
-                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).AddCommand}"
-                                CommandParameter="{Binding}"/>
-                      </StackPanel>
-                      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                                  VerticalAlignment="Top" IsVisible="{Binding ShowRemove}">
-                        <Border Classes="chip" VerticalAlignment="Center">
-                          <TextBlock Text="added" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
-                        </Border>
-                        <Button Name="RemoveButton" Classes="secondary" Content="Remove"
-                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).RemoveCommand}"
-                                CommandParameter="{Binding}"/>
-                      </StackPanel>
-                      <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="dim"
-                                 TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding Meaning}"
-                                 IsVisible="{Binding HasMeaning}"/>
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </Border>
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

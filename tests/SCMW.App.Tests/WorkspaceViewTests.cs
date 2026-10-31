@@ -433,7 +433,7 @@ public class WorkspaceViewTests
     // --- Fields you could add (Task 5.2) --------------------------------------------------------
 
     [AvaloniaFact]
-    public async Task The_add_list_offers_only_the_flagged_addable_field()
+    public async Task The_permanent_timer_is_a_tick_box_not_a_row_in_the_list()
     {
         var source = new AddFieldSource();
         var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source));
@@ -441,9 +441,13 @@ public class WorkspaceViewTests
         await vm.OpenKindAsync("Items");
         await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-        // The auto-destruct timer is the only addable field, and a donor (Stone) has it.
-        var add = Assert.Single(vm.AddableFields);
-        Assert.Equal("_autoDestructTime", add.TechnicalName);
+        // The auto-destruct timer is the only addable field; it is offered as a tick box, so the
+        // "add a value" list stays empty.
+        Assert.Empty(vm.AddableFields);
+        Assert.NotNull(vm.PermanentAdd);
+        Assert.Equal("_autoDestructTime", vm.PermanentAdd!.TechnicalName);
+        Assert.True(vm.ShowPermanentTick);
+        Assert.False(vm.IsPermanent);
 
         // Not offered: a field already in the file, a field with no donor anywhere, and a field that
         // has a donor but the library does not flag addable.
@@ -466,7 +470,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            var add = vm.PermanentAdd!;
             add.Draft = "0";
             vm.AddCommand.Execute(add);
 
@@ -477,10 +481,11 @@ public class WorkspaceViewTests
             Assert.Equal(AddFieldSource.TomatoClass, record.AssetPath);   // the class file, not the item file
             Assert.Equal(AddFieldSource.TorchClass, record.DonorPath);    // where the shape is borrowed from
 
-            // The card now shows the field as added (with a Remove option), not gone.
-            var still = Assert.Single(vm.AddableFields);
+            // The card now shows the box ticked (the project added the field), not an "add" row.
+            var still = vm.PermanentAdd!;
             Assert.True(still.IsAdded);
             Assert.Equal(record.Id, still.RecordId);
+            Assert.True(vm.IsPermanent);
 
             // And it shows in the item's own field list, as "added", with its value.
             var row = vm.Fields.Single(f => f.TechnicalName == "_autoDestructTime");
@@ -504,7 +509,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            var add = vm.PermanentAdd!;
             add.Draft = "0";
             vm.AddCommand.Execute(add);
 
@@ -536,7 +541,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            var add = vm.PermanentAdd!;
             add.Draft = "0";
             vm.AddCommand.Execute(add);
             Assert.Single(changes.For(projects.Current!.FolderPath));
@@ -569,7 +574,8 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
 
-            Assert.True(Assert.Single(vm.AddableFields).IsAdded);
+            Assert.True(vm.PermanentAdd!.IsAdded);
+            Assert.True(vm.IsPermanent);       // the box reads ticked
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -583,7 +589,7 @@ public class WorkspaceViewTests
         await vm.OpenKindAsync("Items");
         await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
 
-        var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+        var add = vm.PermanentAdd!;
         Assert.Equal(AddFieldSource.BaitRealClass, add.TargetPath);
     }
 
@@ -601,7 +607,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
 
-            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            var add = vm.PermanentAdd!;
             add.Draft = "0";
             vm.AddCommand.Execute(add);
 
@@ -630,7 +636,7 @@ public class WorkspaceViewTests
             await vm.OpenKindAsync("Items");
             await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Animal Bait"));
 
-            var add = vm.AddableFields.Single(a => a.TechnicalName == "_autoDestructTime");
+            var add = vm.PermanentAdd!;
             Assert.True(add.IsAdded);          // the old record is still visible, not silently lost
 
             vm.RemoveCommand.Execute(add);
@@ -645,7 +651,87 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_add_section_shows_a_field_you_could_add()
+    public async Task Ticking_the_permanent_box_adds_the_timer_as_zero()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            vm.IsPermanent = true;
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(ChangeOperation.AddField, record.Operation);
+            Assert.Equal("_autoDestructTime", record.FieldTechnicalName);
+            Assert.Equal("0", record.NewValue);
+            Assert.True(vm.IsPermanent);
+            Assert.Equal("0", vm.Fields.Single(f => f.TechnicalName == "_autoDestructTime").Value);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Unticking_the_permanent_box_takes_the_timer_away()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var source = new AddFieldSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
+                                            changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Tomato"));
+
+            vm.IsPermanent = true;
+            vm.IsPermanent = false;
+
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+            Assert.False(vm.IsPermanent);
+            Assert.DoesNotContain(vm.Fields, f => f.TechnicalName == "_autoDestructTime");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void An_item_whose_file_has_a_timer_ticks_the_box_only_when_it_is_zero()
+    {
+        var (projects, root) = TestProjects.With("Tomato mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source: null, catalog: null,
+                                            changes: changes, projects: projects);
+
+            var fields = new[] { Field("Weight", "20000"), Field("_autoDestructTime", "45") };
+            vm.Show("Items", "Tomato", fields, "/a/Tomato_ES");
+
+            Assert.True(vm.ShowPermanentTick);
+            Assert.False(vm.IsPermanent);          // 45 minutes is not "permanent"
+
+            vm.IsPermanent = true;                 // ticking writes the 0 for the owner
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));
+            Assert.Equal(ChangeOperation.Set, record.Operation);
+            Assert.Equal("_autoDestructTime", record.FieldTechnicalName);
+            Assert.Equal("45", record.OldValue);
+            Assert.Equal("0", record.NewValue);
+
+            vm.IsPermanent = false;                // unticking drops the change: back to the game's 45
+            Assert.Empty(changes.For(projects.Current!.FolderPath));
+            Assert.False(vm.IsPermanent);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void The_page_shows_the_permanent_tick_box_for_an_item()
     {
         var vm = new WorkspaceViewModel();
         var addable = new AddableField("Auto-destruct time", "real minutes",
@@ -656,16 +742,43 @@ public class WorkspaceViewTests
                 new[] { addable });
 
         var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        var card = view.FindControl<Border>("PermanentCard");
+        Assert.NotNull(card);
+        Assert.True(card!.IsVisible);
+
+        var tick = view.FindControl<CheckBox>("PermanentTick");
+        Assert.NotNull(tick);
+        Assert.False(tick!.IsChecked);
+        Assert.Contains("permanent", (tick.Content as string) ?? "", StringComparison.OrdinalIgnoreCase);
+
+        // The timer is not also offered in the "add a value" list.
+        Assert.False(vm.HasAddableFields);
+    }
+
+    [AvaloniaFact]
+    public void The_add_section_shows_a_field_you_could_add()
+    {
+        var vm = new WorkspaceViewModel();
+        var addable = new AddableField("Max health", "", "How much damage it takes.",
+                                       "MaxHealth", "/a/Torch", FieldType.Number, "/a/Tomato", isAdded: true);
+
+        vm.Show("Items", "Tomato", new[] { Field("Weight", "20000") }, "/a/Tomato_ES",
+                new[] { addable });
+
+        var view = new WorkspaceView { DataContext = vm };
         var window = new Window { Content = view, Width = 900, Height = 600 };
         window.Show();
         window.UpdateLayout();
 
-        var section = view.FindControl<Border>("AddableSection");
-        Assert.NotNull(section);
-        Assert.True(section!.IsVisible);
+        var advanced = view.FindControl<Expander>("AdvancedExpander");
+        Assert.NotNull(advanced);
+        Assert.True(advanced!.IsVisible);
         var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
-        Assert.Contains(texts, t => t.Contains("Add a value this item doesn't have", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("Auto-destruct time", texts);
+        Assert.Contains(texts, t => t.Contains("add a value this item doesn't have", StringComparison.OrdinalIgnoreCase));
     }
 
     [AvaloniaFact]
@@ -709,7 +822,7 @@ public class WorkspaceViewTests
         await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Target"));
 
         // The only donor sits at item 46, past the old 40-item cap.
-        var add = Assert.Single(vm.AddableFields);
+        var add = vm.PermanentAdd!;
         Assert.Equal("_autoDestructTime", add.TechnicalName);
         Assert.Equal(DeepDonorSource.DonorClass, add.DonorPath);
     }

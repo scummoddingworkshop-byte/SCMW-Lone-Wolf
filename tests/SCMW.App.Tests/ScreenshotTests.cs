@@ -3,6 +3,9 @@ using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using SCMW.App.Views;
 using SCMW.Backend.Build;
+using SCMW.Core;
+using SCMW.Core.Content;
+using SCMW.Core.Knowledge;
 
 namespace SCMW.App.Tests;
 
@@ -190,6 +193,39 @@ public class ScreenshotTests
             IEnumerable<string> ids, IProgress<SCMW.Core.Content.IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new SCMW.Core.Content.IconExtractionProgress(0, 0, 0, 0));
         public Task ClearIconsAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    [AvaloniaFact]
+    public void Capture_workspace()
+    {
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source: null, catalog: null);
+
+        var permanent = new AddableField("Auto-destruct time", "real minutes",
+            "How long an item left on the ground or on a surface lasts before it vanishes.",
+            "_autoDestructTime", "/a/Torch", FieldType.Number, "/a/Tomato_ES");
+
+        static AssetField F(string name, string value) =>
+            new(name, name, StatusKind.Editable, value);
+
+        vm.Show("Items", "Tomato", new[]
+        {
+            F("Caption", "Tomato"),
+            F("Description", "A ripe tomato, still warm from the vine."),
+            F("Weight", "150"),
+            F("MaxStackSize", "6"),
+            F("MaxHealth", "20"),
+            F("_shelfLife", "360"),
+        }, "/a/Tomato_ES", new[] { permanent });
+
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1000, Height = 1500 };
+        window.Show();
+        window.UpdateLayout();
+
+        var path = Screenshot.Capture(window, "workspace");
+
+        Assert.True(File.Exists(path), path);
+        Assert.True(new FileInfo(path).Length > 5_000, "PNG looks empty");
     }
 
     [AvaloniaFact]
