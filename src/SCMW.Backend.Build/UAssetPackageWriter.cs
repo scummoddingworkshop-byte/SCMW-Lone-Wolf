@@ -149,7 +149,8 @@ public sealed class UAssetPackageWriter : IPackageWriter
         {
             if (array.Value.Length == 0)
             {
-                error = $"There is no existing entry of \"{change.Field}\" to copy for the new one.";
+                error = "There is nothing in this list to copy for the new entry — remove that change in Projects, "
+                        + "then add it again from a list that has something in it.";
                 return false;
             }
             if (array.Value.Length >= MaxListEntries)

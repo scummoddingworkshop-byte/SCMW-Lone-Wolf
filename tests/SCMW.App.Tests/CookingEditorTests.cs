@@ -280,11 +280,12 @@ public class CookingEditorTests
         {
             var (vm, _) = await DishOpened(projects);
 
-            vm.RemoveCookingFoodCommand.Execute(vm.CookingSlots[0].Foods[0]);
+            vm.AddCookingFoodCommand.Execute(vm.CookingSlots[0]);      // two foods now
+            vm.RemoveCookingFoodCommand.Execute(vm.CookingSlots[0].Foods[1]);
 
-            var record = Assert.Single(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath));
-            Assert.Equal("MainIngredients[0].PossibleIngredient[0]", record.FieldTechnicalName);
-            Assert.Equal(ChangeOperation.RemoveEntry, record.Operation);
+            var record = TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath)
+                .Single(r => r.Operation == ChangeOperation.RemoveEntry);
+            Assert.Equal("MainIngredients[0].PossibleIngredient[1]", record.FieldTechnicalName);
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -349,10 +350,11 @@ public class CookingEditorTests
         {
             var (vm, _) = await DishOpened(projects);
 
-            vm.RemoveCookingFoodCommand.Execute(vm.CookingSlots[0].Foods[0]);
+            vm.AddCookingFoodCommand.Execute(vm.CookingSlots[0]);          // two foods
+            vm.RemoveCookingFoodCommand.Execute(vm.CookingSlots[0].Foods[1]);
             await vm.OpenAsync(vm.SelectedAsset!);
 
-            Assert.Empty(vm.CookingSlots[0].Foods);
+            Assert.Single(vm.CookingSlots[0].Foods);                       // the one that was removed stays gone
         }
         finally { TestProjects.Cleanup(root); }
     }
@@ -397,9 +399,10 @@ public class CookingEditorTests
         Field("OptionalIngredients[0].PossibleIngredient[0].Liters", "0.1", "FloatProperty"),
     };
 
-    private static async Task<(WorkspaceViewModel Vm, DishSource Source)> OilDishOpened(ProjectStore? projects)
+    private static async Task<(WorkspaceViewModel Vm, DishSource Source)> OilDishOpened(
+        ProjectStore? projects, IReadOnlyList<AssetField>? fields = null)
     {
-        var source = new DishSource(OilDishFields());
+        var source = new DishSource(fields ?? OilDishFields());
         ItemChangeStore? changes = projects is null ? null : TestProjects.ChangeStore(projects);
         var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
                                         new ContentCatalog(source), changes, projects);
@@ -508,6 +511,44 @@ public class CookingEditorTests
             var shown = vm.CookingSlots[0].Foods[0];
             Assert.Equal(Pepper, shown.SelectedFood!.SoftPath);
             Assert.True(shown.CanResetToResource);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Adding_a_food_when_the_ingredient_has_none_is_refused_with_a_plain_line()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            // An ingredient opened with no foods (the shape an older project can be left in).
+            var empty = OilDishFields().Where(f => !f.TechnicalName.Contains("PossibleIngredient")).ToList();
+            var (vm, _) = await OilDishOpened(projects, empty);
+            Assert.Empty(vm.CookingSlots[0].Foods);
+
+            vm.AddCookingFoodCommand.Execute(vm.CookingSlots[0]);
+
+            Assert.Empty(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath));
+            Assert.True(vm.HasCookingNotice);
+            Assert.Contains("no food", vm.CookingNotice);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Removing_the_last_food_is_refused_with_a_plain_line()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var (vm, _) = await OilDishOpened(projects);
+
+            vm.RemoveCookingFoodCommand.Execute(vm.CookingSlots[0].Foods[0]);
+
+            Assert.Empty(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath)
+                .Where(r => r.FieldTechnicalName.Contains("PossibleIngredient[0]")));
+            Assert.True(vm.HasCookingNotice);
+            Assert.Contains("at least one food", vm.CookingNotice);
         }
         finally { TestProjects.Cleanup(root); }
     }

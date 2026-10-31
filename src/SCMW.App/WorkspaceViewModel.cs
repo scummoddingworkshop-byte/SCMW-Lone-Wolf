@@ -2853,7 +2853,8 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>Add a food to an ingredient. Recorded as a list change; the build clones the last food,
-    /// so the card shows the new (cloned) row at once.</summary>
+    /// so the card shows the new (cloned) row at once. With no food left to copy the build could never
+    /// make the mod, so it is refused here with a plain line instead.</summary>
     [RelayCommand]
     private void AddCookingFood(CookingIngredientRow? ingredient)
     {
@@ -2862,6 +2863,12 @@ public partial class WorkspaceViewModel : ObservableObject
         var path = SelectedAsset?.AssetId;
         if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
 
+        if (ingredient.Foods.Count == 0)
+        {
+            CookingNotice = "This ingredient has no food left to copy. Add the ingredient again, or remove it — the build cannot make a food from nothing.";
+            return;
+        }
+
         _changes.RecordListChange(path!, CookingIngredients.FoodListPath(ingredient.IsMain, ingredient.Index),
                                   ChangeOperation.AddEntry, _projects!.Chosen!.Id, assetPath: path);
         CookingNotice = string.Empty;
@@ -2869,7 +2876,8 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     /// <summary>Remove a food at its own index. Removing shifts the rest, so the dish's existing value
-    /// changes are cleared first — the card says how many, so nothing is silent.</summary>
+    /// changes are cleared first — the card says how many, so nothing is silent. The last food is kept:
+    /// an ingredient with no food is one no build can grow again.</summary>
     [RelayCommand]
     private void RemoveCookingFood(CookingFoodRow? food)
     {
@@ -2877,6 +2885,13 @@ public partial class WorkspaceViewModel : ObservableObject
 
         var path = SelectedAsset?.AssetId;
         if (_changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        var ingredient = CookingSlots.FirstOrDefault(i => i.IsMain == food.IsMain && i.Index == food.IngredientIndex);
+        if (ingredient is not null && ingredient.Foods.Count <= 1)
+        {
+            CookingNotice = "An ingredient needs at least one food. Remove the whole ingredient instead.";
+            return;
+        }
 
         var dropped = _changes.RecordListChange(path!,
             CookingIngredients.FoodPath(food.IsMain, food.IngredientIndex, food.Index),
