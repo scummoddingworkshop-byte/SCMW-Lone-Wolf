@@ -56,6 +56,7 @@ public partial class WorkspaceViewModel : ObservableObject
             _projects.Changed += OnProjectChanged;
 
         SelectedKindChip = KindChips[0];
+        KindChips[0].IsCurrent = true;   // the first list is the one being browsed
     }
 
     public WorkspaceViewModel(IContentSource source) : this(FieldLibraryLoader.LoadDefault(), source) { }
@@ -409,6 +410,10 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>The kinds the picker offers, in the order they are shown.</summary>
     public IReadOnlyList<string> Kinds { get; } = new[] { "Items", "Base building", "Recipes", "Cooking" };
 
+    /// <summary>Which list is being browsed, in plain words ("Showing: Change a recipe").</summary>
+    public string BrowsingLine =>
+        string.IsNullOrEmpty(SelectedKindChip?.Label) ? string.Empty : "Showing: " + SelectedKindChip!.Label;
+
     /// <summary>
     /// A chip on the picker: the kind's known key (what the rest of the app uses) and the words the
     /// player reads. Both recipe families say "recipe" out loud, so nobody has to guess which list a
@@ -422,8 +427,16 @@ public partial class WorkspaceViewModel : ObservableObject
 
     partial void OnSelectedKindChipChanged(KindChip? value)
     {
+        OnPropertyChanged(nameof(BrowsingLine));
         if (value is not null && !string.Equals(value.Key, SelectedKind, StringComparison.Ordinal))
             SelectedKind = value.Key;
+    }
+
+    /// <summary>Pick a list from the starting buttons (the one button per job).</summary>
+    [RelayCommand]
+    private void SelectKind(string? key)
+    {
+        if (!string.IsNullOrEmpty(key)) SelectedKind = key;
     }
 
     /// <summary>The kind being browsed (always one of <see cref="Kinds"/>).</summary>
@@ -438,6 +451,9 @@ public partial class WorkspaceViewModel : ObservableObject
 
         var chip = KindChips.FirstOrDefault(c => string.Equals(c.Key, value, StringComparison.Ordinal));
         if (chip is not null && !ReferenceEquals(chip, SelectedKindChip)) SelectedKindChip = chip;
+
+        // The button for the list being browsed is lit up; the others are not.
+        foreach (var one in KindChips) one.IsCurrent = string.Equals(one.Key, value, StringComparison.Ordinal);
 
         if (!_loadingKind && !string.IsNullOrEmpty(value))
         {

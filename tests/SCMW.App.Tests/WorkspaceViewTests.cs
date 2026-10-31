@@ -278,7 +278,7 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_chips_say_what_the_player_wants_to_do()
+    public void The_starting_buttons_say_what_the_player_wants_to_do()
     {
         var vm = new WorkspaceViewModel();
 
@@ -289,8 +289,12 @@ public class WorkspaceViewTests
         Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
                      vm.KindChips.Select(c => c.Key).ToArray());
 
-        vm.SelectedKindChip = vm.KindChips.Single(c => c.Key == "Cooking");
+        // The button for the list being browsed is lit up, and only that one.
+        Assert.True(vm.KindChips[0].IsCurrent);
+
+        vm.SelectKindCommand.Execute("Cooking");
         Assert.Equal("Cooking", vm.SelectedKind);
+        Assert.Equal("Showing: Change a cooking dish", vm.BrowsingLine);
     }
 
     [AvaloniaFact]
@@ -302,7 +306,7 @@ public class WorkspaceViewTests
         window.Show();
         window.UpdateLayout();
 
-        Assert.NotNull(view.FindControl<ListBox>("KindChips"));
+        Assert.NotNull(view.FindControl<ItemsControl>("KindButtons"));
         Assert.NotNull(view.FindControl<Button>("StartMakeNew"));
         Assert.False(vm.FullMode);
         Assert.NotNull(view.FindControl<CheckBox>("FullModeTick"));
