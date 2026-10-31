@@ -66,7 +66,7 @@ public class NexusMediaTests : IDisposable
     public void Media_workspace()
     {
         var vm = ConfiguredShell("Inventory Rebalance");
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Workspace);
+        vm.SelectedEntry = vm.Sidebar.First(i => i.Key == ScreenKey.Workspace);
 
         Save(new MainWindow { DataContext = vm }, "nexus-workspace");
     }

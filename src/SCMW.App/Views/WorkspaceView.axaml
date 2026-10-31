@@ -118,39 +118,20 @@
                  Foreground="{StaticResource WarningBrush}"/>
     </Border>
 
-    <!-- Left: what the player wants to do (one button per job), then find + browse -->
-    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
-      <ItemsControl Grid.Row="0" Name="KindButtons" ItemsSource="{Binding KindChips}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <!-- One per row, all the same width and height. A two-by-two grid looked tidier but cut
-                 "Change a cooking dish" in half, and worse once the list is dragged narrow. -->
-            <StackPanel/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:KindChip">
-            <Button Classes="secondary" Content="{Binding Label}"
-                    Margin="0,0,0,6"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).SelectKindCommand}"
-                    CommandParameter="{Binding Key}"/>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
+    <!-- Left: which list is open, then find + browse. The four job rows live in the rail now. -->
+    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
       <!-- What can be done in this list: a band like the rail's MAKE / SHIP headings, with a line
            above and below so it sits clear of the buttons and the search box. -->
-      <Border Grid.Row="1" Name="BrowsingBand" Margin="0,4,0,4" Padding="0,8"
+      <Border Grid.Row="0" Name="BrowsingBand" Margin="0,0,0,4" Padding="0,8"
               BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,1">
         <TextBlock Name="BrowsingLine" Classes="bandNote" Text="{Binding BrowsingLine}"
                    TextWrapping="Wrap" ToolTip.Tip="The list you are in"/>
       </Border>
 
-      <TextBox Grid.Row="2" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
+      <TextBox Grid.Row="1" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
                Text="{Binding Search, Mode=TwoWay}"/>
 
-      <ListBox Grid.Row="3" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
+      <ListBox Grid.Row="2" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
                ItemsSource="{Binding Categories}"
                SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
         <ListBox.ItemsPanel>
@@ -166,12 +147,12 @@
       </ListBox>
 
       <!-- Make something new is an action, not a list, so it sits beside the chips. -->
-      <Button Grid.Row="4" Name="StartMakeNew" Classes="secondary" Content="Make something new"
+      <Button Grid.Row="3" Name="StartMakeNew" Classes="secondary" Content="Make something new"
               HorizontalAlignment="Left" Margin="0,12,0,0"
               ToolTip.Tip="Make a new item or a new recipe"
               Command="{Binding StartMakeNewCommand}"/>
 
-      <ListBox Grid.Row="5" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
+      <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                IsVisible="{Binding HasAssetMatches}">
@@ -182,7 +163,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <Border Grid.Row="4" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
+      <Border Grid.Row="3" Name="NoAssetMatches" Classes="card" VerticalAlignment="Top"
               IsVisible="{Binding ShowAssetNoMatches}">
         <TextBlock Text="Nothing matches that" Classes="dim"/>
       </Border>

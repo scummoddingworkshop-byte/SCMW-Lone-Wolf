@@ -124,7 +124,12 @@ public partial class ShellViewModel : ObservableObject
         Sidebar = new[]
         {
             Nav(ScreenKey.Home, "Home"),
-            Nav(ScreenKey.Workspace, "Workspace"),
+            // The four jobs took the old "Workspace" row's place: each one opens the Workspace on
+            // the list it edits, so the job is picked before the page is even reached.
+            Job("Items"),
+            Job("Base building"),
+            Job("Recipes"),
+            Job("Cooking"),
             // "Modify in bulk" is hidden from the rail for now — its screen and mechanics stay in
             // place, so dropping the hidden flag brings the row back when we review it.
             Nav(ScreenKey.BulkEdit, "Modify in bulk", hidden: true),
@@ -155,6 +160,14 @@ public partial class ShellViewModel : ObservableObject
 
         _selectedEntry = Sidebar[0];
         _nav.Changed += Sync;
+
+        // The page can change the list on its own (e.g. "Make something new" opens the recipe list),
+        // so the rail's lit row follows whatever list is actually open.
+        _workspaceVm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(WorkspaceViewModel.SelectedKind)) SyncRailSelection();
+        };
+
         _projectStore.Changed += SyncActiveProject;
         SyncActiveProject();
         Sync();
@@ -208,6 +221,14 @@ public partial class ShellViewModel : ObservableObject
     {
         var (light, dark) = RailIcons.For(key);
         return new NavItem(key, label, light, dark) { Hidden = hidden };
+    }
+
+    /// <summary>One of the Workspace's job rows: the job's words and icon, opening that list.</summary>
+    private static NavItem Job(string kind)
+    {
+        var chip = KindChip.All.First(c => string.Equals(c.Key, kind, StringComparison.Ordinal));
+        var (light, dark) = RailIcons.ForKind(kind);
+        return new NavItem(ScreenKey.Workspace, chip.Label, light, dark) { Kind = kind };
     }
 
     /// <summary>True once the player has told us where SCUM is and given an unlock key.</summary>
@@ -375,7 +396,13 @@ public partial class ShellViewModel : ObservableObject
                 : "Mods and UE4SS are switched off. " + (result.Error ?? "SCUM could not be started."));
     }
 
-    partial void OnSelectedEntryChanged(NavItem value) => _nav.GoTo(value.Key);
+    partial void OnSelectedEntryChanged(NavItem value)
+    {
+        // A job row picks the Workspace list as well as opening the screen.
+        if (value.Kind is { } kind) _workspaceVm.SelectedKind = kind;
+
+        _nav.GoTo(value.Key);
+    }
 
     /// <summary>A rail row was clicked in one of the bands: make it the current screen.</summary>
     private void OnBandSelectionChanged(object? sender, PropertyChangedEventArgs e)
@@ -402,7 +429,9 @@ public partial class ShellViewModel : ObservableObject
     private void Sync()
     {
         Current = _nav.Current;
-        ScreenTitle = Sidebar.First(i => i.Key == Current).Label;
+        ScreenTitle = Current == ScreenKey.Workspace
+            ? "Workspace"
+            : Sidebar.First(i => i.Key == Current).Label;
 
         // Remember the screen so the next launch opens here.
         SaveLastScreen(Current);
@@ -438,11 +467,19 @@ public partial class ShellViewModel : ObservableObject
             _ => new AreaPlaceholderView { Title = ScreenTitle },
         };
 
-        // Keep exactly one row shown as selected: the band that owns the current screen.
-        var entry = Sidebar.First(i => i.Key == Current);
+        // Keep exactly one row shown as selected: the band that owns the current screen, and — for
+        // the Workspace's four job rows — the one for the list being browsed.
+        SyncRailSelection();
+    }
+
+    /// <summary>Lights up the one rail row that matches the open screen (and, for the Workspace,
+    /// the list being browsed).</summary>
+    private void SyncRailSelection()
+    {
+        var entry = Sidebar.First(i => i.Key == Current && MatchesKind(i));
         foreach (var band in Bands)
         {
-            band.Selected = band.Items.FirstOrDefault(i => i.Key == Current);
+            band.Selected = band.Items.FirstOrDefault(i => i.Key == Current && MatchesKind(i));
         }
 
         if (!ReferenceEquals(entry, SelectedEntry))
@@ -450,6 +487,10 @@ public partial class ShellViewModel : ObservableObject
             SelectedEntry = entry;
         }
     }
+
+    /// <summary>True for a row with no list of its own, or the one whose list is open.</summary>
+    private bool MatchesKind(NavItem item) =>
+        item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal);
 
     /// <summary>Remembers the current screen so the next launch can reopen on it.</summary>
     private void SaveLastScreen(ScreenKey key)

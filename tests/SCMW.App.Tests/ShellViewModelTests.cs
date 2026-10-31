@@ -13,7 +13,7 @@ public class ShellViewModelTests
             new[]
             {
                 ScreenKey.Home,
-                ScreenKey.Workspace,
+                ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace, ScreenKey.Workspace,
                 ScreenKey.BulkEdit, ScreenKey.Projects,
                 ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups, ScreenKey.Settings, ScreenKey.Help,
             },

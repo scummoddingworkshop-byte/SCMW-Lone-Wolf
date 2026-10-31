@@ -330,21 +330,21 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_four_job_buttons_are_all_the_same_size()
+    public void The_job_buttons_have_left_the_page_for_the_rail()
     {
         var view = new WorkspaceView { DataContext = new WorkspaceViewModel() };
         var window = new Window { Content = view, Width = 1200, Height = 700 };
         window.Show();
         window.UpdateLayout();
 
-        var buttons = view.GetVisualDescendants().OfType<Button>()
-            .Where(b => b.DataContext is KindChip)
-            .ToList();
+        Assert.Null(view.FindControl<ItemsControl>("KindButtons"));   // the rail owns them now
+        Assert.Empty(view.GetVisualDescendants().OfType<Button>()
+                         .Where(b => b.DataContext is KindChip));
 
-        Assert.Equal(4, buttons.Count);
-        var first = buttons[0].Bounds;
-        Assert.All(buttons, b => Assert.Equal(first.Width, b.Bounds.Width, 1));
-        Assert.All(buttons, b => Assert.Equal(first.Height, b.Bounds.Height, 1));
+        // The band that says what can be done here is now the first thing in the column.
+        var band = view.FindControl<Border>("BrowsingBand");
+        Assert.NotNull(band);
+        Assert.Equal(0, Grid.GetRow(band!));
     }
 
     [AvaloniaFact]
@@ -377,7 +377,7 @@ public class WorkspaceViewTests
     }
 
     [AvaloniaFact]
-    public void The_workspace_offers_one_row_of_jobs_and_one_make_something_new_button()
+    public void The_workspace_keeps_make_something_new_and_the_simple_view()
     {
         var vm = new WorkspaceViewModel();
         var view = new WorkspaceView { DataContext = vm };
@@ -385,7 +385,6 @@ public class WorkspaceViewTests
         window.Show();
         window.UpdateLayout();
 
-        Assert.NotNull(view.FindControl<ItemsControl>("KindButtons"));
         Assert.NotNull(view.FindControl<Button>("StartMakeNew"));
         Assert.False(vm.FullMode);
         Assert.NotNull(view.FindControl<CheckBox>("FullModeTick"));

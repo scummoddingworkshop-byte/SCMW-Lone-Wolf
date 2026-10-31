@@ -14,4 +14,10 @@ public sealed record NavItem(ScreenKey Key, string Label,
 
     /// <summary>True for an area that exists but is kept out of the rail for now.</summary>
     public bool Hidden { get; init; }
+
+    /// <summary>
+    /// For a row that opens a list rather than an area: the Workspace list it picks (Items, Recipes…).
+    /// Null for every other row.
+    /// </summary>
+    public string? Kind { get; init; }
 }

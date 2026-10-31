@@ -18,6 +18,22 @@ public static class RailIcons
         return (Load(name), Load(name + "-on"));
     }
 
+    /// <summary>The icon for one of the Workspace's job rows: values, base parts, recipes, dishes.</summary>
+    public static (IImage? Light, IImage? Dark) ForKind(string kind)
+    {
+        var name = KindName(kind);
+        return (Load(name), Load(name + "-on"));
+    }
+
+    private static string KindName(string kind) => kind switch
+    {
+        "Items" => "items",
+        "Base building" => "basebuilding",
+        "Recipes" => "recipes",
+        "Cooking" => "cooking",
+        _ => "items",
+    };
+
     private static string Name(ScreenKey key) => key switch
     {
         ScreenKey.Workspace => "home",              // placeholder icon (no Workspace artwork yet)
