@@ -36,9 +36,9 @@ public sealed partial class KindChip : ObservableObject
     /// <summary>The buttons, in the order they are shown.</summary>
     public static readonly IReadOnlyList<KindChip> All = new[]
     {
-        new KindChip("Items", "Change a value", "You can change an item's value here"),
-        new KindChip("Base building", "Change a base part", "You can change a base part's value here"),
-        new KindChip("Recipes", "Change a recipe", "You can change a recipe here"),
-        new KindChip("Cooking", "Change a cooking dish", "You can change a cooking dish here"),
+        new KindChip("Items", "Modify an item's value", "You can modify an item's value here"),
+        new KindChip("Base building", "Modify a base part", "You can modify a base part here"),
+        new KindChip("Recipes", "Modify a crafting recipe", "You can modify a crafting recipe here"),
+        new KindChip("Cooking", "Modify a cooking recipe", "You can modify a cooking recipe here"),
     };
 }

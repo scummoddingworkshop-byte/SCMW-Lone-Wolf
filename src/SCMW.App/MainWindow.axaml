@@ -21,9 +21,9 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="220,*">
+    <Grid Grid.Row="2" ColumnDefinitions="240,*">
     <!-- Left rail -->
-    <Border Grid.Column="0" Background="{StaticResource BgPanelBrush}"
+    <Border Grid.Column="0" Name="Rail" Background="{StaticResource BgPanelBrush}"
             BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
       <Panel>
         <!-- A faint misty forest behind the rail; the panel colour stays as a fallback. -->

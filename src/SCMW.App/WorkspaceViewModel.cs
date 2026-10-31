@@ -798,7 +798,7 @@ public partial class WorkspaceViewModel : ObservableObject
     }
 
     // --- The starting point (polish pass 4) ------------------------------------------------------
-    // The chips say what the player wants to do (Change a value, Change a recipe…). Making something
+    // The chips say what the player wants to do (Modify an item's value, Modify a crafting recipe…). Making something
     // new is an action, not a list, so it sits beside them as one button.
 
     /// <summary>

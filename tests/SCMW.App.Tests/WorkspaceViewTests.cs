@@ -281,7 +281,7 @@ public class WorkspaceViewTests
     {
         var vm = new WorkspaceViewModel();
 
-        Assert.Equal(new[] { "Change a value", "Change a base part", "Change a recipe", "Change a cooking dish" },
+        Assert.Equal(new[] { "Modify an item's value", "Modify a base part", "Modify a crafting recipe", "Modify a cooking recipe" },
                      vm.KindChips.Select(c => c.Label).ToArray());
 
         // The keys behind them are untouched, so nothing stored against a project moves.
@@ -293,7 +293,7 @@ public class WorkspaceViewTests
 
         vm.SelectKindCommand.Execute("Cooking");
         Assert.Equal("Cooking", vm.SelectedKind);
-        Assert.Equal("You can change a cooking dish here", vm.BrowsingLine);
+        Assert.Equal("You can modify a cooking recipe here", vm.BrowsingLine);
     }
 
     [AvaloniaFact]
@@ -301,9 +301,10 @@ public class WorkspaceViewTests
     {
         var vm = new WorkspaceViewModel();
 
-        Assert.Equal("You can change an item's value here", vm.BrowsingLine);
-        Assert.Equal("You can change a base part's value here", vm.KindChips[1].Blurb);
-        Assert.Equal("You can change a recipe here", vm.KindChips[2].Blurb);
+        Assert.Equal("You can modify an item's value here", vm.BrowsingLine);
+        Assert.Equal("You can modify a base part here", vm.KindChips[1].Blurb);
+        Assert.Equal("You can modify a crafting recipe here", vm.KindChips[2].Blurb);
+        Assert.Equal("You can modify a cooking recipe here", vm.KindChips[3].Blurb);
 
         // Nothing chosen yet: no line at all rather than a stray sentence.
         vm.SelectedKindChip = null;

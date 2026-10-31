@@ -59,7 +59,7 @@ public class RailTests
         var jobs = make.Items.Take(4).ToList();
         Assert.Equal(new[] { "Items", "Base building", "Recipes", "Cooking" },
                      jobs.Select(i => i.Kind));
-        Assert.Equal(new[] { "Change a value", "Change a base part", "Change a recipe", "Change a cooking dish" },
+        Assert.Equal(new[] { "Modify an item's value", "Modify a base part", "Modify a crafting recipe", "Modify a cooking recipe" },
                      jobs.Select(i => i.Label));
         Assert.All(jobs, i => Assert.NotNull(i.Icon));            // each has its own rail icon
         Assert.Equal(ScreenKey.Projects, make.Items[4].Key);      // Projects still follows them
@@ -78,6 +78,30 @@ public class RailTests
 
         var make = vm.Bands.Single(b => b.Band == NavBand.Make);
         Assert.Equal("Recipes", make.Selected!.Kind);             // and its row is the lit one
+    }
+
+    [AvaloniaFact]
+    public void The_rail_is_wide_enough_for_the_longest_job_label()
+    {
+        var window = new MainWindow { DataContext = new ShellViewModel(new NavigationHost()) };
+        window.Width = 1200;
+        window.Height = 900;
+        window.Show();
+        window.UpdateLayout();
+
+        var rail = window.FindControl<Border>("Rail");
+        Assert.NotNull(rail);
+        Assert.True(rail!.Bounds.Width >= 240, $"the rail was only {rail.Bounds.Width} wide");
+
+        // The longest row's words fit inside the space the row gives them, so nothing is cut off.
+        var cooking = window.GetVisualDescendants().OfType<ListBoxItem>()
+            .First(i => i.DataContext is NavItem n && n.Kind == "Cooking");
+        var label = cooking.GetVisualDescendants().OfType<TextBlock>().First();
+        label.Measure(Size.Infinity);
+        var needed = label.DesiredSize;
+
+        Assert.True(needed.Width <= label.Bounds.Width + 1,
+                    $"\"{label.Text}\" needs {needed.Width:0} but has {label.Bounds.Width:0}");
     }
 
     [AvaloniaFact]
