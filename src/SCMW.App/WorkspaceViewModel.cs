@@ -231,6 +231,43 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True when the "What it does" group has something to show (the file's own values).</summary>
     public bool HasWhatItDoes => HasFields || ShowPermanentTick;
 
+    // --- Simple and Full (polish pass 4) --------------------------------------------------------
+    // A player starting out sees the everyday things. Everything else — the add-a-value list, the
+    // shelf and place, the values that cannot be changed — is one tick away, never gone.
+
+    /// <summary>
+    /// True when the page shows every option. Off by default: Simple is the everyday view.
+    /// </summary>
+    [ObservableProperty] private bool _fullMode;
+
+    partial void OnFullModeChanged(bool value)
+    {
+        if (!value) ShowLockedFields = false;   // locked values belong to Full
+    }
+
+    /// <summary>True when the "add a value" list is offered (Full only).</summary>
+    public bool ShowAdvancedCard => FullMode && HasAddableFields;
+
+    /// <summary>True when the shelf-and-place card shows (Full only: it only matters for a new recipe).</summary>
+    public bool ShowCraftingGroupCard => FullMode && ShowCraftingGroup;
+
+    /// <summary>True when the "show non editable fields" tick shows (Full only).</summary>
+    public bool ShowLockedCard => FullMode && HasLockedFields;
+
+    /// <summary>True when the "How it is made or sold" group has anything in Simple or Full.</summary>
+    public bool HasHowItsMade =>
+        HasIngredients || HasCookingIngredients || ShowOpenMakes || ShowCraftingGroupCard;
+
+    private void NotifyGroups()
+    {
+        OnPropertyChanged(nameof(HasWhatItIs));
+        OnPropertyChanged(nameof(HasWhatItDoes));
+        OnPropertyChanged(nameof(HasHowItsMade));
+        OnPropertyChanged(nameof(ShowAdvancedCard));
+        OnPropertyChanged(nameof(ShowCraftingGroupCard));
+        OnPropertyChanged(nameof(ShowLockedCard));
+    }
+
     /// <summary>
     /// Every row the open file produced, before the locked ones are filtered out of the list.
     /// </summary>
@@ -260,17 +297,6 @@ public partial class WorkspaceViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLockedFields));
     }
 
-    /// <summary>True when the "How it is made or sold" group has something to show (ingredients, makes, shelf).</summary>
-    public bool HasHowItsMade =>
-        HasIngredients || HasCookingIngredients || ShowOpenMakes || ShowCraftingGroup;
-
-    private void NotifyGroups()
-    {
-        OnPropertyChanged(nameof(HasWhatItIs));
-        OnPropertyChanged(nameof(HasWhatItDoes));
-        OnPropertyChanged(nameof(HasHowItsMade));
-    }
-
     /// <summary>Keep the three group headings in step with whatever the cards are showing.</summary>
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -286,6 +312,7 @@ public partial class WorkspaceViewModel : ObservableObject
             case nameof(ShowOpenMakes):
             case nameof(ShowCraftingGroup):
             case nameof(ShowPermanentTick):
+            case nameof(FullMode):
             case nameof(IsPermanent):
                 NotifyGroups();
                 break;
@@ -738,8 +765,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Open the "New" panel: fill the "start from" list from the open kind's files.</summary>
     [RelayCommand]
-    private void OpenNewRecipe()
-    {
+    private void OpenNewRecipe()    {
         if (!ShowNewRecipeButton) return;   // the list must be loaded before it can be used
 
         FillRecipeDonors();
@@ -757,6 +783,35 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         ShowNewRecipe = false;
         NewRecipeNotice = string.Empty;
+    }
+
+    // --- The four starting points (polish pass 4) ------------------------------------------------
+    // The player's own words for the four things people come here to do, so nobody has to work out
+    // which list something lives in.
+
+    /// <summary>Change a value on an item.</summary>
+    [RelayCommand]
+    private void StartChangeValue() => SelectedKind = "Items";
+
+    /// <summary>Change a crafting recipe.</summary>
+    [RelayCommand]
+    private void StartChangeRecipe() => SelectedKind = "Recipes";
+
+    /// <summary>Change a cooking dish.</summary>
+    [RelayCommand]
+    private void StartChangeCooking() => SelectedKind = "Cooking";
+
+    /// <summary>
+    /// Make something new: an item from the Items list, a recipe from a recipe list. Anywhere else the
+    /// new recipe is the useful thing, so it opens that list first.
+    /// </summary>
+    [RelayCommand]
+    private async System.Threading.Tasks.Task StartMakeNew()
+    {
+        if (!IsLoadedKind("Items") && !IsLoadedKind("Recipes"))
+            await OpenKindAsync("Recipes").ConfigureAwait(true);
+
+        OpenNewRecipe();
     }
 
     /// <summary>

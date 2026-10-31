@@ -378,6 +378,7 @@ public class CraftingGroupEditorTests
             window.Show();
 
             await NewRecipeOpen(vm);
+            vm.FullMode = true;        // the shelf-and-place card belongs to Full
             window.UpdateLayout();
 
             var card = view.FindControl<Border>("CraftingGroupCard");

@@ -239,6 +239,74 @@ public class WorkspaceViewTests
         Assert.Contains(vm.Fields, f => !f.Described);
     }
 
+    // --- Simple and Full, and the four starting points (polish pass 4) ---------------------------
+
+    [AvaloniaFact]
+    public void Simple_is_the_default_and_full_can_be_switched_on()
+    {
+        var vm = new WorkspaceViewModel();
+
+        Assert.False(vm.FullMode);        // Simple is what a player sees first
+        Assert.False(vm.ShowCraftingGroupCard);
+        Assert.False(vm.ShowLockedCard);
+
+        vm.FullMode = true;
+        Assert.True(vm.FullMode);
+    }
+
+    [AvaloniaFact]
+    public void Turning_on_full_brings_back_the_locked_values()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Items", "Tomato", new[]
+        {
+            Field("Weight", "150"),
+            new AssetField("_shelfLife", "_shelfLife", StatusKind.Unknown, "360"),
+        }, "/a/Tomato_ES");
+
+        Assert.False(vm.ShowLockedCard);          // Simple: no tick at all
+        vm.FullMode = true;
+        Assert.True(vm.ShowLockedCard);           // Full: the tick is offered
+        Assert.True(vm.HasLockedFields);
+
+        vm.ShowLockedFields = true;
+        Assert.Equal(2, vm.Fields.Count);
+
+        vm.FullMode = false;                      // back to Simple: locked rows go again
+        Assert.False(vm.ShowLockedFields);
+        Assert.Single(vm.Fields);
+    }
+
+    [AvaloniaFact]
+    public void The_four_starting_points_go_to_the_right_list()
+    {
+        var vm = new WorkspaceViewModel();
+
+        vm.StartChangeValueCommand.Execute(null);
+        Assert.Equal("Items", vm.SelectedKind);
+
+        vm.StartChangeRecipeCommand.Execute(null);
+        Assert.Equal("Recipes", vm.SelectedKind);
+
+        vm.StartChangeCookingCommand.Execute(null);
+        Assert.Equal("Cooking", vm.SelectedKind);
+    }
+
+    [AvaloniaFact]
+    public void The_workspace_offers_the_four_starting_buttons_and_the_full_tick()
+    {
+        var vm = new WorkspaceViewModel();
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1000, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        foreach (var name in new[] { "StartChangeValue", "StartChangeRecipe", "StartChangeCooking", "StartMakeNew" })
+            Assert.NotNull(view.FindControl<Button>(name));
+
+        Assert.NotNull(view.FindControl<CheckBox>("FullModeTick"));
+    }
+
     // --- The kind picker + making the Workspace reachable (Task 3.0) ----------------------------
 
     [AvaloniaFact]
@@ -843,6 +911,7 @@ public class WorkspaceViewTests
 
         vm.Show("Items", "Tomato", new[] { Field("Weight", "20000") }, "/a/Tomato_ES",
                 new[] { addable });
+        vm.FullMode = true;   // the add-a-value list belongs to Full
 
         var view = new WorkspaceView { DataContext = vm };
         var window = new Window { Content = view, Width = 900, Height = 600 };

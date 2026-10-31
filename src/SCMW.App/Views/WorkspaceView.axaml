@@ -111,9 +111,25 @@
                  Foreground="{StaticResource WarningBrush}"/>
     </Border>
 
-    <!-- Left: find + browse -->
-    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,*">
-      <ListBox Grid.Row="0" Name="KindChips" Classes="chips"
+    <!-- Left: the four starting points, then find + browse -->
+    <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+      <!-- The player's own words for the four things people come here to do. -->
+      <WrapPanel Grid.Row="0" Name="StartHere" Margin="0,0,0,12">
+        <Button Name="StartChangeValue" Classes="secondary" Content="Change a value"
+                ToolTip.Tip="Change a value on an item"
+                Command="{Binding StartChangeValueCommand}" Margin="0,0,6,6"/>
+        <Button Name="StartChangeRecipe" Classes="secondary" Content="Change a recipe"
+                ToolTip.Tip="Change a crafting recipe"
+                Command="{Binding StartChangeRecipeCommand}" Margin="0,0,6,6"/>
+        <Button Name="StartChangeCooking" Classes="secondary" Content="Change a cooking dish"
+                ToolTip.Tip="Change a cooking dish"
+                Command="{Binding StartChangeCookingCommand}" Margin="0,0,6,6"/>
+        <Button Name="StartMakeNew" Classes="secondary" Content="Make something new"
+                ToolTip.Tip="Make a new item or a new recipe"
+                Command="{Binding StartMakeNewCommand}" Margin="0,0,6,6"/>
+      </WrapPanel>
+
+      <ListBox Grid.Row="1" Name="KindChips" Classes="chips"
                ItemsSource="{Binding KindChips}"
                SelectedItem="{Binding SelectedKindChip, Mode=TwoWay}">
         <ListBox.ItemsPanel>
@@ -128,10 +144,10 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <TextBox Grid.Row="1" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
+      <TextBox Grid.Row="2" Name="SearchBox" Classes="field" Margin="0,12,0,0" Watermark="Search by name…"
                Text="{Binding Search, Mode=TwoWay}"/>
 
-      <ListBox Grid.Row="2" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
+      <ListBox Grid.Row="3" Name="CategoryChips" Classes="chips" Margin="0,12,0,0"
                ItemsSource="{Binding Categories}"
                SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
         <ListBox.ItemsPanel>
@@ -147,13 +163,13 @@
       </ListBox>
 
       <!-- The list's "New" button: makes a new item from the Items list, a new recipe from Recipes. -->
-      <Button Grid.Row="3" Name="NewRecipeButton" Classes="secondary" Content="{Binding NewButtonText}"
+      <Button Grid.Row="4" Name="NewRecipeButton" Classes="secondary" Content="{Binding NewButtonText}"
               HorizontalAlignment="Left" Margin="0,12,0,0"
               IsVisible="{Binding ShowNewRecipeButton}"
               ToolTip.Tip="Make a brand-new recipe or item"
               Command="{Binding OpenNewRecipeCommand}"/>
 
-      <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
+      <ListBox Grid.Row="5" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
                IsVisible="{Binding HasAssetMatches}">
@@ -252,6 +268,11 @@
               </StackPanel>
             </Grid>
           </Border>
+
+          <!-- Show every option: off is Simple (the everyday things), on is Full (everything). -->
+          <CheckBox Name="FullModeTick" Content="Show every option" Margin="0,0,0,12"
+                    IsChecked="{Binding FullMode, Mode=TwoWay}"
+                    ToolTip.Tip="Full shows the advanced cards too: shelf and place, add a value, and the values that cannot be changed"/>
 
           <!-- What it is: the words, picture and categories the game shows for it. -->
           <TextBlock Classes="group" Text="What it is" IsVisible="{Binding HasWhatItIs}"/>
@@ -394,7 +415,7 @@
                everything the file carries, not just what can be changed. -->
           <CheckBox Name="ShowLockedFieldsTick" Content="Show non editable fields"
                     IsChecked="{Binding ShowLockedFields, Mode=TwoWay}"
-                    IsVisible="{Binding HasLockedFields}" Margin="0,0,0,10"/>
+                    IsVisible="{Binding ShowLockedCard}" Margin="0,0,0,10"/>
 
           <ItemsControl Name="FieldList" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemTemplate>
@@ -422,7 +443,7 @@
           <!-- Anything else we could add stays out of the way, for the owner who knows what they want. -->
           <Expander Name="AdvancedExpander" Classes="group-expander"
                     Header="Advanced — add a value this item doesn't have"
-                    IsVisible="{Binding HasAddableFields}" Margin="0,0,0,14">
+                    IsVisible="{Binding ShowAdvancedCard}" Margin="0,0,0,14">
             <ItemsControl Name="AddableList" ItemsSource="{Binding AddableFields}" Margin="0,10,0,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AddableField">
@@ -477,7 +498,7 @@
           <!-- A new recipe's shelf and place in the Items menu (Phase 8.3). The dropdowns are built
                fresh per recipe open, like the New panel's ones. -->
           <Border Name="CraftingGroupCard" Classes="card" Margin="0,0,0,14"
-                  IsVisible="{Binding ShowCraftingGroup}">
+                  IsVisible="{Binding ShowCraftingGroupCard}">
             <StackPanel Spacing="10">
               <TextBlock Classes="section" Text="Crafting group"/>
               <TextBlock Classes="dim" TextWrapping="Wrap"
