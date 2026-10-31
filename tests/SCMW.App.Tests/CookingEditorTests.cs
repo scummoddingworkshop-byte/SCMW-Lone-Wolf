@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
+using SCMW.App.Controls;
 using SCMW.App.Views;
 using SCMW.Core;
 using SCMW.Core.Content;
@@ -72,7 +73,7 @@ public class CookingEditorTests
     }
 
     [Fact]
-    public void A_resource_food_shows_its_name_instead_of_a_picker()
+    public void A_resource_food_starts_with_no_item_chosen()
     {
         var vm = new WorkspaceViewModel();
         vm.Show("Cooking", "Dish Cake Bread", new[]
@@ -87,7 +88,7 @@ public class CookingEditorTests
         Assert.False(food.HasItem);
         Assert.True(food.IsResource);
         Assert.Equal("Milk", food.ResourceLabel);
-        Assert.Null(food.SelectedFood);   // no dropdown: nothing to pick
+        Assert.Null(food.SelectedFood);   // nothing chosen yet; picking an item is how it changes
     }
 
     [Fact]
@@ -379,6 +380,157 @@ public class CookingEditorTests
             .Count(b => b.Name == "RemoveCookingIngredient"));
     }
 
+    // --- A resource food (oil, milk, water) switched to a real item ----------------------------
+
+    private const string Oil = "/Game/ConZ_Files/GameResources/Food/Liquids/Oil.Oil_C";
+    private const string Pepper = "/Game/ConZ_Files/Items/Food/MiscFood/BlackPepper.BlackPepper_C";
+
+    /// <summary>A dish whose only ingredient is a fluid ("resource"): oil, exactly like Dish Grill Fish.</summary>
+    private static IReadOnlyList<AssetField> OilDishFields() => new[]
+    {
+        Field("CookingTime", "150", "FloatProperty"),
+        Field("OptionalIngredients[0].IngredientTitle", "Ingredient_Oil"),
+        Field("OptionalIngredients[0].IsResource", "True", "BoolProperty"),
+        Field("OptionalIngredients[0].PossibleIngredient[0].Item", "None", "SoftObjectProperty"),
+        Field("OptionalIngredients[0].PossibleIngredient[0].ResourceType", "Oil_C", "ObjectProperty"),
+        Field("OptionalIngredients[0].PossibleIngredient[0].IsResource", "True", "BoolProperty"),
+        Field("OptionalIngredients[0].PossibleIngredient[0].Liters", "0.1", "FloatProperty"),
+    };
+
+    private static async Task<(WorkspaceViewModel Vm, DishSource Source)> OilDishOpened(ProjectStore? projects)
+    {
+        var source = new DishSource(OilDishFields());
+        ItemChangeStore? changes = projects is null ? null : TestProjects.ChangeStore(projects);
+        var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                        new ContentCatalog(source), changes, projects);
+        await vm.OpenKindAsync("Cooking");
+        await vm.OpenAsync(vm.VisibleAssets.Single());
+        return (vm, source);
+    }
+
+    [Fact]
+    public void A_resource_food_shows_the_picker_and_its_resource_name()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Cooking", "Dish Grill Fish", OilDishFields(), cookingFoods: TwoFoods());
+
+        var food = vm.CookingSlots[0].Foods[0];
+        Assert.True(food.IsResource);
+        Assert.Equal("Oil", food.ResourceLabel);
+        Assert.Equal(2, food.Choices.Count);          // the game's foods are offered, so one can be picked
+        Assert.False(food.CanResetToResource);        // nothing to go back to yet
+    }
+
+    [AvaloniaFact]
+    public async Task Picking_an_item_on_a_resource_food_records_the_switch()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var (vm, _) = await OilDishOpened(projects);
+
+            var food = vm.CookingSlots[0].Foods[0];
+            food.SelectedFood = new CookingFood(Pepper, "BlackPepper");
+            vm.SetCookingFoodCommand.Execute(food);
+
+            var records = TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath);
+            Assert.Equal(3, records.Count);
+            Assert.Contains(records, r =>
+                r.FieldTechnicalName == "OptionalIngredients[0].PossibleIngredient[0].Item"
+                && r.OldValue == "None" && r.NewValue == Pepper);
+            Assert.Contains(records, r =>
+                r.FieldTechnicalName == "OptionalIngredients[0].PossibleIngredient[0].IsResource"
+                && r.OldValue == "True" && r.NewValue == "False");
+            Assert.Contains(records, r =>
+                r.FieldTechnicalName == "OptionalIngredients[0].IsResource"
+                && r.OldValue == "True" && r.NewValue == "False");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task A_switched_resource_shows_the_item_and_offers_the_way_back()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var (vm, _) = await OilDishOpened(projects);
+
+            var food = vm.CookingSlots[0].Foods[0];
+            food.SelectedFood = new CookingFood(Pepper, "BlackPepper");
+            vm.SetCookingFoodCommand.Execute(food);
+
+            var shown = vm.CookingSlots[0].Foods[0];
+            Assert.False(shown.IsResource);
+            Assert.Equal(Pepper, shown.SelectedFood!.SoftPath);
+            Assert.True(shown.CanResetToResource);
+            Assert.Equal("Oil", shown.ResourceLabel);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Going_back_to_the_resource_drops_all_three_changes()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var (vm, _) = await OilDishOpened(projects);
+
+            var food = vm.CookingSlots[0].Foods[0];
+            food.SelectedFood = new CookingFood(Pepper, "BlackPepper");
+            vm.SetCookingFoodCommand.Execute(food);
+
+            vm.ResetCookingResourceCommand.Execute(vm.CookingSlots[0].Foods[0]);
+
+            Assert.Empty(TestProjects.ChangeStore(projects).For(projects.Current!.FolderPath));
+            var back = vm.CookingSlots[0].Foods[0];
+            Assert.True(back.IsResource);
+            Assert.False(back.CanResetToResource);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public async Task Reopening_a_dish_shows_the_item_a_resource_was_switched_to()
+    {
+        var (projects, root) = TestProjects.With("Cooking mod");
+        try
+        {
+            var (vm, _) = await OilDishOpened(projects);
+
+            var food = vm.CookingSlots[0].Foods[0];
+            food.SelectedFood = new CookingFood(Pepper, "BlackPepper");
+            vm.SetCookingFoodCommand.Execute(food);
+
+            await vm.OpenAsync(vm.SelectedAsset!);
+
+            var shown = vm.CookingSlots[0].Foods[0];
+            Assert.Equal(Pepper, shown.SelectedFood!.SoftPath);
+            Assert.True(shown.CanResetToResource);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void The_card_shows_a_picker_on_a_resource_row()
+    {
+        var vm = new WorkspaceViewModel();
+        vm.Show("Cooking", "Dish Grill Fish", OilDishFields(), cookingFoods: TwoFoods());
+
+        var view = new WorkspaceView { DataContext = vm };
+        var window = new Window { Content = view, Width = 900, Height = 700 };
+        window.Show();
+        window.UpdateLayout();
+
+        // The picker is there on a resource row (that is how a resource becomes an item), and the
+        // way back only appears once something has been picked.
+        var pickers = view.GetVisualDescendants().OfType<SearchPicker>().ToList();
+        Assert.Single(pickers);
+        Assert.True(pickers[0].IsVisible);
+        Assert.Empty(view.GetVisualDescendants().OfType<Button>().Where(b => b.Name == "ResetCookingResource" && b.IsVisible));
+    }
+
     /// <summary>Open the fake dish in a workspace with a chosen project; returns the view model.</summary>
     private static async Task<(WorkspaceViewModel Vm, DishSource Source)> DishOpened(ProjectStore? projects)
     {
@@ -397,6 +549,11 @@ public class CookingEditorTests
         public const string Dish = "SCUM/Content/ConZ_Files/Cooking/Recipes/Cakes/Cook_Dish_Cake_ApplePie";
         public const string AppleItem = "SCUM/Content/ConZ_Files/Items/Food/Fruit/Apple_ES";
         public const string PearItem = "SCUM/Content/ConZ_Files/Items/Food/Fruit/Pear_ES";
+
+        /// <summary>A source for another dish's fields (e.g. the oil dish), same index.</summary>
+        private readonly IReadOnlyList<AssetField> _fields;
+
+        public DishSource(IReadOnlyList<AssetField>? fields = null) => _fields = fields ?? DishFields();
 
         public int DishRead { get; private set; }
 
@@ -420,7 +577,7 @@ public class CookingEditorTests
         {
             if (id != Dish) return Task.FromResult<IReadOnlyList<AssetField>>(Array.Empty<AssetField>());
             DishRead++;
-            return Task.FromResult(DishFields());
+            return Task.FromResult(_fields);
         }
         public Task<IconExtractionProgress> ExtractAllIconsAsync(IProgress<IconExtractionProgress>? p = null, CancellationToken ct = default) =>
             Task.FromResult(new IconExtractionProgress(0, 0, 0, 0));

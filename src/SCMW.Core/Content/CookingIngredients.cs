@@ -84,10 +84,15 @@ public sealed record CookingFoodSlot(int Index, AssetField? Item, AssetField? Re
 /// <c>OptionalIngredients</c>), so every field path can be rebuilt exactly.
 /// </summary>
 public sealed record CookingIngredientSlot(bool IsMain, int Index, AssetField? Title,
-                                           IReadOnlyList<CookingFoodSlot> Foods)
+                                           IReadOnlyList<CookingFoodSlot> Foods,
+                                           AssetField? ResourceFlag = null)
 {
     /// <summary>The title's plain value (e.g. <c>Base</c>), or null.</summary>
     public string? TitleValue => Title?.CurrentValue;
+
+    /// <summary>True when the file marks the whole ingredient as a resource (oil, milk, water).</summary>
+    public bool IsResource =>
+        string.Equals(ResourceFlag?.CurrentValue, "True", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The list this ingredient lives in.</summary>
     public string ListName => CookingIngredients.ListName(IsMain);
@@ -124,6 +129,9 @@ public static class CookingIngredients
 
     /// <summary>The resource-link sub-field of a food (where the game keeps milk/water).</summary>
     public const string ResourceTypeName = "ResourceType";
+
+    /// <summary>The yes/no switch saying a food (or a whole ingredient) is a resource, not an item.</summary>
+    public const string ResourceFlagName = "IsResource";
 
     /// <summary>The food value sub-fields we own and show, in the order the card shows them.</summary>
     public static readonly string[] FoodValueNames =
@@ -258,6 +266,14 @@ public static class CookingIngredients
     /// <summary>The path of one food's resource link, e.g. <c>…PossibleIngredient[1].ResourceType</c>.</summary>
     public static string FoodResourcePath(bool isMain, int index, int foodIndex) =>
         FoodPath(isMain, index, foodIndex) + "." + ResourceTypeName;
+
+    /// <summary>The path of an ingredient's own "is this a resource" switch, e.g. <c>OptionalIngredients[1].IsResource</c>.</summary>
+    public static string IngredientResourcePath(bool isMain, int index) =>
+        IngredientPath(isMain, index) + "." + ResourceFlagName;
+
+    /// <summary>The path of one food's "is this a resource" switch, e.g. <c>…PossibleIngredient[0].IsResource</c>.</summary>
+    public static string FoodResourceFlagPath(bool isMain, int index, int foodIndex) =>
+        FoodPath(isMain, index, foodIndex) + "." + ResourceFlagName;
 
     /// <summary>The path of one food's value, e.g. <c>MainIngredients[0].PossibleIngredient[1].Liters</c>.</summary>
     public static string FoodValuePath(bool isMain, int index, int foodIndex, string valueName) =>
@@ -399,6 +415,9 @@ public static class CookingIngredients
 
         public AssetField? Title { get; private set; }
 
+        /// <summary>The ingredient's own "is this a resource" switch, if the file has one.</summary>
+        public AssetField? ResourceFlag { get; private set; }
+
         /// <summary>Foods by their bracket order, so the lowest is first.</summary>
         public SortedDictionary<int, FoodBuilder> Foods { get; } = new();
 
@@ -407,6 +426,12 @@ public static class CookingIngredients
             if (string.Equals(rest, TitleName, StringComparison.OrdinalIgnoreCase))
             {
                 Title ??= field;
+                return;
+            }
+
+            if (string.Equals(rest, ResourceFlagName, StringComparison.OrdinalIgnoreCase))
+            {
+                ResourceFlag ??= field;
                 return;
             }
 
@@ -431,7 +456,7 @@ public static class CookingIngredients
         {
             var foods = new List<CookingFoodSlot>(Foods.Count);
             foreach (var pair in Foods) foods.Add(pair.Value.Build(pair.Key));
-            return new CookingIngredientSlot(IsMain, Index, Title, foods);
+            return new CookingIngredientSlot(IsMain, Index, Title, foods, ResourceFlag);
         }
     }
 

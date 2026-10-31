@@ -25,7 +25,7 @@
           <TextBlock Classes="step" Text="•  change values on items, base-building parts and recipes — an item's weight, stack size or health, or a recipe's XP reward;"/>
           <TextBlock Classes="step" Text="•  change how much a recipe produces, and what a recipe makes;"/>
           <TextBlock Classes="step" Text="•  change a recipe's ingredients — what each one accepts, how much, and add or remove whole ingredients;"/>
-          <TextBlock Classes="step" Text="•  edit cooking dishes, including what each ingredient may be made from;"/>
+          <TextBlock Classes="step" Text="•  edit cooking dishes — their numbers, and which foods each ingredient takes (a food can be pointed at a real item, and a dish's resource such as oil can be swapped for one);"/>
           <TextBlock Classes="step" Text="•  add the auto-destruct timer to an item that doesn't have one, so a placed object stays put;"/>
           <TextBlock Classes="step" Text="•  make a brand-new recipe — its name, what it makes, which menu shelf it sits on and where on that shelf;"/>
           <TextBlock Classes="step" Text="•  make a brand-new menu section of your own, such as SCMW Mods, and put your recipes on it;"/>

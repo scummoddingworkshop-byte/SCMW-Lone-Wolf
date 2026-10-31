@@ -14,7 +14,8 @@ public partial class CookingFoodRow : ObservableObject
     public CookingFoodRow(bool isMain, int ingredientIndex, int index, string? originalItemPath,
                           string? currentItemPath, bool hasItem, string? resourceLabel,
                           CookingFood? selected, IReadOnlyList<CookingFood> choices,
-                          IReadOnlyList<WorkspaceField> values)
+                          IReadOnlyList<WorkspaceField> values, bool canResetToResource = false,
+                          bool ingredientIsResource = false)
     {
         IsMain = isMain;
         IngredientIndex = ingredientIndex;
@@ -26,6 +27,8 @@ public partial class CookingFoodRow : ObservableObject
         Choices = choices;
         Values = values;
         _selectedFood = selected;
+        CanResetToResource = canResetToResource;
+        IngredientIsResource = ingredientIsResource;
     }
 
     /// <summary>Which of the dish's lists this food's ingredient lives in.</summary>
@@ -51,6 +54,16 @@ public partial class CookingFoodRow : ObservableObject
 
     /// <summary>The resource's plain name (e.g. <c>Milk</c>), or null.</summary>
     public string? ResourceLabel { get; }
+
+    /// <summary>
+    /// True when the file's own food is a resource and this row now points at an item, so the owner
+    /// can put the resource back (the "↺ Oil" button).
+    /// </summary>
+    public bool CanResetToResource { get; }
+
+    /// <summary>True when the file marks the whole ingredient as a resource, so switching one food
+    /// over to an item must switch the ingredient too (the game keeps both in step).</summary>
+    public bool IngredientIsResource { get; }
 
     /// <summary>The item's soft path with the project's change applied — what the picker shows.</summary>
     [ObservableProperty] private string? _currentItemPath;

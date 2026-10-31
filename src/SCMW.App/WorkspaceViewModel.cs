@@ -2142,6 +2142,9 @@ public partial class WorkspaceViewModel : ObservableObject
             if (ingredient.Title is not null)
                 yield return CookingIngredients.TitlePath(ingredient.IsMain, ingredient.Index);
 
+            if (ingredient.ResourceFlag is not null)
+                yield return CookingIngredients.IngredientResourcePath(ingredient.IsMain, ingredient.Index);
+
             foreach (var food in ingredient.Foods)
             {
                 if (food.Item is not null)
@@ -2208,6 +2211,15 @@ public partial class WorkspaceViewModel : ObservableObject
             }
 
             var foods = new List<CookingFoodRow>(ingredient.Foods.Count);
+            var ingredientIsResource = ingredient.IsResource;
+            if (ingredient.ResourceFlag is not null && !string.IsNullOrEmpty(assetPath))
+            {
+                var flagPath = CookingIngredients.IngredientResourcePath(isMain, index);
+                var appliedFlag = AppliedValue.ResolveForAsset(records, assetPath, title, flagPath,
+                                                               ingredient.ResourceFlag.CurrentValue) ?? ingredient.ResourceFlag.CurrentValue;
+                ingredientIsResource = string.Equals(appliedFlag, "True", StringComparison.OrdinalIgnoreCase);
+            }
+
             foreach (var food in ingredient.Foods)
             {
                 var itemPath = CookingIngredients.FoodItemPath(isMain, index, food.Index);
@@ -2239,10 +2251,17 @@ public partial class WorkspaceViewModel : ObservableObject
                     values.Add(field);
                 }
 
+                // A recorded switch turns a resource into an item, so what the row shows comes from
+                // the applied value, not only from the file.
+                var hasItemNow = !string.IsNullOrWhiteSpace(appliedItem)
+                                 && !string.Equals(appliedItem, "None", StringComparison.OrdinalIgnoreCase);
+
                 foods.Add(new CookingFoodRow(isMain, index, food.Index, originalItem, appliedItem,
-                                             food.HasItem, food.ResourceName,
-                                             food.HasItem ? FoodChoice(appliedItem, _cookingFoods) : null,
-                                             _cookingFoods, values));
+                                             hasItemNow, food.ResourceName,
+                                             hasItemNow ? FoodChoice(appliedItem, _cookingFoods) : null,
+                                             _cookingFoods, values,
+                                             canResetToResource: !food.HasItem && hasItemNow,
+                                             ingredientIsResource: ingredientIsResource));
             }
 
             CookingSlots.Add(new CookingIngredientRow(isMain, index, titleField, foods));
@@ -2745,7 +2764,12 @@ public partial class WorkspaceViewModel : ObservableObject
 
     /// <summary>Change the item a food points at. Recorded against the food's own item path (a
     /// deliberate exception to the field-library rule — see <see cref="CookingIngredients"/>). Picking
-    /// the file's own item back is a revert, so the recorded change is dropped rather than left to build.</summary>
+    /// the file's own item back is a revert, so the recorded change is dropped rather than left to build.
+    /// <para>
+    /// A food that is a <i>resource</i> (oil, milk, water) has no item to change: picking one switches
+    /// the food over to it, which needs three values written — the food's and its ingredient's
+    /// "is a resource" switches off, and the item link set.
+    /// </para></summary>
     [RelayCommand]
     private void SetCookingFood(CookingFoodRow? food)
     {
@@ -2761,6 +2785,13 @@ public partial class WorkspaceViewModel : ObservableObject
 
         var fieldPath = CookingIngredients.FoodItemPath(food.IsMain, food.IngredientIndex, food.Index);
 
+        if (!food.HasItem)
+        {
+            RecordResourceSwitch(path!, food, fieldPath, chosen);
+            RefreshShown();
+            return;
+        }
+
         if (string.Equals(chosen, food.OriginalItemPath, StringComparison.OrdinalIgnoreCase))
         {
             UndoCookingSet(path!, fieldPath);   // back to the game's own item: drop the standing change
@@ -2771,6 +2802,37 @@ public partial class WorkspaceViewModel : ObservableObject
         _changes.RecordEdit(path!, fieldPath, food.OriginalItemPath, chosen, _projects!.Chosen!.Id,
                             assetPath: path);
         food.CurrentItemPath = chosen;
+    }
+
+    /// <summary>Turn a resource food into a real item: the food's switch and (when the file has one)
+    /// the ingredient's switch go off, and the item link is set. Three ordinary value changes, so the
+    /// build writes them like any other, and Undo drops all three.</summary>
+    private void RecordResourceSwitch(string assetPath, CookingFoodRow food, string itemPath, string chosen)
+    {
+        var projectId = _projects!.Chosen!.Id;
+
+        _changes!.RecordEdit(assetPath, CookingIngredients.FoodResourceFlagPath(food.IsMain, food.IngredientIndex, food.Index),
+                             "True", "False", projectId, assetPath: assetPath);
+
+        if (food.IngredientIsResource)
+            _changes.RecordEdit(assetPath, CookingIngredients.IngredientResourcePath(food.IsMain, food.IngredientIndex),
+                                "True", "False", projectId, assetPath: assetPath);
+
+        _changes.RecordEdit(assetPath, itemPath, "None", chosen, projectId, assetPath: assetPath);
+    }
+
+    /// <summary>Put a switched food back to the resource it was in the file, dropping all of the
+    /// switch's changes so nothing is left for the build to write.</summary>
+    [RelayCommand]
+    private void ResetCookingResource(CookingFoodRow? food)
+    {
+        var path = SelectedAsset?.AssetId;
+        if (food is null || _changes is null || string.IsNullOrEmpty(path) || NeedsProject) return;
+
+        UndoCookingSet(path!, CookingIngredients.FoodItemPath(food.IsMain, food.IngredientIndex, food.Index));
+        UndoCookingSet(path!, CookingIngredients.FoodResourceFlagPath(food.IsMain, food.IngredientIndex, food.Index));
+        UndoCookingSet(path!, CookingIngredients.IngredientResourcePath(food.IsMain, food.IngredientIndex));
+        RefreshShown();
     }
 
     /// <summary>Drop every recorded value change on one dish field (used when a picker returns to the

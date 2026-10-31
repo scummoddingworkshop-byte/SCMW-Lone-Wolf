@@ -586,7 +586,6 @@
                                       <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock Text="Item" Classes="dim" VerticalAlignment="Center"/>
                                         <controls:SearchPicker Name="FoodPicker" Width="260"
-                                                               IsVisible="{Binding HasItem}"
                                                                ItemsSource="{Binding Choices}"
                                                                SelectedItem="{Binding SelectedFood, Mode=TwoWay}"
                                                                SelectionChanged="OnCookingFoodChanged">
@@ -598,7 +597,13 @@
                                         </controls:SearchPicker>
                                         <TextBlock Text="{Binding ResourceLabel}" VerticalAlignment="Center"
                                                    IsVisible="{Binding IsResource}"
+                                                   ToolTip.Tip="A game resource, not an item — pick an item to use it instead"
                                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <Button Name="ResetCookingResource" Classes="secondary" Content="↺"
+                                                IsVisible="{Binding CanResetToResource}" VerticalAlignment="Center"
+                                                ToolTip.Tip="Go back to the game's own resource"
+                                                Command="{Binding $parent[UserControl].((vm:WorkspaceViewModel)DataContext).ResetCookingResourceCommand}"
+                                                CommandParameter="{Binding}"/>
                                       </StackPanel>
                                     </StackPanel>
                                     <Button Grid.Row="0" Grid.Column="1" Name="RemoveCookingFood" Classes="secondary"
