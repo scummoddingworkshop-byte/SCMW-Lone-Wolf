@@ -68,7 +68,7 @@ public class NexusMediaTests : IDisposable
     {
         var vm = Shell("Duct Tape Expanded");
         vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", vm.ProjectStore.Current!.Id);
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Build);
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
         Save(new MainWindow { DataContext = vm }, "nexus-build");
     }
 

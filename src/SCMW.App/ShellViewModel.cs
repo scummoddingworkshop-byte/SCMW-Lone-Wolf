@@ -35,7 +35,6 @@ public partial class ShellViewModel : ObservableObject
     private readonly ICraftingSectionStore _sections;
     private readonly ModList _modList;
     private readonly BuildViewModel _build;
-    private readonly BuildView _buildView;
     private readonly ISaveBackupsService _saves;
     private readonly ModsViewModel _mods;
     private readonly ModsView _modsView;
@@ -95,11 +94,6 @@ public partial class ShellViewModel : ObservableObject
                                        new ContentCatalog(ContentSource, ContentSource.Icons),
                                        changes: _itemChanges, projects: _projectStore);
         _bulkView = new BulkTableView { DataContext = _bulk };
-        _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
-                                          gameReady: () => IsScumConfigured(store),
-                                          source: ContentSource,
-                                          openItem: OpenItemInWorkspace);
-        _projectsView = new ProjectsView { DataContext = _projects };
         _modList = new ModList();
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
@@ -107,7 +101,14 @@ public partial class ShellViewModel : ObservableObject
                                     elevation: WindowsElevation.Default, saves: _saves,
                                     newAssets: _newAssets, sections: _sections);
         _build.Preview.OpenItemRequested += OpenItemInWorkspace;
-        _buildView = new BuildView { DataContext = _build };
+
+        // Build's brain is hosted by Projects: each project card builds its own mod there.
+        _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
+                                          gameReady: () => IsScumConfigured(store),
+                                          source: ContentSource,
+                                          openItem: OpenItemInWorkspace,
+                                          build: _build);
+        _projectsView = new ProjectsView { DataContext = _projects };
         _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default,
                                   projects: _projectStore);
         _modsView = new ModsView { DataContext = _mods };
@@ -141,7 +142,6 @@ public partial class ShellViewModel : ObservableObject
             // "Modify in bulk" is hidden from the rail for now — its screen and mechanics stay in
             // place, so dropping the hidden flag brings the row back when we review it.
             Nav(ScreenKey.BulkEdit, "Modify in bulk", hidden: true),
-            Nav(ScreenKey.Build, "Build"),
             Nav(ScreenKey.Mods, "Mods Management"),
             Nav(ScreenKey.Backups, "Backups"),
             Nav(ScreenKey.Settings, "Settings"),
@@ -475,7 +475,7 @@ public partial class ShellViewModel : ObservableObject
         if (Current == ScreenKey.Projects) _projects.RefreshWelcome();
 
         // Build re-reads the chosen project's changes (its "What's in this mod" preview) when opened.
-        if (Current == ScreenKey.Build) _build.Preview.Refresh();
+        if (Current == ScreenKey.Projects) _build.Preview.Refresh();
 
         // The bulk table re-reads the current kind's files every time it is opened.
         if (Current == ScreenKey.BulkEdit) _ = _bulk.OpenKindAsync(_bulk.SelectedKind);
@@ -485,7 +485,6 @@ public partial class ShellViewModel : ObservableObject
             ScreenKey.Workspace => _workspaceView,
             ScreenKey.BulkEdit => _bulkView,
             ScreenKey.Projects => _projectsView,
-            ScreenKey.Build => _buildView,
             ScreenKey.Mods => _modsView,
             ScreenKey.Backups => _backupsView,
             ScreenKey.Settings => _settingsView,

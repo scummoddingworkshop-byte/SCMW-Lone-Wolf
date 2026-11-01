@@ -16,7 +16,7 @@ public class ShellViewModelTests
                 "Modify an item's value", "Modify a base part", "Modify a crafting recipe", "Modify a cooking recipe",
                 "New item", "New base part", "New crafting recipe", "New cooking recipe",
                 "Modify in bulk",
-                "Build", "Mods Management", "Backups", "Settings", "Help",
+                "Mods Management", "Backups", "Settings", "Help",
             },
             vm.Sidebar.Select(i => i.Label));
     }

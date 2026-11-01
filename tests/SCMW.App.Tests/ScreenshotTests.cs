@@ -205,7 +205,7 @@ public class ScreenshotTests
         var current = vm.ProjectStore.Current!;
         vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", current.Id);
         vm.ItemChanges.RecordEdit("AK-15", "Damage", "45", "60", current.Id);
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Build);
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
 
         var window = new MainWindow { DataContext = vm };
         window.Width = 1200;
@@ -248,7 +248,7 @@ public class ScreenshotTests
         var current = vm.ProjectStore.Current!;
         vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", current.Id);
         vm.ItemChanges.RecordEdit("AK-15", "Damage", "45", "60", current.Id);
-        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Build);
+        vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
 
         var window = new MainWindow { DataContext = vm };
         window.Width = 1200;
@@ -263,8 +263,15 @@ public class ScreenshotTests
     [AvaloniaFact]
     public void Capture_build_empty()
     {
-        var view = new BuildView { DataContext = new BuildViewModel() };
-        var window = new Window { Content = view, Width = 1200, Height = 900 };
+        var dir = Path.Combine(Path.GetTempPath(), "SCMW-shots", "build-empty");
+        if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        var projects = new ProjectStore(
+            new SCMW.Core.Projects.ProjectService(SCMW.Core.Workspace.WorkspaceService.Ensure(dir)),
+            new InMemorySettingsStore());
+
+        var screen = new ProjectsViewModel(projects, new NavigationHost(), build: new BuildViewModel());
+        var view = new ProjectsView { DataContext = screen };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
         window.Show();
 
         var path = Screenshot.Capture(window, "build-empty");
@@ -288,12 +295,12 @@ public class ScreenshotTests
     [AvaloniaFact]
     public void Capture_build_permission_failure()
     {
-        var vm = Buildable(elevation: new ScreenshotElevation());
-        var view = new BuildView { DataContext = vm };
-        var window = new Window { Content = view, Width = 1200, Height = 900 };
+        var (screen, build) = Buildable(elevation: new ScreenshotElevation());
+        var view = new ProjectsView { DataContext = screen };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
         window.Show();
 
-        vm.ShowFailure(
+        build.ShowFailure(
             "The mod could not be installed.",
             "Windows blocked SCMW from writing to your SCUM folder, so it couldn't install the mod into " +
             "SCUM. This usually means SCUM is installed in a protected place like Program Files. " +
@@ -433,17 +440,19 @@ public class ScreenshotTests
         }
     }
 
-    private static (BuildView view, BuildViewModel vm, Window window) BuildWindow()
+    private static (ProjectsView view, BuildViewModel vm, Window window) BuildWindow()
     {
-        var vm = Buildable();
-        var view = new BuildView { DataContext = vm };
-        var window = new Window { Content = view, Width = 1200, Height = 900 };
+        var (screen, build) = Buildable();
+        var view = new ProjectsView { DataContext = screen };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
         window.Show();
-        return (view, vm, window);
+        return (view, build, window);
     }
 
-    /// <summary>A Build view model over a throwaway project holding one saved change.</summary>
-    private static BuildViewModel Buildable(IBuildService? service = null, IElevation? elevation = null)
+    /// <summary>Projects over a throwaway project holding one saved change, with build wired in —
+    /// the screen that now holds the version box and the Build button.</summary>
+    private static (ProjectsViewModel screen, BuildViewModel build) Buildable(
+        IBuildService? service = null, IElevation? elevation = null)
     {
         var dir = Path.Combine(Path.GetTempPath(), "SCMW-shots", "build");
         if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
@@ -455,18 +464,22 @@ public class ScreenshotTests
         projects.SetCurrent(projects.All()[0].Id);
 
         var changes = new ItemChangeStore(new SCMW.Core.Editing.ProjectChangeStore(), projects);
-        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
-        return new BuildViewModel(changes, projects: projects, service: service, elevation: elevation);
+        changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id,
+                           assetPath: "/a/Duct_Tape_ES");
+
+        var build = new BuildViewModel(changes, projects: projects, service: service, elevation: elevation);
+        var screen = new ProjectsViewModel(projects, new NavigationHost(), changes, build: build);
+        return (screen, build);
     }
 
     [AvaloniaFact]
     public async Task Capture_build_pak()
     {
-        var vm = Buildable(new AlwaysOkScreenshotService());
-        var view = new BuildView { DataContext = vm };
-        var window = new Window { Content = view, Width = 1200, Height = 900 };
+        var (screen, build) = Buildable(new AlwaysOkScreenshotService());
+        var view = new ProjectsView { DataContext = screen };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
         window.Show();
-        await vm.BuildCommand.ExecuteAsync(null);
+        await build.BuildCommand.ExecuteAsync(null);
 
         var path = Screenshot.Capture(window, "build-pak");
         Assert.True(File.Exists(path), path);
@@ -476,11 +489,11 @@ public class ScreenshotTests
     [AvaloniaFact]
     public async Task Capture_build_succeeded()
     {
-        var vm = Buildable(new AlwaysOkScreenshotService());
-        var view = new BuildView { DataContext = vm };
-        var window = new Window { Content = view, Width = 1200, Height = 900 };
+        var (screen, build) = Buildable(new AlwaysOkScreenshotService());
+        var view = new ProjectsView { DataContext = screen };
+        var window = new Window { Content = view, Width = 1200, Height = 1000 };
         window.Show();
-        await vm.BuildCommand.ExecuteAsync(null);
+        await build.BuildCommand.ExecuteAsync(null);
 
         var path = Screenshot.Capture(window, "build-installed");
         Assert.True(File.Exists(path), path);

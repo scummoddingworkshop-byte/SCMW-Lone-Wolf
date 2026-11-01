@@ -39,7 +39,6 @@ public static class RailIcons
         ScreenKey.Workspace => "home",              // placeholder icon (no Workspace artwork yet)
         ScreenKey.BulkEdit => "bulk",               // a ticked list ("Modify in bulk")
         ScreenKey.Projects => "projects",
-        ScreenKey.Build => "build",
         ScreenKey.Mods => "mods",
         ScreenKey.Backups => "backups",
         ScreenKey.Settings => "settings",

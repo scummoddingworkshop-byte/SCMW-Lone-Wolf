@@ -12,7 +12,6 @@ public enum ScreenKey
     /// <summary>The bulk table — set one value across many files at once (Task 5.1).</summary>
     BulkEdit,
 
-    Build,
     Mods,
     Backups,
     Settings,

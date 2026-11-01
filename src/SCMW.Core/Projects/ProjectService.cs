@@ -178,11 +178,13 @@ public sealed class ProjectService
             }
 
             var now = DateTime.UtcNow;
-            var file = new ProjectFile(id, displayName, description ?? string.Empty, now, now, iconFileName);
+            var file = new ProjectFile(id, displayName, description ?? string.Empty, now, now, iconFileName,
+                DefaultModVersion);
             WriteJsonAtomic(Path.Combine(folder, ProjectFileName),
                 JsonSerializer.Serialize(file, JsonOptions));
 
-            var record = new ProjectRecord(id, displayName, file.Description, folder, now, now, iconFileName);
+            var record = new ProjectRecord(id, displayName, file.Description, folder, now, now, iconFileName,
+                file.ModVersion ?? DefaultModVersion);
             return new CreateResult(record, iconWarning, null);
         }
         catch
@@ -419,7 +421,7 @@ public sealed class ProjectService
 
         var now = DateTime.UtcNow;
         var file = new ProjectFile(project.Id, newName, newDescription ?? string.Empty,
-            project.CreatedUtc, now, desiredIconFileName);
+            project.CreatedUtc, now, desiredIconFileName, project.ModVersion);
         try
         {
             WriteJsonAtomic(jsonPath, JsonSerializer.Serialize(file, JsonOptions));
@@ -752,6 +754,42 @@ public sealed class ProjectService
         }
     }
 
+    /// <summary>
+    /// Remember the mod version a project builds with. Saving the version is deliberately not an
+    /// edit of the mod: the project's "modified" time is left alone, so the card does not jump in
+    /// the list. Returns null on success, otherwise one plain message.
+    /// </summary>
+    public string? SetVersion(string id, string? version)
+    {
+        var project = GetById(id);
+        if (project is null)
+            return NotFoundMessage;
+
+        var value = NormaliseVersion(version);
+        if (string.Equals(project.ModVersion, value, StringComparison.Ordinal))
+            return null;
+
+        var jsonPath = Path.Combine(project.FolderPath, ProjectFileName);
+        var file = new ProjectFile(project.Id, project.Name, project.Description,
+            project.CreatedUtc, project.ModifiedUtc, project.IconFileName, value);
+        try
+        {
+            WriteJsonAtomic(jsonPath, JsonSerializer.Serialize(file, JsonOptions));
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                       or SecurityException or ArgumentException or NotSupportedException)
+        {
+            return UpdateFailedMessage;
+        }
+    }
+
+    /// <summary>The version a project that has never been given one builds with.</summary>
+    public const string DefaultModVersion = "1.0.0";
+
+    private static string NormaliseVersion(string? version) =>
+        string.IsNullOrWhiteSpace(version) ? DefaultModVersion : version.Trim();
+
     /// <summary>All readable projects, newest <see cref="ProjectRecord.ModifiedUtc"/> first.</summary>
     public IReadOnlyList<ProjectRecord> List()
     {
@@ -773,7 +811,7 @@ public sealed class ProjectService
 
                 records.Add(new ProjectRecord(file.Id, file.Name ?? string.Empty,
                     file.Description ?? string.Empty, folder, file.CreatedUtc, file.ModifiedUtc,
-                    file.IconFileName));
+                    file.IconFileName, NormaliseVersion(file.ModVersion)));
             }
             catch (JsonException)
             {
@@ -814,5 +852,6 @@ public sealed class ProjectService
     /// <summary>On-disk shape; the folder path and icon path are implied and never written.</summary>
     private sealed record ProjectFile(string Id, string Name, string Description,
         DateTime CreatedUtc, DateTime ModifiedUtc,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? IconFileName);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? IconFileName,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ModVersion = null);
 }

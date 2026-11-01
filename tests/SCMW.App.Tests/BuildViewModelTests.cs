@@ -188,6 +188,43 @@ public class BuildViewModelTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // a version built before is asked about once, not built on the first press
+    public void A_version_that_was_built_before_is_asked_about_first()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+
+            var mods = new ModList();
+            mods.Install(SCMW.Backend.Build.BuildNames.PakFileName("My first mod", "1.0.0"));
+
+            var vm = new BuildViewModel(changes, projects: projects, mods: mods);
+            vm.BuildCommand.Execute(null);
+
+            Assert.True(vm.HasDuplicateVersionNotice);          // asked, not built
+            Assert.Contains("already been built", vm.DuplicateVersionNotice);
+            Assert.NotEqual(BuildState.Running, vm.State);
+
+            vm.ModVersion = "1.1.0";                            // changing it answers the question
+            Assert.False(vm.HasDuplicateVersionNotice);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void An_empty_version_builds_as_1_0_0()
+    {
+        var vm = new BuildViewModel();
+        vm.ModVersion = "   ";
+
+        Assert.Equal("1.0.0", vm.EffectiveVersion);
+
+        vm.ModVersion = "My first release";
+        Assert.Equal("My first release", vm.EffectiveVersion);   // any words the player likes
+    }
+
     [AvaloniaFact]
     public void Go_to_items_navigates()
     {

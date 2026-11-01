@@ -271,7 +271,7 @@ public partial class ModsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void GoToBuild() => _nav.GoTo(ScreenKey.Build);
+    private void GoToProjects() => _nav.GoTo(ScreenKey.Projects);
 
     private void RaiseAll()
     {

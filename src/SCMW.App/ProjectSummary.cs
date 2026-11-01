@@ -52,6 +52,25 @@ public partial class ProjectSummary : ObservableObject
     /// <summary>True while this project's inline delete confirmation is showing.</summary>
     [ObservableProperty] private bool _isConfirmingDelete;
 
+    /// <summary>The version this project builds with, remembered in its own project file.</summary>
+    [ObservableProperty] private string _modVersion = SCMW.Core.Projects.ProjectService.DefaultModVersion;
+
+    /// <summary>True when the card should show its Build controls (the screen is wired to a build).</summary>
+    [ObservableProperty] private bool _showBuild;
+
+    /// <summary>True when this card's Build button can start a build right now.</summary>
+    [ObservableProperty] private bool _canBuild;
+
+    /// <summary>Plain reason the Build button is off ("Nothing to build yet").</summary>
+    public string BuildHint => !ShowBuild ? ""
+        : !HasChanges ? "Nothing to build yet"
+        : CanBuild ? ""
+        : "A build is already running";
+
+    partial void OnCanBuildChanged(bool value) => OnPropertyChanged(nameof(BuildHint));
+
+    partial void OnShowBuildChanged(bool value) => OnPropertyChanged(nameof(BuildHint));
+
     /// <summary>Builds a screen row from a project on disk.</summary>
     public static ProjectSummary From(ProjectRecord record, bool isCurrent, int changeCount = 0) =>
         new(record.Name, record.Description, Describe(record.ModifiedUtc), LoadPicture(record.IconPath))
@@ -59,6 +78,7 @@ public partial class ProjectSummary : ObservableObject
             Id = record.Id,
             IsCurrent = isCurrent,
             ChangeCount = changeCount,
+            ModVersion = record.ModVersion,
         };
 
     /// <summary>Plain "2 hours ago" text.</summary>

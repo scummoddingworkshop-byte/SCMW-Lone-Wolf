@@ -379,6 +379,83 @@ public class ProjectsViewModelTests
         finally { Cleanup(root); }
     }
 
+    [AvaloniaFact] // each card builds its own mod, remembering that mod's version
+    public void Building_from_a_card_makes_it_current_and_uses_its_version()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var tape = store.Create("Tape mod", "").Project!;
+            var other = store.Create("Other mod", "").Project!;
+            store.SetCurrent(other.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", tape.Id, assetPath: "/a/Duct_Tape_ES");
+
+            var service = new ProjectService(WorkspaceService.Ensure(root));
+            service.SetVersion(tape.Id, "2.4.1");
+
+            var build = new BuildViewModel(changes, projects: store);
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes, build: build);
+
+            vm.BuildProjectCommand.Execute(vm.VisibleProjects.Single(p => p.Name == "Tape mod"));
+
+            Assert.Equal(tape.Id, store.Chosen!.Id);      // the mod being built is the current one
+            Assert.Equal("2.4.1", build.ModVersion);      // with the version the card remembered
+            Assert.True(build.IsRunning);                 // and the build started
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // Remove on an item card drops every change to that item, and only that item
+    public void Remove_on_an_item_card_drops_that_items_changes()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Bolts", "Weight", "5", "3", project.Id, assetPath: "/a/Bolts_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            var tape = vm.Changes.Single(c => c.FriendlyName == "Duct Tape");
+
+            vm.RemoveItemCommand.Execute(tape);
+
+            var left = Assert.Single(vm.Changes);
+            Assert.Equal("Bolts", left.FriendlyName);
+            var folder = store.All().Single(p => p.Id == project.Id).FolderPath;
+            Assert.DoesNotContain(changes.For(folder), r => r.AssetPath!.Contains("Duct_Tape"));
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // a card keeps its own version between visits
+    public void A_card_shows_the_projects_saved_version()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            new ProjectService(WorkspaceService.Ensure(root)).SetVersion(project.Id, "3.2.0");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), null,
+                                           build: new BuildViewModel(projects: store));
+
+            Assert.Equal("3.2.0", vm.VisibleProjects.Single().ModVersion);
+        }
+        finally { Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void Search_filters_and_restores()
     {

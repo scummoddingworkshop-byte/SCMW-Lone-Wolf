@@ -22,7 +22,6 @@ public class ShellNavigationTests
     [InlineData(ScreenKey.Projects, NavBand.Top)]
     [InlineData(ScreenKey.Workspace, NavBand.Modify)]
     [InlineData(ScreenKey.BulkEdit, NavBand.Modify)]
-    [InlineData(ScreenKey.Build, NavBand.Ship)]
     [InlineData(ScreenKey.Mods, NavBand.Ship)]
     [InlineData(ScreenKey.Backups, NavBand.Ship)]
     [InlineData(ScreenKey.Settings, NavBand.App)]
@@ -32,7 +31,7 @@ public class ShellNavigationTests
 
     [Fact]
     public void A_rail_row_knows_its_band()
-        => Assert.Equal(NavBand.Ship, new NavItem(ScreenKey.Build, "Build").Band);
+        => Assert.Equal(NavBand.Ship, new NavItem(ScreenKey.Mods, "Mods Management").Band);
 
     [Fact]
     public void Screens_group_under_their_band_in_band_order()
@@ -41,7 +40,6 @@ public class ShellNavigationTests
         {
             new NavItem(ScreenKey.Help, "Help"),
             new NavItem(ScreenKey.Projects, "Projects"),
-            new NavItem(ScreenKey.Build, "Build"),
             new NavItem(ScreenKey.Settings, "Settings"),
             new NavItem(ScreenKey.Mods, "Mods Management"),
             new NavItem(ScreenKey.Backups, "Backups"),
@@ -55,7 +53,7 @@ public class ShellNavigationTests
                      groups.Select(g => g.Band));
         Assert.Equal(new[] { "Projects" }, groups[0].Items.Select(i => i.Label));
         Assert.Equal(new[] { "Modify an item's value" }, groups[1].Items.Select(i => i.Label));
-        Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
+        Assert.Equal(new[] { ScreenKey.Mods, ScreenKey.Backups },
                      groups[2].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Help, ScreenKey.Settings },   // the order they were given
                      groups[3].Items.Select(i => i.Key));
@@ -71,7 +69,7 @@ public class ShellNavigationTests
         Assert.Equal(new[] { ScreenKey.Projects }, vm.Bands[0].Items.Select(i => i.Key));
         Assert.All(vm.Bands[1].Items, i => Assert.False(i.Creates));
         Assert.All(vm.Bands[2].Items, i => Assert.True(i.Creates));
-        Assert.Equal(new[] { ScreenKey.Build, ScreenKey.Mods, ScreenKey.Backups },
+        Assert.Equal(new[] { ScreenKey.Mods, ScreenKey.Backups },
                      vm.Bands[3].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      vm.Bands[4].Items.Select(i => i.Key));
@@ -96,9 +94,9 @@ public class ShellNavigationTests
         var vm = new ShellViewModel(nav);
 
         var ship = vm.Bands.Single(b => b.Band == NavBand.Ship);
-        ship.Selected = ship.Items.Single(i => i.Key == ScreenKey.Build);
+        ship.Selected = ship.Items.Single(i => i.Key == ScreenKey.Mods);
 
-        Assert.Equal(ScreenKey.Build, nav.Current);
+        Assert.Equal(ScreenKey.Mods, nav.Current);
         Assert.Same(ship.Selected, vm.SelectedEntry);
     }
 

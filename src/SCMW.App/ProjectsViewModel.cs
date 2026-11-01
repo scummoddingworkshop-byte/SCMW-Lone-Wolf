@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using Avalonia.Media;
@@ -22,6 +23,7 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly ProjectStore _store;
     private readonly INavigation _nav;
     private readonly ItemChangeStore? _changes;
+    private readonly BuildViewModel? _build;
     private readonly Func<bool>? _gameReady;
     private readonly SCMW.Core.Content.IContentSource? _source;
     private readonly Action<string>? _openItem;
@@ -31,16 +33,18 @@ public partial class ProjectsViewModel : ObservableObject
 
     public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null,
                              Func<bool>? gameReady = null, SCMW.Core.Content.IContentSource? source = null,
-                             Action<string>? openItem = null)
+                             Action<string>? openItem = null, BuildViewModel? build = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
         _changes = changes;
+        _build = build;
         _gameReady = gameReady;
         _source = source;
         _openItem = openItem;
         _store.Changed += Refresh;
         if (_changes is not null) _changes.Changed += Refresh;
+        if (_build is not null) _build.PropertyChanged += OnBuildChanged;
 
         VisibleProjects = new ObservableCollection<ProjectSummary>();
         Refresh();
@@ -71,6 +75,30 @@ public partial class ProjectsViewModel : ObservableObject
 
     /// <summary>The chosen project's recorded changes, one card per item (empty when none is chosen).</summary>
     public ObservableCollection<ProjectChangeGroup> Changes { get; } = new();
+
+    /// <summary>Build's brain, hosted here: each project card builds its own mod on this screen.</summary>
+    public BuildViewModel? Build => _build;
+
+    /// <summary>True when this screen carries the build controls (a build is wired in).</summary>
+    public bool HasBuild => _build is not null;
+
+    private void OnBuildChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(BuildViewModel.State) or nameof(BuildViewModel.HasChanges))
+            SyncBuildState();
+    }
+
+    /// <summary>Keeps every card's Build button honest: on when it has something to build and nothing
+    /// else is running.</summary>
+    private void SyncBuildState()
+    {
+        var running = _build?.State == BuildState.Running;
+        foreach (var row in _rows)
+        {
+            row.ShowBuild = _build is not null;
+            row.CanBuild = _build is not null && row.HasChanges && !running;
+        }
+    }
 
     /// <summary>How many changes there are in total, across every item.</summary>
     private int ChangeCount => Changes.Sum(g => g.Rows.Count);
@@ -148,6 +176,7 @@ public partial class ProjectsViewModel : ObservableObject
         _rows = _store.All()
             .Select(record => ProjectSummary.From(record, record.Id == chosen?.Id, ChangeCountFor(record)))
             .ToList();
+        SyncBuildState();
 
         var query = Search.Trim();
         VisibleProjects.Clear();
@@ -349,6 +378,36 @@ public partial class ProjectsViewModel : ObservableObject
         if (row is null || chosen is null || _changes is null) return;
 
         _changes.UndoField(chosen.FolderPath, row.Path, row.FieldTechnical);   // raises Changed → Refresh rebuilds
+    }
+
+    /// <summary>Build one project straight from its card. The mod being built becomes the current
+    /// one (so the list below shows it), and its own remembered version is used.</summary>
+    [RelayCommand]
+    private void BuildProject(ProjectSummary? project)
+    {
+        if (project is null || _build is null) return;
+
+        var version = string.IsNullOrWhiteSpace(project.ModVersion)
+            ? ProjectService.DefaultModVersion
+            : project.ModVersion.Trim();
+        project.ModVersion = version;
+
+        _store.SetVersion(project.Id, version);   // remembered with the project, no card jump
+        if (!string.Equals(_store.Chosen?.Id, project.Id, StringComparison.Ordinal))
+            _store.SetCurrent(project.Id);
+
+        _build.ModVersion = version;
+        if (_build.BuildCommand.CanExecute(null)) _build.BuildCommand.Execute(null);
+    }
+
+    /// <summary>Drop every change to one item — what Build's own cards used to offer.</summary>
+    [RelayCommand]
+    private void RemoveItem(ProjectChangeGroup? group)
+    {
+        var chosen = _store.Chosen;
+        if (group is null || chosen is null || _changes is null) return;
+
+        _changes.RemoveItem(chosen.FolderPath, group.Path);   // raises Changed → the card and count refresh
     }
 
     [RelayCommand]

@@ -144,8 +144,11 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>True when the warning should show.</summary>
     public bool HasDuplicateVersionNotice => DuplicateVersionNotice.Length > 0;
 
-    partial void OnDuplicateVersionNoticeChanged(string value) =>
+    partial void OnDuplicateVersionNoticeChanged(string value)
+    {
         OnPropertyChanged(nameof(HasDuplicateVersionNotice));
+        OnPropertyChanged(nameof(ShowBuildPanel));
+    }
 
     /// <summary>The version the player has already been asked about, so the second press goes ahead.</summary>
     private string? _versionConfirmed;
@@ -233,6 +236,10 @@ public partial class BuildViewModel : ObservableObject
     public bool IsFailed => State == BuildState.Failed;
     public bool ShowStepBar => State == BuildState.Running;
 
+    /// <summary>True when the Projects page's build strip has something to say (running, done,
+    /// failed, or the once-only duplicate-version question).</summary>
+    public bool ShowBuildPanel => ShowStepBar || IsSucceeded || IsFailed || HasDuplicateVersionNotice;
+
     partial void OnStateChanged(BuildState value)
     {
         OnPropertyChanged(nameof(CanBuild));
@@ -240,6 +247,7 @@ public partial class BuildViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSucceeded));
         OnPropertyChanged(nameof(IsFailed));
         OnPropertyChanged(nameof(ShowStepBar));
+        OnPropertyChanged(nameof(ShowBuildPanel));
         BuildCommand.NotifyCanExecuteChanged();
     }
 

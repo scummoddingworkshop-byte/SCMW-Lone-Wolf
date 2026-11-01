@@ -119,6 +119,12 @@ public sealed class ProjectStore
         return error;
     }
 
+    /// <summary>
+    /// Remember the version a project builds with. Deliberately silent: a version is not a change to
+    /// the project's contents, so the list is not rebuilt and the card does not move under the click.
+    /// </summary>
+    public string? SetVersion(string id, string? version) => _service.SetVersion(id, version);
+
     public string? SetIcon(string id, string? iconSourcePath)
     {
         var error = _service.SetIcon(id, iconSourcePath);

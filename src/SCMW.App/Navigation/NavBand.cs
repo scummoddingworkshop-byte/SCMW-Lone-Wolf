@@ -34,7 +34,6 @@ public static class NavBands
         ScreenKey.Projects => NavBand.Top,       // the place the app opens on
         ScreenKey.Workspace => NavBand.Modify,   // the four modifying jobs
         ScreenKey.BulkEdit => NavBand.Modify,
-        ScreenKey.Build => NavBand.Ship,
         ScreenKey.Mods => NavBand.Ship,
         ScreenKey.Backups => NavBand.Ship,
         ScreenKey.Settings => NavBand.App,

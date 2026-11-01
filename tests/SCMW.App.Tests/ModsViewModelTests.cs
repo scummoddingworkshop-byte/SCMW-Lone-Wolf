@@ -77,8 +77,8 @@ public class ModsViewModelTests
         var nav = new NavigationHost();
         var vm = new ModsViewModel(new ModList(), nav);
 
-        vm.GoToBuildCommand.Execute(null);
+        vm.GoToProjectsCommand.Execute(null);
 
-        Assert.Equal(ScreenKey.Build, nav.Current);
+        Assert.Equal(ScreenKey.Projects, nav.Current);
     }
 }

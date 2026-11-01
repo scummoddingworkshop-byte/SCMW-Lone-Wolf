@@ -35,6 +35,120 @@ public class ProjectsViewTests
         if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
     }
 
+    [AvaloniaFact] // every project card carries its own version box and Build button
+    public void Each_project_card_carries_a_version_box_and_a_build_button()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            store.Create("Tape mod", "");
+            new ProjectService(WorkspaceService.Ensure(root)).SetVersion(store.All()[0].Id, "2.1.0");
+
+            var build = new BuildViewModel(projects: store);
+            var vm = new ProjectsViewModel(store, new NavigationHost(), build: build);
+            var view = new ProjectsView { DataContext = vm };
+            new Window { Content = view, Width = 1100, Height = 900 }.Show();
+
+            var boxes = view.GetVisualDescendants().OfType<TextBox>()
+                .Where(t => t.Text == "2.1.0").ToList();
+            Assert.Single(boxes);                                   // the card's own version box
+
+            Assert.Contains(view.GetVisualDescendants().OfType<Button>(),
+                b => (b.Content as string) == "Build");
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // an item's card can drop every change to it, in one press
+    public void A_change_card_has_a_remove_button()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id,
+                               assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            var view = new ProjectsView { DataContext = vm };
+            new Window { Content = view, Width = 1100, Height = 900 }.Show();
+
+            Assert.Contains(view.GetVisualDescendants().OfType<Button>(),
+                b => (b.Content as string) == "Remove");
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the build strip shows its steps while a build runs
+    public void The_build_strip_shows_the_step_bar_while_running()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id,
+                               assetPath: "/a/Duct_Tape_ES");
+
+            var build = new BuildViewModel(changes, projects: store);
+            var screen = new ProjectsViewModel(store, new NavigationHost(), changes, build: build);
+            var view = new ProjectsView { DataContext = screen };
+            var window = new Window { Content = view, Width = 1100, Height = 900 };
+            window.Show();
+
+            build.BuildCommand.Execute(null);   // starts the simulated run
+            window.UpdateLayout();
+
+            Assert.True(view.FindControl<StackPanel>("StepBar")!.IsVisible);
+            var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+            Assert.Contains("Prepare", texts);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // and its success and failure panels, exactly as the old Build screen had them
+    public void The_build_strip_shows_success_and_failure()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id,
+                               assetPath: "/a/Duct_Tape_ES");
+
+            var build = new BuildViewModel(changes, projects: store);
+            var screen = new ProjectsViewModel(store, new NavigationHost(), changes, build: build);
+            var view = new ProjectsView { DataContext = screen };
+            new Window { Content = view, Width = 1100, Height = 900 }.Show();
+
+            build.BuildCommand.Execute(null);
+            for (var i = 0; i < 5; i++) build.Advance();
+            Assert.True(view.FindControl<StackPanel>("SuccessPanel")!.IsVisible);
+
+            build.ShowFailure("Nope", "Because", "Try again", "details");
+            Assert.True(view.FindControl<StackPanel>("FailurePanel")!.IsVisible);
+            var texts = view.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+            Assert.Contains("Try again", texts);
+        }
+        finally { Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void Projects_shows_the_header_search_and_grid()
     {

@@ -81,6 +81,70 @@
         </StackPanel>
       </Border>
 
+      <!-- Build feedback: the strip that used to be the whole Build screen. It appears when a build
+           starts (from any card) and stays for the result. -->
+      <Border Name="BuildPanel" Classes="card" IsVisible="{Binding Build.ShowBuildPanel}">
+        <StackPanel Spacing="10" DataContext="{Binding Build}">
+          <TextBlock Text="{Binding ProjectName}" FontSize="15" FontWeight="SemiBold"
+                     Foreground="{StaticResource TextPrimaryBrush}"/>
+
+          <!-- A save-backup problem is a plain note, never a silent loss. -->
+          <TextBlock Text="{Binding SaveNote}" Classes="dim" TextWrapping="Wrap"
+                     Foreground="{StaticResource WarningBrush}"
+                     IsVisible="{Binding SaveNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+          <!-- A version that has been built before is asked about here, once. -->
+          <TextBlock Name="DuplicateVersionText" Text="{Binding DuplicateVersionNotice}" TextWrapping="Wrap"
+                     Classes="dim" Foreground="{StaticResource WarningBrush}"
+                     IsVisible="{Binding HasDuplicateVersionNotice}"/>
+
+          <!-- Step bar -->
+          <StackPanel Name="StepBar" Spacing="8" IsVisible="{Binding ShowStepBar}">
+            <ItemsControl ItemsSource="{Binding Steps}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModBuildStep">
+                  <Border Classes="step" Classes.active="{Binding IsActive}" Classes.done="{Binding IsDone}">
+                    <TextBlock Text="{Binding Label}"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Name="StatusText" Text="{Binding StatusText}" Classes="dim"/>
+          </StackPanel>
+
+          <!-- Built and ready. Installing and switching it on live in Mods Management. -->
+          <StackPanel Name="SuccessPanel" Spacing="8" IsVisible="{Binding IsSucceeded}">
+            <TextBlock Text="{Binding SuccessMessage}" Classes="dim good" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding BuiltPakPath}" Classes="dim" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="Mods Management" Command="{Binding GoToModsCommand}"/>
+              <TextBlock Text="Install, switch off or remove it there." Classes="dim"
+                         VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- Failure -->
+          <StackPanel Name="FailurePanel" Spacing="6" IsVisible="{Binding IsFailed}">
+            <TextBlock Text="{Binding FailureWhat}" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{StaticResource WarningBrush}"/>
+            <TextBlock Text="{Binding FailureMeaning}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding FailureNext}" Classes="dim" TextWrapping="Wrap"/>
+            <Button Name="RestartAdminButton" Classes="primary" Content="Restart as administrator"
+                    HorizontalAlignment="Left"
+                    IsVisible="{Binding CanRestartAsAdmin}"
+                    Command="{Binding RestartAsAdminCommand}"/>
+            <Expander Header="Show details" IsVisible="{Binding HasFailureDetails}">
+              <TextBlock Text="{Binding FailureDetails}" Classes="dim" TextWrapping="Wrap"/>
+            </Expander>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
       <!-- Grid of projects. -->
       <ItemsControl Name="Grid" ItemsSource="{Binding VisibleProjects}" IsVisible="{Binding ShowGrid}">
         <ItemsControl.ItemsPanel>
@@ -97,7 +161,8 @@
                                   DuplicateCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).DuplicateProjectCommand}"
                                   RequestDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).RequestDeleteCommand}"
                                   ConfirmDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).ConfirmDeleteCommand}"
-                                  CancelDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).CancelDeleteCommand}"/>
+                                  CancelDeleteCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).CancelDeleteCommand}"
+                                  BuildCommand="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).BuildProjectCommand}"/>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
@@ -166,6 +231,12 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- Drop every change to this item in one press (what Build's cards offered). -->
+                    <Button Classes="secondary" Content="Remove" HorizontalAlignment="Left"
+                            ToolTip.Tip="Remove every change to this item"
+                            Command="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).RemoveItemCommand}"
+                            CommandParameter="{Binding}"/>
 
                   </StackPanel>
                 </Border>

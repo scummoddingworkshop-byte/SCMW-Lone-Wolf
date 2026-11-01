@@ -36,6 +36,9 @@ public partial class ProjectTile : UserControl
     public static readonly StyledProperty<ICommand?> CancelDeleteCommandProperty =
         AvaloniaProperty.Register<ProjectTile, ICommand?>(nameof(CancelDeleteCommand));
 
+    public static readonly StyledProperty<ICommand?> BuildCommandProperty =
+        AvaloniaProperty.Register<ProjectTile, ICommand?>(nameof(BuildCommand));
+
     public ProjectSummary? Project
     {
         get => GetValue(ProjectProperty);
@@ -78,6 +81,12 @@ public partial class ProjectTile : UserControl
         set => SetValue(CancelDeleteCommandProperty, value);
     }
 
+    public ICommand? BuildCommand
+    {
+        get => GetValue(BuildCommandProperty);
+        set => SetValue(BuildCommandProperty, value);
+    }
+
     private bool _ready;
 
     public ProjectTile()
@@ -118,6 +127,9 @@ public partial class ProjectTile : UserControl
         var currentChip = this.FindControl<Border>("CurrentChip");
         var confirmBar = this.FindControl<StackPanel>("ConfirmBar");
         var actionsBar = this.FindControl<StackPanel>("ActionsBar");
+        var buildBar = this.FindControl<Border>("BuildBar");
+        var buildHint = this.FindControl<TextBlock>("BuildHintText");
+        var buildButton = this.FindControl<Button>("BuildButton");
 
         if (nameText is null || picture is null || currentChip is null || actionsBar is null)
         {
@@ -140,20 +152,36 @@ public partial class ProjectTile : UserControl
         actionsBar.IsVisible = RenameCommand is not null || DuplicateCommand is not null
                                || RequestDeleteCommand is not null;
 
+        // Build lives on the card: its own version box and button, or nothing when no build is wired.
+        if (buildBar is not null)
+            buildBar.IsVisible = project?.ShowBuild == true;
+        if (buildHint is not null)
+            buildHint.Text = project?.BuildHint ?? "";
+        if (buildButton is not null)
+        {
+            buildButton.IsVisible = project?.ShowBuild == true;
+            buildButton.IsEnabled = project?.CanBuild == true;
+        }
+
         Wire("EditButton", RenameCommand);
         Wire("DuplicateButton", DuplicateCommand);
         Wire("DeleteButton", RequestDeleteCommand);
         Wire("ConfirmDeleteButton", ConfirmDeleteCommand);
         Wire("CancelDeleteButton", CancelDeleteCommand);
+        Wire("BuildButton", BuildCommand);
     }
 
     /// <summary>Clicking the card itself picks that project (the screen stays where it is). A click
-    /// on one of the card's own buttons is left to the button.</summary>
+    /// on one of the card's own controls (its buttons, or the version box) is left to that control.</summary>
     private void OnCardPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (e.InitialPressMouseButton != MouseButton.Left) return;
-        if (e.Source is Control source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+        if (e.Source is Control source
+            && (source.FindAncestorOfType<Button>(includeSelf: true) is not null
+                || source.FindAncestorOfType<TextBox>(includeSelf: true) is not null))
+        {
             return;
+        }
 
         if (OpenCommand?.CanExecute(Project) == true)
         {

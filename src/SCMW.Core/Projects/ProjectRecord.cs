@@ -6,7 +6,8 @@ namespace SCMW.Core.Projects;
 /// <see cref="FolderPath"/> is derived from the folder that holds that file.
 /// </summary>
 public sealed record ProjectRecord(string Id, string Name, string Description,
-    string FolderPath, DateTime CreatedUtc, DateTime ModifiedUtc, string? IconFileName = null)
+    string FolderPath, DateTime CreatedUtc, DateTime ModifiedUtc, string? IconFileName = null,
+    string ModVersion = "1.0.0")
 {
     /// <summary>
     /// Absolute path to the copied icon image inside <see cref="FolderPath"/>, or null when the
