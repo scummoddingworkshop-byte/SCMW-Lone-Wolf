@@ -20,7 +20,9 @@ public static class ChangeDiff
     /// A change made against an item's class file joins the item file, so one item is one card.
     /// Cards come out by item name and values by their plain name, so the same list always reads in
     /// the same order — an item is always in the same place, and two items can be compared line for
-    /// line.
+    /// line. A recipe's ingredients are the one exception that reads better grouped: its "what it
+    /// accepts" rows come together, with the amounts below them (see
+    /// <see cref="ChangeWords.OrderKey"/>).
     /// </summary>
     public static IReadOnlyList<BuildChange> Build(IEnumerable<ChangeRecord> records) =>
         records
@@ -29,7 +31,7 @@ public static class ChangeDiff
                 ItemNameOf(g),
                 g.GroupBy(r => r.FieldTechnicalName)
                     .Select(FieldRow)
-                    .OrderBy(v => v.ValueName, StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(v => ChangeWords.OrderKey(v.FieldTechnical), StringComparer.OrdinalIgnoreCase)
                     .ToList(),
                 g.Key))
             .OrderBy(c => c.ItemName, StringComparer.CurrentCultureIgnoreCase)

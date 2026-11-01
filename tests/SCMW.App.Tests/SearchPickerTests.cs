@@ -88,6 +88,30 @@ public class SearchPickerTests
         Assert.Equal("Banana", ((IPickerItem)picker.SelectedItem!).Label);
     }
 
+    [AvaloniaFact] // after a choice is picked, the same dropdown must open again for the next pick
+    public void The_list_opens_again_after_a_choice_was_picked()
+    {
+        var (picker, window, options, search) = Shown(Choices());
+        var pop = picker.FindControl<Popup>("Pop")!;
+        var toggle = picker.FindControl<Button>("Toggle")!;
+
+        toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+        Assert.True(pop.IsOpen);
+
+        options.SelectedIndex = 0;                 // the owner picks "Apple"
+        window.UpdateLayout();
+        Assert.False(pop.IsOpen);
+
+        System.Threading.Thread.Sleep(400);        // past the click-after-close guard
+
+        toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.UpdateLayout();
+
+        Assert.True(pop.IsOpen);                   // it must stay open, ready for another pick
+        Assert.Equal(string.Empty, search.Text);   // with an empty box to type in
+    }
+
     [AvaloniaFact] // opening the list must keep working after the picker's parent is hidden and shown again
     public void The_list_opens_again_after_its_parent_is_hidden_and_shown()
     {

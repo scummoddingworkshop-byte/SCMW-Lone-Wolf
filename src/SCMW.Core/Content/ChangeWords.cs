@@ -26,6 +26,49 @@ public static class ChangeWords
         return FieldNames.Friendly(path);
     }
 
+    /// <summary>
+    /// The order a changed value's row sits in on a card. A recipe's ingredients travel together: every
+    /// "what it accepts" first, one ingredient after another, then the amounts from no skill upwards —
+    /// so an ingredient's own numbers sit below the ingredients instead of splitting them. Everything
+    /// else keeps the plain alphabetical order. Rows with the same key keep the order they were read in.
+    /// </summary>
+    public static string OrderKey(string? technicalName)
+    {
+        var path = (technicalName ?? string.Empty).Trim();
+        if (path.Length == 0) return string.Empty;
+
+        return RecipeOrderKey(path) ?? path;
+    }
+
+    /// <summary>The order key for a recipe's ingredient path, or null when the path is not one.</summary>
+    private static string? RecipeOrderKey(string path)
+    {
+        if (!StartsWith(path, RecipeIngredients.ListName, out var after)) return null;
+        if (!TakeIndex(after, out var index, out var rest)) return null;
+
+        var head = RecipeIngredients.ListName + "#";
+        var slot = index.ToString("000", CultureInfo.InvariantCulture);
+
+        if (rest.Length == 0) return head + "0" + slot;                        // the whole ingredient
+        if (StartsWith(rest, "AllowedTypes", out _)) return head + "1" + slot;  // what it accepts
+
+        if (StartsWith(rest, "Amount", out var afterAmount) && afterAmount.StartsWith(".", StringComparison.Ordinal))
+            return head + "2" + slot + SkillOrder(afterAmount[1..]);
+
+        return head + "9" + slot;                                               // anything else on it
+    }
+
+    /// <summary>The five skill levels in the order the cards show them, so the amounts count upwards.</summary>
+    private static string SkillOrder(string skill) => skill.ToUpperInvariant() switch
+    {
+        "NOSKILL" => "0",
+        "BASIC" => "1",
+        "MEDIUM" => "2",
+        "ADVANCED" => "3",
+        "ABOVEADVANCED" => "4",
+        _ => "5" + skill,
+    };
+
     /// <summary>A dish's ingredient path, or null when the path is not one.</summary>
     private static string? DishWords(string path)
     {

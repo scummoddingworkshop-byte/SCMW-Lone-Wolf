@@ -30,6 +30,36 @@ public class ChangeWordsTests
     public void A_recipe_path_reads_like_the_ingredients_card(string path, string words) =>
         Assert.Equal(words, ChangeWords.For(path));
 
+    [Fact] // the ingredient block reads: what it accepts first, then the amounts from no skill up
+    public void A_recipes_ingredients_are_ordered_as_a_group()
+    {
+        string[] inCardOrder =
+        {
+            "Ingredients[10].Amount.AboveAdvanced",
+            "Ingredients[2].Amount.Advanced",
+            "Ingredients[10].AllowedTypes[0]",
+            "Ingredients[2].AllowedTypes[0]",
+            "Ingredients[2].Amount.NoSkill",
+            "Ingredients[2].Amount.Medium",
+            "Ingredients[2].Amount.Basic",
+            "Ingredients[2]",
+        };
+
+        var ordered = inCardOrder.OrderBy(ChangeWords.OrderKey, StringComparer.OrdinalIgnoreCase).ToArray();
+
+        Assert.Equal(new[]
+        {
+            "Ingredients[2]",
+            "Ingredients[2].AllowedTypes[0]",
+            "Ingredients[10].AllowedTypes[0]",
+            "Ingredients[2].Amount.NoSkill",
+            "Ingredients[2].Amount.Basic",
+            "Ingredients[2].Amount.Medium",
+            "Ingredients[2].Amount.Advanced",
+            "Ingredients[10].Amount.AboveAdvanced",
+        }, ordered);
+    }
+
     [Theory]
     [InlineData("MaxStackSize")]
     [InlineData("Weight")]

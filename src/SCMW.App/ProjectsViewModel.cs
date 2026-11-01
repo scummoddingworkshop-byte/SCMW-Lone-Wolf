@@ -454,7 +454,10 @@ public sealed class ProjectChangeRow
         Path = itemPath;
         Field = value.ValueName;
         FieldTechnical = value.FieldTechnical;
-        Value = value.Summary;
+
+        // The project card says what the value WILL BE — the game's old number is not needed here.
+        // The Modify screens keep showing it ("was 10") beside the value being edited.
+        Value = value.NewValue;
     }
 
     /// <summary>The item's game path — what the shell opens, and how Undo finds the edits.</summary>
@@ -466,7 +469,7 @@ public sealed class ProjectChangeRow
     /// <summary>The field's own game name ("GridInventoryRowSpan"), kept for the tooltip.</summary>
     public string FieldTechnical { get; }
 
-    /// <summary>The change in plain words: the game's number → the new one ("2 → 3").</summary>
+    /// <summary>The value it will have ("75"), or a plain word for a list change ("added").</summary>
     public string Value { get; }
 
     /// <summary>The file's own name (the last part of its path), e.g. <c>Nails_ES</c>.</summary>

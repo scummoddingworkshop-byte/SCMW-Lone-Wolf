@@ -301,10 +301,15 @@ public class ProjectsViewModelTests
 
             var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
 
-            // One card, one line: the game's own number → the number it will have.
+            // One card, one line: the value it will have. The game's own number is not repeated here —
+            // the Modify screens show that beside the value being edited.
             var row = Assert.Single(Assert.Single(vm.Changes).Rows);
             Assert.Equal("Max Stack", row.Field);
-            Assert.Equal("10 → 75", row.Value);
+            Assert.Equal("75", row.Value);
+
+            // The shared diff still knows the game's number, so nothing else lost it.
+            var line = Assert.Single(ChangeDiff.Build(changes.For(project.FolderPath)!));
+            Assert.Equal("10 → 75", Assert.Single(line.Values).Summary);
         }
         finally { Cleanup(root); }
     }

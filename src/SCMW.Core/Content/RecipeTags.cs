@@ -55,13 +55,30 @@ public static class RecipeTags
         return name.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) ? name : null;
     }
 
-    /// <summary>The plain words for a tag name: <c>CI_Metal_Scrap</c> → <c>Metal Scrap</c>.</summary>
+    /// <summary>
+    /// The plain words for a tag name: <c>CI_Metal_Scrap</c> → <c>Metal Scrap</c>, and a name the app
+    /// made from typed words with no underscore in it — <c>CI_OliveOil</c> → <c>Olive Oil</c> — splits at
+    /// the capital too, so the owner reads back the words they typed.
+    /// </summary>
     public static string Label(string name)
     {
         var label = name.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)
             ? name[Prefix.Length..]
             : name;
-        label = label.Replace('_', ' ').Trim();
+        label = SpaceOut(label.Replace('_', ' ')).Trim();
         return label.Length == 0 ? name : label;
+    }
+
+    /// <summary>Puts a space before a capital that follows a small letter ("OliveOil" → "Olive Oil").</summary>
+    private static string SpaceOut(string text)
+    {
+        var words = new System.Text.StringBuilder(text.Length + 4);
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(text[i]) && char.IsLower(text[i - 1])) words.Append(' ');
+            words.Append(text[i]);
+        }
+
+        return words.ToString();
     }
 }

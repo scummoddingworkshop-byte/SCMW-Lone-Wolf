@@ -238,7 +238,8 @@ public class ProjectsViewTests
             Assert.Contains("What this mod changes", texts);
             Assert.Contains("Duct Tape", texts);                       // the friendly name, like Build
             Assert.Contains(vm.Changes[0].Rows[0].Field, texts);        // the value that changed, in words
-            Assert.Contains("10 → 25", texts);                          // game's number → what it became
+            Assert.Contains("25", texts);                               // the value it will have
+            Assert.DoesNotContain("10 → 25", texts);                    // the game's own number is not repeated
             Assert.Contains("1 change", texts);                        // how many on that item
             Assert.DoesNotContain(texts, t => t is not null && t.Contains("/a/Duct_Tape"));
             Assert.DoesNotContain("Duct_Tape", texts);                 // the file name is not the heading

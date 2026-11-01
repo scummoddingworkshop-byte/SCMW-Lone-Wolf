@@ -28,6 +28,32 @@ public class ChangeDiffTests
                      values.Select(v => v.ValueName));
     }
 
+    [Fact] // a recipe's ingredients stay together: every "what it accepts" first, then the amounts
+    public void Recipe_ingredient_rows_group_by_ingredient()
+    {
+        var items = ChangeDiff.Build(new[]
+        {
+            Rec("/g/CR_Soap", "Product", "old", "new"),
+            Rec("/g/CR_Soap", "Ingredients[2].Amount.AboveAdvanced", "2", "1"),
+            Rec("/g/CR_Soap", "Ingredients[2].AllowedTypes[0]", "CI_A", "CI_B"),
+            Rec("/g/CR_Soap", "Ingredients[0].AllowedTypes[0]", "CI_C", "CI_D"),
+            Rec("/g/CR_Soap", "Ingredients[2].Amount.NoSkill", "10", "1"),
+            Rec("/g/CR_Soap", "Ingredients[1].AllowedTypes[0]", "CI_E", "CI_F"),
+            Rec("/g/CR_Soap", "Ingredients[2].Amount.Basic", "8", "1"),
+        });
+
+        Assert.Equal(new[]
+        {
+            "Ingredients[0].AllowedTypes[0]",
+            "Ingredients[1].AllowedTypes[0]",
+            "Ingredients[2].AllowedTypes[0]",
+            "Ingredients[2].Amount.NoSkill",
+            "Ingredients[2].Amount.Basic",
+            "Ingredients[2].Amount.AboveAdvanced",
+            "Product",
+        }, Assert.Single(items).Values.Select(v => v.FieldTechnical));
+    }
+
     [Fact] // item cards sit alphabetically too, so an item is always in the same place
     public void Item_cards_are_alphabetical()
     {

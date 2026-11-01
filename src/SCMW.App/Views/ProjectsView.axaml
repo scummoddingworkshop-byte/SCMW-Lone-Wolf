@@ -176,11 +176,12 @@
           <!-- Laid out like Build's "What's in this mod": one card per item, its picture and friendly
                name, its changes beside them. The cards flow into as many columns as the window fits,
                so a wide screen shows them side by side instead of one very long card. -->
+          <!-- One card per item, each as wide as the window: a change line can be a whole game path,
+               and a narrow card had to shorten it. -->
           <ItemsControl Name="ChangeRows" ItemsSource="{Binding Changes}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <UniformGrid ColumnSpacing="12" RowSpacing="12"
-                             Columns="{Binding $self.Bounds.Width, Converter={StaticResource ColumnCountConverter}, ConverterParameter='300,1,5'}"/>
+                <StackPanel Spacing="12"/>
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
@@ -222,6 +223,7 @@
                                        Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center"
                                        ToolTip.Tip="{Binding FieldTechnical}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Value}"
                                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <Button Grid.Column="2" Classes="secondary" Content="Undo"
                                     ToolTip.Tip="Undo this value"

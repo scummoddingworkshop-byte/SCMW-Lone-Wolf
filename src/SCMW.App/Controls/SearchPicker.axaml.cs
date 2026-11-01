@@ -65,6 +65,10 @@ public partial class SearchPicker : UserControl
     private readonly ListBox? _options;
     private DateTime _closedAt = DateTime.MinValue;
 
+    /// <summary>True while the list is being rebuilt, so its own selection changes are not read as a
+    /// pick by the owner (which used to close the list the instant it opened the second time).</summary>
+    private bool _refiltering;
+
     public SearchPicker()
     {
         AvaloniaXamlLoader.Load(this);
@@ -140,12 +144,25 @@ public partial class SearchPicker : UserControl
             ? new List<IPickerItem>()
             : ItemsSource.Cast<object?>().OfType<IPickerItem>().ToList();
 
-        _options.ItemTemplate = ItemTemplate;
-        _options.ItemsSource = PickerFilter.Apply(all, _search?.Text);
+        // A rebuilt list starts with nothing picked: the last pick is remembered by the box, not by
+        // the list. Without this, the list's old selection came back the moment it was refilled and
+        // was read as a fresh pick — closing the list as soon as it opened.
+        _refiltering = true;
+        try
+        {
+            _options.ItemTemplate = ItemTemplate;
+            _options.ItemsSource = PickerFilter.Apply(all, _search?.Text);
+            _options.SelectedItem = null;
+        }
+        finally
+        {
+            _refiltering = false;
+        }
     }
 
     private void OnOptionPicked(object? sender, SelectionChangedEventArgs e)
     {
+        if (_refiltering) return;
         if (_options?.SelectedItem is not { } picked) return;
 
         SetCurrentValue(SelectedItemProperty, picked);
