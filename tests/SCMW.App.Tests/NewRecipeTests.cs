@@ -1,6 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
@@ -68,6 +71,53 @@ public class NewRecipeTests
         var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source, new ContentCatalog(source),
                                         changes: changes, projects: projects, newAssets: newAssets);
         return (vm, newAssets, changes, projects, root);
+    }
+
+    [AvaloniaFact] // picking a file in the list leaves the New panel, so the picked recipe is shown
+    public async Task Picking_a_recipe_closes_the_new_recipe_panel()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Recipes");
+            vm.OpenNewRecipeCommand.Execute(null);
+            Assert.True(vm.ShowNewRecipe);
+
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Wooden Arrow"));
+
+            Assert.False(vm.ShowNewRecipe);
+            Assert.Equal("Wooden Arrow", vm.Title);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // clicking the file that is already selected also leaves the New panel
+    public async Task Clicking_the_file_already_selected_closes_the_new_panel()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            var view = new WorkspaceView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1000, Height = 700 };
+            window.Show();
+
+            await vm.OpenKindAsync("Recipes");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Wooden Arrow"));
+            vm.OpenNewRecipeCommand.Execute(null);
+            window.UpdateLayout();
+            Assert.True(vm.ShowNewRecipe);
+
+            var list = view.FindControl<ListBox>("AssetList")!;
+            var item = list.GetVisualDescendants().OfType<ListBoxItem>().First();
+            var point = item.TranslatePoint(
+                new Avalonia.Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(point, Avalonia.Input.MouseButton.Left);
+            window.MouseUp(point, Avalonia.Input.MouseButton.Left);
+
+            Assert.False(vm.ShowNewRecipe);
+            Assert.Equal("Wooden Arrow", vm.Title);
+        }
+        finally { TestProjects.Cleanup(root); }
     }
 
     private static void Make(WorkspaceViewModel vm, string name) =>

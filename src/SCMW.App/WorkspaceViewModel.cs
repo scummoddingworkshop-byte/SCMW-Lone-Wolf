@@ -2681,6 +2681,10 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>Read <paramref name="asset"/>'s own fields and show them. Never throws.</summary>
     private async System.Threading.Tasks.Task LoadFieldsAsync(ItemSummary asset)
     {
+        // A file is being shown, so the "New" panel's moment has passed: never leave it covering the
+        // file the player just picked.
+        if (ShowNewRecipe) ShowNewRecipe = false;
+
         IReadOnlyList<AssetField> fields = Array.Empty<AssetField>();
         if (_source is not null)
         {

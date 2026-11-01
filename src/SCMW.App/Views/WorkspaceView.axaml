@@ -155,6 +155,7 @@
       <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"
                SelectedItem="{Binding SelectedAsset, Mode=TwoWay}"
+               PointerReleased="OnAssetListPointerReleased"
                IsVisible="{Binding HasAssetMatches}">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:ItemSummary">

@@ -47,6 +47,18 @@ public partial class WorkspaceView : UserControl
             ? columns.ColumnDefinitions[0].ActualWidth
             : WorkspaceLayout.SavedWidth;
 
+    /// <summary>
+    /// Clicking a file in the list means "work on this one", so the New panel steps aside. This runs
+    /// on every click, including one on the row that is already selected (which changes no property
+    /// and so would otherwise leave the panel covering the file).
+    /// </summary>
+    private void OnAssetListPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.InitialPressMouseButton != MouseButton.Left) return;
+        if (DataContext is WorkspaceViewModel { ShowNewRecipe: true } vm)
+            vm.CancelNewRecipeCommand.Execute(null);
+    }
+
     /// <summary>Follow the view model so the New-recipe panel's dropdown can be rebuilt per open.</summary>
     private void HookViewModel()
     {
