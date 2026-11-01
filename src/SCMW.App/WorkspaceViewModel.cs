@@ -3069,15 +3069,31 @@ public partial class WorkspaceViewModel : ObservableObject
 
         // Nothing actually changed: leave the records alone (a no-op record would be listed by
         // Build as a real change). Compared as shown, so 0.15 against a file's 0.15000000000000002
-        // is not a change either.
-        if (PlainNumber.ForDisplay(draft) == PlainNumber.ForDisplay(field.OriginalValue))
+        // is not a change either. The value to compare against is the one the project puts on screen
+        // now, NOT the game's own number: a value already changed to 3 can be typed back to its
+        // game number 4, and that is a real edit (it removes the change).
+        var typed = PlainNumber.ForDisplay(draft);
+        var shown = PlainNumber.ForDisplay(field.Value);
+
+        if (typed == shown)
         {
-            field.Value = PlainNumber.ForDisplay(draft);
+            field.Value = shown;
             field.IsEditing = false;
             return;
         }
 
-        field.Value = PlainNumber.ForDisplay(draft);
+        // Typing the game's own number back means "no change": drop this value's records, so the
+        // item returns to the game's number on every screen and in the build.
+        if (typed == PlainNumber.ForDisplay(field.OriginalValue))
+        {
+            field.Value = typed;
+            field.IsEditing = false;
+            if (_changes is not null && path is not null)
+                _changes.UndoField(_projects!.Chosen!.FolderPath, path, field.TechnicalName);
+            return;
+        }
+
+        field.Value = typed;
         field.IsEditing = false;
         _changes.RecordEdit(path!, field.TechnicalName, field.OriginalValue, draft, _projects!.Chosen!.Id,
                             assetPath: path);

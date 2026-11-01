@@ -500,6 +500,67 @@ public class WorkspaceViewTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // typing the game's own number back must drop the change (not quietly keep it)
+    public async Task Typing_the_game_value_back_removes_the_change()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            const string path = "SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES";
+            changes.RecordEdit("Batteries", "Weight", "400", "999", projects.Current!.Id, assetPath: path);
+
+            var source = new BrowseSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Batteries"));
+
+            var weight = vm.Fields.Single(f => f.TechnicalName == "Weight");
+            Assert.Equal("999", weight.Value);                 // the project's value is what shows
+            Assert.True(weight.IsChanged);                     // and it reads as a change
+
+            vm.BeginEditCommand.Execute(weight);
+            weight.Draft = "400";                              // the game's own number
+            vm.CommitEditCommand.Execute(weight);
+
+            Assert.Empty(changes.For(projects.Current!.FolderPath));   // the change is gone, not kept
+            Assert.Equal("400", weight.Value);                 // the row shows the game's number again
+            Assert.False(weight.IsChanged);                    // and no longer reads as a change
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact] // typing the value already shown records nothing new (a real no-op)
+    public async Task Typing_the_value_already_shown_records_nothing()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            const string path = "SCUM/Content/ConZ_Files/Items/Equipment/Batteries_ES";
+            changes.RecordEdit("Batteries", "Weight", "400", "999", projects.Current!.Id, assetPath: path);
+
+            var source = new BrowseSource();
+            var vm = new WorkspaceViewModel(FieldLibraryLoader.LoadDefault(), source,
+                                            new ContentCatalog(source), changes: changes, projects: projects);
+
+            await vm.OpenKindAsync("Items");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Batteries"));
+
+            var weight = vm.Fields.Single(f => f.TechnicalName == "Weight");
+            vm.BeginEditCommand.Execute(weight);
+            weight.Draft = "999";                              // already the project's value
+            vm.CommitEditCommand.Execute(weight);
+
+            var record = Assert.Single(changes.For(projects.Current!.FolderPath));   // still one
+            Assert.Equal("999", record.NewValue);
+            Assert.Equal("999", weight.Value);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public async Task Multiplying_a_number_field_records_a_multiply_against_the_files_path()
     {
