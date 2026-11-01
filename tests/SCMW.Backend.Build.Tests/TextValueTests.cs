@@ -13,8 +13,8 @@ public class TextValueTests
 {
     private readonly FakeNameMap _names = new();
 
-    [Fact]
-    public void A_base_text_gets_the_words_it_shows_and_keeps_its_key()
+    [Fact] // the game resolves a name through its KEY, so new words need a new key (seen in game 2026-10-16)
+    public void A_base_text_gets_the_words_it_shows_and_a_fresh_key()
     {
         var text = new TextPropertyData(_names.Name("Caption"))
         {
@@ -26,7 +26,7 @@ public class TextValueTests
         Assert.True(TextValue.TrySet(text, "Olive Oil", out var error), error);
 
         Assert.Equal(TextHistoryType.Base, text.HistoryType);
-        Assert.Equal("CD57C0AF4885DFEBD96E87B331933A6B", text.Value.ToString());
+        Assert.NotEqual("CD57C0AF4885DFEBD96E87B331933A6B", text.Value?.ToString());
         Assert.Equal("Olive Oil", text.CultureInvariantString.ToString());
     }
 

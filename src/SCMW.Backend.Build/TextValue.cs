@@ -6,7 +6,9 @@ namespace SCMW.Backend.Build;
 /// <summary>
 /// Sets the words a game text shows. A cooked text comes in two shapes we meet on items:
 /// <list type="bullet">
-/// <item><b>Base</b> — the words are the text's own source string (the name).</item>
+/// <item><b>Base</b> — the words are the text's own source string (the name). The game still resolves
+/// them through the text's KEY (editing only the source changes nothing, tested 2026-10-16), so the
+/// words are written under a fresh key.</item>
 /// <item><b>String-table entry</b> — the words are looked up in a game table (the description), so
 /// changing the stored key would still show the old words. We turn it into a plain Base text with our
 /// own key and source, which the game shows directly.</item>
@@ -31,10 +33,12 @@ internal static class TextValue
             switch (text.HistoryType)
             {
                 case TextHistoryType.Base:
-                    // The words live in the source string; the key only identifies them.
+                    // The game resolves the shown words through the text's KEY, not the source string:
+                    // editing only the source (same key) changes nothing in game (tested 2026-10-16).
+                    // A fresh key with our words is the shape that shows (proven for descriptions and
+                    // cooking titles), so always issue one when the words are set here.
                     text.Namespace = FString.FromString(string.Empty);
-                    if (text.Value is null || string.IsNullOrEmpty(text.Value.ToString()))
-                        text.Value = FString.FromString(NewKey());
+                    text.Value = FString.FromString(NewKey());
                     text.CultureInvariantString = FString.FromString(words);
                     return true;
 
