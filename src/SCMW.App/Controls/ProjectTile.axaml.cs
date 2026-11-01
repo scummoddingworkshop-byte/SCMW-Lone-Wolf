@@ -125,6 +125,7 @@ public partial class ProjectTile : UserControl
         var picture = this.FindControl<Image>("Picture");
         var defaultMark = this.FindControl<TextBlock>("DefaultMark");
         var currentChip = this.FindControl<Border>("CurrentChip");
+        var tileBorder = this.FindControl<Border>("TileBorder");
         var confirmBar = this.FindControl<StackPanel>("ConfirmBar");
         var actionsBar = this.FindControl<StackPanel>("ActionsBar");
         var buildBar = this.FindControl<Border>("BuildBar");
@@ -146,6 +147,7 @@ public partial class ProjectTile : UserControl
         defaultMark!.IsVisible = project?.Picture is null;
 
         currentChip.IsVisible = project?.IsCurrent == true;
+        tileBorder?.Classes.Set("current", project?.IsCurrent == true);
         confirmBar!.IsVisible = project?.IsConfirmingDelete == true;
 
         // With no commands wired in, show no action buttons rather than dead ones.

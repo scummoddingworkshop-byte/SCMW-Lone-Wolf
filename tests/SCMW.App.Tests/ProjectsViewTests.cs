@@ -149,6 +149,35 @@ public class ProjectsViewTests
         finally { Cleanup(root); }
     }
 
+    [AvaloniaFact] // the project being worked on wears a green border, so it reads at a glance
+    public void The_current_projects_card_wears_the_current_marker()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new InMemorySettingsStore());
+            store.Create("First mod", "");
+            store.Create("Second mod", "");
+            store.SetCurrent(store.All()[0].Id);
+
+            var vm = new ProjectsViewModel(store, new NavigationHost());
+            var view = new ProjectsView { DataContext = vm };
+            new Window { Content = view, Width = 1100, Height = 900 }.Show();
+
+            var tiles = view.GetVisualDescendants().OfType<ProjectTile>().ToList();
+            var current = tiles.Single(t => t.Project?.IsCurrent == true);
+            var other = tiles.First(t => t.Project?.IsCurrent == false);
+
+            Border BorderOf(ProjectTile tile) => tile.GetVisualDescendants().OfType<Border>()
+                .Single(b => b.Name == "TileBorder");
+
+            Assert.Contains("current", BorderOf(current).Classes);
+            Assert.DoesNotContain("current", BorderOf(other).Classes);
+        }
+        finally { Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void Projects_shows_the_header_search_and_grid()
     {

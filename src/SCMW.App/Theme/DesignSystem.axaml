@@ -249,6 +249,15 @@
   <Style Selector="Border.projecttile:pointerover">
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
   </Style>
+  <!-- The project being worked on: green, so it reads at a glance. Kept after the hover rule so it
+       wins the pointerover style too. -->
+  <Style Selector="Border.projecttile.current">
+    <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+  </Style>
+  <Style Selector="Border.projecttile.current:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+  </Style>
 
   <!-- Items list: plain rows in a ListBox (selection for free, no nested buttons). -->
   <Style Selector="ListBox.items">

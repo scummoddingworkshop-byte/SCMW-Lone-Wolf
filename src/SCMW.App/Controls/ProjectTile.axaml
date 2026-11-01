@@ -3,7 +3,7 @@
              xmlns:vm="clr-namespace:SCMW.App"
              x:Class="SCMW.App.Controls.ProjectTile"
              x:DataType="vm:ProjectSummary">
-  <Border Classes="projecttile" PointerReleased="OnCardPointerReleased">
+  <Border Name="TileBorder" Classes="projecttile" PointerReleased="OnCardPointerReleased">
     <Grid RowDefinitions="*,Auto">
       <!-- Everything above the buttons. This row takes the slack, so the buttons sit on the same
            line on every card, whatever the name or description is. -->
