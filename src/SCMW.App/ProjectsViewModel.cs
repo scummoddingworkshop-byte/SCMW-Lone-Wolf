@@ -166,28 +166,27 @@ public partial class ProjectsViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowGrid));
     }
 
-    /// <summary>How many changes a project holds — read from its own change list.</summary>
+    /// <summary>How many changes a project holds — read from its own change list, one per value
+    /// (an old edit to a value that has since been changed again is not counted twice).</summary>
     private int ChangeCountFor(ProjectRecord record) =>
-        _changes?.For(record.FolderPath).Count ?? 0;
+        _changes is null
+            ? 0
+            : ChangeDiff.Build(_changes.For(record.FolderPath)).Sum(item => item.Values.Count);
 
     /// <summary>Show the chosen project's change list, one card per item, in plain words (nothing when
-    /// none is chosen).</summary>
+    /// none is chosen). The list is the same one Build shows, in the same order: one line per value,
+    /// cards and lines alphabetical.</summary>
     private void RefreshChanges(ProjectRecord? chosen)
     {
         Changes.Clear();
         if (chosen is not null && _changes is not null)
         {
-            var groups = _changes.For(chosen.FolderPath)
-                                .Select(record => new ProjectChangeRow(record))
-                                .GroupBy(row => row.Path, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var group in groups)
+            foreach (var item in ChangeDiff.Build(_changes.For(chosen.FolderPath)))
             {
-                var path = group.First().Path;
                 Changes.Add(new ProjectChangeGroup(
-                    group.ToList(),
-                    ContentCatalog.FriendlyItemName(path),
-                    LoadIcon(path)));
+                    item.Values.Select(value => new ProjectChangeRow(item.Path, value)).ToList(),
+                    ContentCatalog.FriendlyItemName(item.Path),
+                    LoadIcon(item.Path)));
             }
         }
 
@@ -341,14 +340,15 @@ public partial class ProjectsViewModel : ObservableObject
         _openItem?.Invoke(group.Path);
     }
 
-    /// <summary>Undo one recorded change (Task 4.2) — removes exactly that record, nothing else.</summary>
+    /// <summary>Undo one value on one item where it is shown — removes every recorded edit behind that
+    /// line, so the value goes back to the game's own number and the line disappears.</summary>
     [RelayCommand]
     private void UndoChange(ProjectChangeRow? row)
     {
         var chosen = _store.Chosen;
         if (row is null || chosen is null || _changes is null) return;
 
-        _changes.Undo(chosen.FolderPath, row.Id);   // raises Changed → Refresh rebuilds the list
+        _changes.UndoField(chosen.FolderPath, row.Path, row.FieldTechnical);   // raises Changed → Refresh rebuilds
     }
 
     [RelayCommand]
@@ -385,34 +385,20 @@ public partial class ProjectsViewModel : ObservableObject
 }
 
 /// <summary>
-/// One recorded change, in plain words, for the Projects screen's change list. Kept tiny — it is a
-/// reading of the engine's <see cref="ChangeRecord"/>, never a second source of truth.
+/// One line of an item's change card: one value, in plain words, exactly as Build's list shows it.
+/// Built from the shared <see cref="BuildValueChange"/>, never a second reading of the records.
 /// </summary>
 public sealed class ProjectChangeRow
 {
-    public ProjectChangeRow(ChangeRecord record, string? label = null)
+    public ProjectChangeRow(string itemPath, BuildValueChange value)
     {
-        Id = record.Id;
-        Asset = record.AssetId;
-        Path = string.IsNullOrEmpty(record.AssetPath) ? record.AssetId : record.AssetPath;
-        FieldTechnical = record.FieldTechnicalName;
-        Field = label ?? FieldLabels.Of(record.FieldTechnicalName);
-        Value = record.Operation switch
-        {
-            ChangeOperation.Multiply => "×" + record.NewValue,
-            ChangeOperation.AddEntry => "added an entry",
-            ChangeOperation.RemoveEntry => "removed an entry",
-            _ => "→ " + record.NewValue,
-        };
+        Path = itemPath;
+        Field = value.ValueName;
+        FieldTechnical = value.FieldTechnical;
+        Value = value.Summary;
     }
 
-    /// <summary>The record's id (used later for per-change undo).</summary>
-    public Guid Id { get; }
-
-    /// <summary>The item or file the change lands on.</summary>
-    public string Asset { get; }
-
-    /// <summary>The asset's game path when it has one (else its recorded id).</summary>
+    /// <summary>The item's game path — what the shell opens, and how Undo finds the edits.</summary>
     public string Path { get; }
 
     /// <summary>The field that changed, in the words the Modify screen uses ("Height in grid rows").</summary>
@@ -421,7 +407,7 @@ public sealed class ProjectChangeRow
     /// <summary>The field's own game name ("GridInventoryRowSpan"), kept for the tooltip.</summary>
     public string FieldTechnical { get; }
 
-    /// <summary>The change in plain words ("→ 25", "×2", "added an entry").</summary>
+    /// <summary>The change in plain words: the game's number → the new one ("2 → 3").</summary>
     public string Value { get; }
 
     /// <summary>The file's own name (the last part of its path), e.g. <c>Nails_ES</c>.</summary>

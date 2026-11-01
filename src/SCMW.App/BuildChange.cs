@@ -66,7 +66,8 @@ public partial class BuildChange : ObservableObject
 
 /// <summary>One changed value on an item: its plain name and the plain "old → new" line.</summary>
 public sealed record BuildValueChange(string ValueName, string OldValue, string NewValue,
-                                      ChangeOperation Operation = ChangeOperation.Set)
+                                      ChangeOperation Operation = ChangeOperation.Set,
+                                      string FieldTechnical = "")
 {
     /// <summary>
     /// The line shown beside the name: "10 → 25" for a typed value, and a plain word for a list change

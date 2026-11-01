@@ -138,7 +138,7 @@
                       <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding FriendlyName}" FontSize="15" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextPrimaryBrush}"
-                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FileName}"/>
+                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FriendlyName}"/>
                         <TextBlock Text="{Binding ChangeCountText}" FontSize="12"
                                    Foreground="{StaticResource TextDimBrush}"/>
                       </StackPanel>
@@ -159,7 +159,7 @@
                             <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12"
                                        Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                             <Button Grid.Column="2" Classes="secondary" Content="Undo"
-                                    ToolTip.Tip="Undo just this change"
+                                    ToolTip.Tip="Undo this value"
                                     Command="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).UndoChangeCommand}"
                                     CommandParameter="{Binding}"/>
                           </Grid>

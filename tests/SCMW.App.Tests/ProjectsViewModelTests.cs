@@ -253,13 +253,94 @@ public class ProjectsViewModelTests
 
             // The chosen project's list is the one shown (here B, one change, one card).
             var group = Assert.Single(vm.Changes);
-            Assert.Equal("Bat", group.FileName);              // the file's own name, not the path
-            Assert.Equal("/b/Bat", Assert.Single(group.Rows).Path);
+            Assert.Equal("Bat_ES", group.FileName);           // the item file, the same one Build opens
+            Assert.Equal("/b/Bat_ES", Assert.Single(group.Rows).Path);
         }
         finally { Cleanup(root); }
     }
 
-    [AvaloniaFact] // Task 4.2: undo removes exactly one change, not the whole list
+    [AvaloniaFact] // the project's card counts what the list shows, not the old edits behind it
+    public void A_project_counts_current_values_not_old_edits()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Max stack", "25", "50", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Max stack", "50", "75", project.Id, assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+
+            Assert.Equal(1, vm.VisibleProjects.Single().ChangeCount);
+            Assert.Equal("1 change", Assert.Single(vm.Changes).ChangeCountText);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // editing one value more than once shows one line, with the latest value
+    public void A_value_edited_more_than_once_shows_once()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Max stack", "25", "50", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Max stack", "50", "75", project.Id, assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+
+            // One card, one line: the game's own number → the number it will have.
+            var row = Assert.Single(Assert.Single(vm.Changes).Rows);
+            Assert.Equal("Max Stack", row.Field);
+            Assert.Equal("10 → 75", row.Value);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // undo clears the whole value, not just its newest edit
+    public void Undoing_a_value_removes_every_edit_to_it()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ProjectStore(
+                new ProjectService(WorkspaceService.Ensure(root)), new JsonSettingsStore(root));
+            var project = store.Create("Tape mod", "").Project!;
+            store.SetCurrent(project.Id);
+
+            var changes = new ItemChangeStore(new ProjectChangeStore(), store);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Max stack", "25", "50", project.Id, assetPath: "/a/Duct_Tape_ES");
+            changes.RecordEdit("Duct Tape", "Weight", "5", "3", project.Id, assetPath: "/a/Duct_Tape_ES");
+
+            var vm = new ProjectsViewModel(store, new NavigationHost(), changes);
+            var group = Assert.Single(vm.Changes);
+            var stackRow = group.Rows.Single(r => r.FieldTechnical == "Max stack");
+
+            vm.UndoChangeCommand.Execute(stackRow);
+
+            var left = Assert.Single(Assert.Single(vm.Changes).Rows);
+            Assert.Equal("Weight", left.FieldTechnical);               // the other value stayed
+            var folder = store.All().Single(p => p.Id == project.Id).FolderPath;
+            Assert.Single(changes.For(folder));                        // both stack edits went
+            Assert.Equal(1, vm.VisibleProjects.Single(p => p.Id == project.Id).ChangeCount);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // undo removes exactly that value, not the whole item
     public void Undoing_a_change_removes_exactly_one()
     {
         var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
@@ -278,7 +359,7 @@ public class ProjectsViewModelTests
 
             // One card per item, holding all of that item's changes.
             var group = Assert.Single(vm.Changes);
-            Assert.Equal("Duct_Tape", group.FileName);
+            Assert.Equal("Duct_Tape_ES", group.FileName);
             Assert.Equal("Duct Tape", group.FriendlyName);      // the same words Build's list uses
             Assert.Equal("2 changes", group.ChangeCountText);
             Assert.Equal(2, group.Rows.Count);
@@ -288,10 +369,11 @@ public class ProjectsViewModelTests
 
             group = Assert.Single(vm.Changes);
             var left = Assert.Single(group.Rows);
-            Assert.NotEqual(first.Id, left.Id);                       // the other change stayed
+            Assert.NotEqual(first.FieldTechnical, left.FieldTechnical);   // the other value stayed
             Assert.Equal("1 change", group.ChangeCountText);
             var folder = store.All().Single(p => p.Id == project.Id).FolderPath;
-            Assert.DoesNotContain(changes.For(folder), r => r.Id == first.Id);
+            Assert.DoesNotContain(changes.For(folder),
+                                  r => r.FieldTechnicalName == first.FieldTechnical);
             Assert.Equal(1, vm.VisibleProjects.Single(p => p.Id == project.Id).ChangeCount);
         }
         finally { Cleanup(root); }

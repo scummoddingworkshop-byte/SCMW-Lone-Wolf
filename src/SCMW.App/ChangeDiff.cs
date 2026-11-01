@@ -18,6 +18,9 @@ public static class ChangeDiff
     /// <summary>
     /// One row per changed item (matched by path when it has one, so same-named files stay apart).
     /// A change made against an item's class file joins the item file, so one item is one card.
+    /// Cards come out by item name and values by their plain name, so the same list always reads in
+    /// the same order — an item is always in the same place, and two items can be compared line for
+    /// line.
     /// </summary>
     public static IReadOnlyList<BuildChange> Build(IEnumerable<ChangeRecord> records) =>
         records
@@ -26,8 +29,10 @@ public static class ChangeDiff
                 ItemNameOf(g),
                 g.GroupBy(r => r.FieldTechnicalName)
                     .Select(FieldRow)
+                    .OrderBy(v => v.ValueName, StringComparer.CurrentCultureIgnoreCase)
                     .ToList(),
                 g.Key))
+            .OrderBy(c => c.ItemName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
     /// <summary>
@@ -70,7 +75,7 @@ public static class ChangeDiff
             _ => Shown(last.NewValue),
         };
 
-        return new BuildValueChange(FieldLabels.Of(field.Key), before, after, last.Operation);
+        return new BuildValueChange(FieldLabels.Of(field.Key), before, after, last.Operation, field.Key);
     }
 
     /// <summary>

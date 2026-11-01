@@ -171,6 +171,29 @@ public sealed class ItemChangeStore
     }
 
     /// <summary>
+    /// Remove every recorded change to one value on one item — a field added to the item's class file
+    /// counts as the same item — so that value goes back to the game's own number. Returns null on
+    /// success, otherwise one plain message.
+    /// </summary>
+    public string? UndoField(string projectFolder, string assetPath, string field)
+    {
+        if (string.IsNullOrWhiteSpace(projectFolder))
+            return "That project folder is unavailable.";
+
+        var item = ChangeDiff.ItemKey(assetPath);
+        var ids = _store.Load(projectFolder)
+            .Where(r => string.Equals(ChangeDiff.ItemKey(r.AssetPath ?? r.AssetId), item,
+                                      StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(r.FieldTechnicalName, field, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var id in ids) _store.Undo(projectFolder, id);
+        if (ids.Count > 0) Changed?.Invoke();
+        return null;
+    }
+
+    /// <summary>
     /// Remove every recorded change for one item — a field added to the item's class file counts as
     /// the same item — so it reverts to the game's own values. Returns null on success, otherwise one
     /// plain message.
