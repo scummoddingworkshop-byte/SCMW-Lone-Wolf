@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>2.30.5</Version>
+    <Version>2.30.6</Version>
     <Product>SCMW � Lone Wolf</Product>
     <AssemblyTitle>SCMW � Lone Wolf</AssemblyTitle>
     <ApplicationIcon>Assets\scmw.ico</ApplicationIcon>

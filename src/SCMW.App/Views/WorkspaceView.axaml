@@ -248,17 +248,17 @@
                 <Border Classes="chip" VerticalAlignment="Center">
                   <TextBlock Text="new" Classes="dim" Foreground="{StaticResource AccentBrush}"/>
                 </Border>
-                <TextBlock Text="This recipe is new in your project." Classes="dim" VerticalAlignment="Center"/>
+                <TextBlock Text="This is new in your project." Classes="dim" VerticalAlignment="Center"/>
               </StackPanel>
               <Button Grid.Column="1" Name="RemoveNewRecipe" Classes="secondary" Content="Remove"
                       VerticalAlignment="Center"
-                      ToolTip.Tip="Delete this new recipe from the project"
+                      ToolTip.Tip="{Binding RemoveNewAssetHint}"
                       IsVisible="{Binding !ConfirmingRemoveNewRecipe}"
                       Command="{Binding RequestRemoveNewRecipeCommand}"/>
 
               <TextBlock Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
                          VerticalAlignment="Center" Margin="0,0,12,0"
-                         Text="Remove this new recipe from your project? Its changes are removed with it."
+                         Text="{Binding RemoveNewAssetConfirm}"
                          IsVisible="{Binding ConfirmingRemoveNewRecipe}"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
                           IsVisible="{Binding ConfirmingRemoveNewRecipe}">

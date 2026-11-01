@@ -120,6 +120,37 @@ public class NewRecipeTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // a new ITEM can be removed too — and its edits go with it, never left orphaned
+    public async Task Removing_a_new_item_deletes_it_and_its_changes()
+    {
+        var (vm, assets, changes, projects, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Items");
+            vm.OpenNewRecipeCommand.Execute(null);
+            vm.NewRecipeName = "Olive Oil";
+            vm.NewRecipeDonor = vm.RecipeDonors.Single(d => d.Name == "VegetableOil");
+            vm.CreateNewRecipeCommand.Execute(null);
+
+            var folder = projects.Current!.FolderPath;
+            var row = vm.VisibleAssets.Single(a => a.Name == "Olive Oil");
+
+            // An edit on the new item, so there is something that must go with it.
+            changes.RecordEdit("Olive Oil", "ProductQuantity", "1", "2", projects.Current!.Id,
+                               assetPath: row.AssetId);
+            Assert.NotEmpty(changes.For(folder));
+
+            vm.SelectedAsset = row;
+            vm.RequestRemoveNewRecipeCommand.Execute(null);
+            vm.ConfirmRemoveNewRecipeCommand.Execute(null);
+
+            Assert.Empty(assets.Load(folder));                                  // the record is gone
+            Assert.Empty(changes.For(folder));                                  // and so are its edits
+            Assert.DoesNotContain(vm.VisibleAssets, a => a.Name == "Olive Oil");
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     private static void Make(WorkspaceViewModel vm, string name) =>
         (vm.NewRecipeName, vm.NewRecipeDonor) =
             (name, vm.RecipeDonors.Single(d => d.Name == "Wooden Arrow"));

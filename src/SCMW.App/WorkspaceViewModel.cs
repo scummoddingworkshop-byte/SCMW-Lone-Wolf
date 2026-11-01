@@ -2045,6 +2045,17 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True while the "remove this new recipe?" confirmation is showing.</summary>
     [ObservableProperty] private bool _confirmingRemoveNewRecipe;
 
+    /// <summary>The plain word for the open new asset: an item or a recipe.</summary>
+    public string NewAssetWord =>
+        string.Equals(_kind, "Items", StringComparison.Ordinal) ? "item" : "recipe";
+
+    /// <summary>Tooltip for the Remove button on a brand-new asset.</summary>
+    public string RemoveNewAssetHint => $"Delete this new {NewAssetWord} from the project";
+
+    /// <summary>The confirmation line for removing a brand-new asset.</summary>
+    public string RemoveNewAssetConfirm =>
+        $"Remove this new {NewAssetWord} from your project? Its changes are removed with it.";
+
     /// <summary>Arm the removal of the open new recipe (a second click confirms).</summary>
     [RelayCommand] private void RequestRemoveNewRecipe() => ConfirmingRemoveNewRecipe = true;
 
@@ -2052,9 +2063,10 @@ public partial class WorkspaceViewModel : ObservableObject
     [RelayCommand] private void CancelRemoveNewRecipe() => ConfirmingRemoveNewRecipe = false;
 
     /// <summary>
-    /// Delete the open new recipe: drop its edits and its own record, so nothing orphaned is left
-    /// behind (an orphan edit is exactly what a build cannot read). Refused — nothing removed — when
-    /// the open file is not a new recipe, or no project is chosen.
+    /// Delete the open new asset (an item or a recipe): drop its edits and its own record, so nothing
+    /// orphaned is left behind (an orphan edit is exactly what a build cannot read). Nothing is removed
+    /// when the open file is not one of this project's new assets, or no project is chosen — so a failed
+    /// lookup can never strip edits on its own.
     /// </summary>
     [RelayCommand]
     private void ConfirmRemoveNewRecipe()
@@ -2069,15 +2081,24 @@ public partial class WorkspaceViewModel : ObservableObject
             return;
         }
 
-        // Drop the edits first, then the record itself — never leave a record-less change behind.
-        _changes.RemoveItem(folder, asset.AssetId!);
+        // An item's row is its "_ES" twin, while the record keeps the item's own package path (without
+        // "_ES"), so match on the item's own path — never on one exact string.
+        var record = _newAssets.Load(folder).FirstOrDefault(a => IsSameNewAsset(a, asset.AssetId!));
+        if (record is null) return;
 
-        var id = _newAssets.Load(folder)
-            .FirstOrDefault(a => string.Equals(a.PackagePath, asset.AssetId, StringComparison.OrdinalIgnoreCase))?.Id;
-        if (id is { } assetId) _newAssets.Undo(folder, assetId);
+        // Drop the edits first, then the record itself — never leave a record-less change behind.
+        _changes.RemoveItem(folder, asset.AssetId);
+        _newAssets.Undo(folder, record.Id);
 
         _ = LoadKindAsync(_kind);   // rebuild the list without it
     }
+
+    /// <summary>True when a project's new-asset record and a list row are the same file (item or recipe).</summary>
+    private static bool IsSameNewAsset(NewAsset asset, string assetId) =>
+        string.Equals(asset.PackagePath, assetId, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(asset.EditPath, assetId, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ChangeDiff.ItemKey(asset.PackagePath), ChangeDiff.ItemKey(assetId),
+                         StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Open <paramref name="kind"/>'s file named <paramref name="title"/> and show the
     /// fields it actually has, each explained by the library where the library knows it.
@@ -2670,6 +2691,9 @@ public partial class WorkspaceViewModel : ObservableObject
     partial void OnSelectedAssetChanged(ItemSummary? value)
     {
         OnPropertyChanged(nameof(IsOpenNewRecipe));
+        OnPropertyChanged(nameof(NewAssetWord));
+        OnPropertyChanged(nameof(RemoveNewAssetHint));
+        OnPropertyChanged(nameof(RemoveNewAssetConfirm));
         ConfirmingRemoveNewRecipe = false;   // a new selection never keeps a pending removal armed
 
         if (value is not null && !ReferenceEquals(value, _suppressingSelection))
