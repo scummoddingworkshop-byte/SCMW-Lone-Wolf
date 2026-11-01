@@ -429,6 +429,11 @@ public partial class ShellViewModel : ObservableObject
         // A MAKE row goes one step further: it starts a brand-new asset of that list's kind.
         if (value is { Creates: true, Kind: { } creating })
             _ = _workspaceVm.StartCreatingAsync(creating);
+
+        // Always leave exactly one row lit. A MAKE row is a command, never the lit row, and a click
+        // on the row for the list that is ALREADY open changes no property and no screen — without
+        // this, that click would light it beside the Modify row and then do nothing on the next click.
+        SyncRailSelection();
     }
 
     /// <summary>A rail row was clicked in one of the bands: make it the current screen.</summary>

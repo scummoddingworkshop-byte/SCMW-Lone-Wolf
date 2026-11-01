@@ -61,6 +61,7 @@
                   <TextBlock Classes="bandHeader" Text="{Binding Title}" Margin="12,8,0,8"/>
                 </Border>
                 <ListBox Classes="rail" Classes.home="{Binding IsHome}" ItemsSource="{Binding Items}"
+                         SelectionChanged="OnRailSelectionChanged"
                          SelectedItem="{Binding Selected, Mode=TwoWay}">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:NavItem">

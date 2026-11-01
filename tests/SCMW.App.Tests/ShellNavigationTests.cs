@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SCMW.App.Views;
@@ -73,6 +75,144 @@ public class ShellNavigationTests
                      vm.Bands[3].Items.Select(i => i.Key));
         Assert.Equal(new[] { ScreenKey.Settings, ScreenKey.Help },
                      vm.Bands[4].Items.Select(i => i.Key));
+    }
+
+    [AvaloniaFact] // a MAKE row is never lit beside the Modify row, and stays usable after a click
+    public void A_make_row_is_never_lit_beside_the_modify_row()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        var modifyBand = vm.Bands.Single(b => b.Band == NavBand.Modify);
+        var makeBand = vm.Bands.Single(b => b.Band == NavBand.Make);
+        var modifyItems = vm.Sidebar.Single(i => i.Key == ScreenKey.Workspace && i.Kind == "Items" && !i.Creates);
+        var makeRecipe = vm.Sidebar.Single(i => i.Creates && i.Kind == "Recipes");
+
+        // Stand on the Workspace, browsing Items — the Modify row is the lit one.
+        modifyBand.Selected = modifyItems;
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+
+        // Click "New crafting recipe": the rail must still show one row, the Modify recipe row.
+        makeBand.Selected = makeRecipe;
+
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
+
+        // The row stays usable: going back to Items and clicking it again still switches the list.
+        modifyBand.Selected = modifyItems;
+        Assert.Equal("Items", vm.Workspace.SelectedKind);
+
+        makeBand.Selected = makeRecipe;
+        Assert.Equal("Recipes", vm.Workspace.SelectedKind);
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+    }
+
+    [AvaloniaFact] // the owner's case: the list is already open, then "New crafting recipe" is clicked
+    public void Clicking_a_make_row_for_the_list_already_open_still_lights_one_row()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        nav.GoTo(ScreenKey.Workspace);           // stand on the Workspace
+        vm.Workspace.SelectedKind = "Recipes";   // with Recipes already the open list
+
+        var makeRow = vm.Sidebar.Single(i => i.Creates && i.Kind == "Recipes");
+        var makeBand = vm.Bands.Single(b => b.Band == NavBand.Make);
+
+        makeBand.Selected = makeRow;             // the click the rail makes
+
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
+
+        // A "coming soon" idea may be clicked too: it must not stay lit either.
+        var soon = vm.Sidebar.First(i => i.ComingSoon);
+        vm.Bands.Single(b => b.Band == NavBand.Make).Selected = soon;
+
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
+    }
+
+    [AvaloniaFact] // the owner's path with real clicks: Recipes was the list already open
+    public void Clicking_new_crafting_recipe_when_recipes_is_open_lights_one_row()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+        var window = new MainWindow { DataContext = vm, Width = 1400, Height = 900 };
+        window.Show();
+        window.UpdateLayout();
+
+        ClickRailRow(window, "Modify a crafting recipe");
+        ClickRailRow(window, "New crafting recipe");
+        Assert.True(LitRows(window) == 1, Describe(window, vm));
+
+        ClickRailRow(window, "New crafting recipe");   // the click that used to do nothing
+        Assert.True(LitRows(window) == 1, Describe(window, vm));
+        Assert.Equal("Recipes", vm.Workspace.SelectedKind);
+    }
+
+    [AvaloniaFact] // a real click on a MAKE row must leave exactly one row lit, and stay usable
+    public void Clicking_a_make_row_leaves_one_row_lit_and_it_still_works()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+        var window = new MainWindow { DataContext = vm, Width = 1400, Height = 900 };
+        window.Show();
+        window.UpdateLayout();
+
+        ClickRailRow(window, "Modify an item's value");
+        Assert.Equal(ScreenKey.Workspace, nav.Current);
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+
+        ClickRailRow(window, "New crafting recipe");
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.True(LitRows(window) == 1, Describe(window, vm));
+
+        // Go back to Items, then click the MAKE row again: it must still start that list.
+        ClickRailRow(window, "Modify an item's value");
+        ClickRailRow(window, "New crafting recipe");
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.True(LitRows(window) == 1, Describe(window, vm));
+        Assert.Equal("Recipes", vm.Workspace.SelectedKind);
+    }
+
+    /// <summary>Lit rows in the rail only (the Workspace has list boxes of its own).</summary>
+    private static int LitRows(MainWindow window) =>
+        window.GetVisualDescendants().OfType<ListBoxItem>()
+            .Count(i => i.IsSelected && i.FindAncestorOfType<ListBox>()?.DataContext is NavBandSection);
+
+    private static string Describe(MainWindow window, ShellViewModel vm)
+    {
+        var lit = window.GetVisualDescendants().OfType<ListBoxItem>()
+            .Where(i => i.IsSelected)
+            .Select(i =>
+            {
+                var owner = i.FindAncestorOfType<ListBox>();
+                var ownerBand = owner?.DataContext as NavBandSection;
+                var label = (i.DataContext as NavItem)?.Label
+                            ?? $"<{i.DataContext?.GetType().Name ?? "null"}>";
+                var parent = i.GetVisualAncestors().OfType<Control>()
+                    .Select(a => a.Name is { Length: > 0 } n ? $"{a.GetType().Name}#{n}" : a.GetType().Name)
+                    .Take(6);
+                return ownerBand is not null
+                    ? $"{ownerBand.Band}:{label}"
+                    : $"?({string.Join(" < ", parent)}):{label}";
+            })
+            .ToList();
+        var bands = string.Join(", ", vm.Bands.Select(b =>
+            $"{b.Band}={(b.Selected?.Label ?? "none")}"));
+        return $"lit rows = [{string.Join(" | ", lit)}]; bands = [{bands}]";
+    }
+
+    /// <summary>Clicks a rail row the way a mouse does (the ListBox decides, not the view model).</summary>
+    private static void ClickRailRow(MainWindow window, string label)
+    {
+        var text = window.GetVisualDescendants().OfType<TextBlock>()
+            .First(t => t.Text == label && t.FindAncestorOfType<ListBox>() is not null);
+        var item = text.FindAncestorOfType<ListBoxItem>()!;
+        var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(point, MouseButton.Left);
+        window.MouseUp(point, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
     }
 
     [AvaloniaFact]
