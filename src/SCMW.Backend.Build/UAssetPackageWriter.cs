@@ -48,6 +48,10 @@ public sealed class UAssetPackageWriter : IPackageWriter
         WriteResult Failed(string reason, string field) =>
             new(false, $"{reason} (item \"{assetName}\", value \"{FieldNames.Friendly(field)}\")");
 
+        // What one build remembers: the entry shape of a list the project itself emptied, so an add
+        // that comes after the removals still has something to copy (keyed by the list object).
+        var emptiedLists = new Dictionary<object, PropertyData>(ReferenceEqualityComparer.Instance);
+
         foreach (var change in changes)
         {
             // A list change adds or removes an entry rather than setting a value.
@@ -56,7 +60,8 @@ public sealed class UAssetPackageWriter : IPackageWriter
                 var applied = false;
                 foreach (var candidate in exports)
                 {
-                    if (TryApplyListChange(candidate.Data, change, out var found, out var listError))
+                    if (TryApplyListChange(candidate.Data, change, out var found, out var listError,
+                                           emptiedLists))
                     {
                         applied = true;
                         break;
@@ -135,8 +140,15 @@ public sealed class UAssetPackageWriter : IPackageWriter
     /// Adds or removes one entry of the list a list-change names. <paramref name="found"/> is true
     /// when the list was found here (so a caller can tell "not in this export" from a real failure).
     /// </summary>
+    /// <param name="emptiedLists">
+    /// What this build remembers between changes: the entry shape of a list the project's own removals
+    /// emptied, keyed by the list itself. A project can remove an item's last category and then add a
+    /// new one, and the add still needs an entry to copy — this is where it comes from. Null for a
+    /// one-off change, where an empty list has nothing to copy.
+    /// </param>
     internal static bool TryApplyListChange(
-        IReadOnlyList<PropertyData> properties, FieldChange change, out bool found, out string? error)
+        IReadOnlyList<PropertyData> properties, FieldChange change, out bool found, out string? error,
+        IDictionary<object, PropertyData>? emptiedLists = null)
     {
         found = false;
         error = null;
@@ -149,9 +161,17 @@ public sealed class UAssetPackageWriter : IPackageWriter
         {
             if (array.Value.Length == 0)
             {
-                error = "There is nothing in this list to copy for the new entry — remove that change in Projects, "
-                        + "then add it again from a list that has something in it.";
-                return false;
+                // The list is empty because this project removed its entries a moment ago: the shape
+                // of the last one removed is remembered, so the new entry can still be built.
+                if (emptiedLists is null || !emptiedLists.TryGetValue(array, out var remembered))
+                {
+                    error = "There is nothing in this list to copy for the new entry — remove that change in Projects, "
+                            + "then add it again from a list that has something in it.";
+                    return false;
+                }
+
+                array.Value = new[] { DeepClone(remembered) };
+                return true;
             }
             if (array.Value.Length >= MaxListEntries)
             {
@@ -173,8 +193,14 @@ public sealed class UAssetPackageWriter : IPackageWriter
         }
 
         var kept = array.Value.ToList();
+        var removed = kept[index];
         kept.RemoveAt(index);
         array.Value = kept.ToArray();
+
+        // Remember the shape of the entry that emptied the list, for an add that may follow.
+        if (kept.Count == 0 && emptiedLists is not null)
+            emptiedLists[array] = DeepClone(removed);
+
         return true;
     }
 

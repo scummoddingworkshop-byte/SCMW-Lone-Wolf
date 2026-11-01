@@ -85,6 +85,67 @@ public class UAssetPackageWriterListTests
         Assert.NotEqual(sourceLink.Value.ToString(), cloneLink.Value.ToString());
     }
 
+    /// <summary>What one build remembers: the entry shape of each list it emptied (keyed by the list).</summary>
+    private static Dictionary<object, PropertyData> Remembered() =>
+        new(ReferenceEqualityComparer.Instance);
+
+    [Fact]
+    public void An_entry_can_be_added_back_after_the_project_emptied_the_list()
+    {
+        var array = Ingredients(Slot(4));
+        var properties = new PropertyData[] { array };
+        var remembered = Remembered();
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            properties, new FieldChange("Ingredients[0]", "", ChangeOperation.RemoveEntry),
+            out _, out var removeError, remembered), removeError);
+        Assert.Empty(array.Value);
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            properties, new FieldChange("Ingredients", "", ChangeOperation.AddEntry),
+            out _, out var addError, remembered), addError);
+
+        var added = Assert.Single(array.Value);
+        Assert.Equal(4, Amount(added));
+    }
+
+    [Fact]
+    public void The_entry_added_back_is_a_copy_of_the_one_that_was_removed()
+    {
+        var array = Ingredients(TaggedSlot(4, 2));
+        var properties = new PropertyData[] { array };
+        var remembered = Remembered();
+        var removed = array.Value[0];
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            properties, new FieldChange("Ingredients[0]", "", ChangeOperation.RemoveEntry),
+            out _, out _, remembered));
+
+        Assert.True(UAssetPackageWriter.TryApplyListChange(
+            properties, new FieldChange("Ingredients", "", ChangeOperation.AddEntry),
+            out _, out _, remembered));
+
+        var added = Assert.Single(array.Value);
+        Assert.NotSame(removed, added);                       // a fresh entry, not the old object
+        var addedLink = (ObjectPropertyData)((ArrayPropertyData)((StructPropertyData)added).Value[0]).Value[0];
+        var removedLink = (ObjectPropertyData)((ArrayPropertyData)((StructPropertyData)removed).Value[0]).Value[0];
+        Assert.NotSame(removedLink, addedLink);                // and its nested fields stand alone
+    }
+
+    [Fact]
+    public void Adding_to_an_emptied_list_is_refused_when_nothing_was_remembered()
+    {
+        var array = Ingredients();
+
+        Assert.False(UAssetPackageWriter.TryApplyListChange(
+            new PropertyData[] { array }, new FieldChange("Ingredients", "", ChangeOperation.AddEntry),
+            out var found, out var error));
+
+        Assert.True(found);
+        Assert.False(string.IsNullOrWhiteSpace(error));
+        Assert.Empty(array.Value);
+    }
+
     [Fact]
     public void Removing_an_entry_drops_the_named_one()
     {
