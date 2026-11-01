@@ -96,8 +96,8 @@ public class ShellLaunchTests
         public PackOutcome PackOurMods(string zipPath) => new(false, "no mods here", 0, Array.Empty<string>());
     }
 
-    [AvaloniaFact]
-    public async Task Launch_unmodded_switches_all_mods_off_first_and_modded_switches_them_on()
+    [AvaloniaFact] // a clean launch switches every mod off; Play with mods keeps YOUR switches
+    public async Task Launch_clean_switches_all_mods_off_and_play_with_mods_leaves_them_alone()
     {
         var launcher = new FakeLauncher();
         var mods = new FakeMods();
@@ -106,7 +106,8 @@ public class ShellLaunchTests
         await vm.LaunchUnmoddedCommand.ExecuteAsync(null);
         await vm.LaunchModdedCommand.ExecuteAsync(null);
 
-        Assert.Equal(new[] { false, true }, mods.AllSwitches);
+        Assert.Equal(new[] { false }, mods.AllSwitches);   // only the clean launch touches them
+        Assert.Equal(1, launcher.Modded);                  // and the modded game still started
     }
 
     [AvaloniaFact]

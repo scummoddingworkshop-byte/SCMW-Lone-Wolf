@@ -383,9 +383,11 @@ public partial class ShellViewModel : ObservableObject
         // a copy of the saved game first. Best-effort: a failure is said plainly, but never blocks.
         var saveNote = modded ? _saves.BackUp() ?? "" : "";
 
-        if (_modsService is { } mods)
+        // A clean launch switches every mod off. A modded launch leaves the player's own switches
+        // exactly as they set them — they may deliberately keep a clashing mod off.
+        if (_modsService is { } mods && !modded)
         {
-            var switched = await Task.Run(() => mods.SetAllEnabled(modded));
+            var switched = await Task.Run(() => mods.SetAllEnabled(false));
             if (!switched.Ok)
             {
                 LaunchNote = switched.Error ?? "The mods could not be switched.";

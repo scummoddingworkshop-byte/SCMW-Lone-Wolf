@@ -90,7 +90,7 @@
       <Expander Header="Turn mods on or off, and play" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="The Mods Management screen lists everything in SCUM's mods folder. Each row has a switch: on means SCUM will load it, off means it won't."/>
-          <TextBlock Classes="step" Text="The two launch buttons at the bottom of the left bar start SCUM for you — and they also set every mod switch first. 'Play with mods' switches every mod on and starts the game with the mod loader. 'Play clean / online' switches every mod off, switches the mod loader off too, and starts the game through Steam with BattlEye — the way online servers expect."/>
+          <TextBlock Classes="step" Text="The two launch buttons at the bottom of the left bar start SCUM for you. 'Play with mods' switches the mod loader on and starts the game with the mods you have switched on in Mods Management. 'Play clean / online' switches every mod off, switches the mod loader off too, and starts the game through Steam with BattlEye — the way online servers expect."/>
         </StackPanel>
       </Expander>
 
