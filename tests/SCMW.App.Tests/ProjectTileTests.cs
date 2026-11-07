@@ -123,4 +123,19 @@ public class ProjectTileTests
         Assert.False(toggle.IsChecked);
         Assert.Equal("Build this mod first", ToolTip.GetTip(toggle));
     }
+
+    [AvaloniaFact] // the switch is the card's own control: flipping it must not also pick the project
+    public void A_click_on_the_switch_is_not_a_click_on_the_card()
+    {
+        var project = new ProjectSummary("n", "d", "w") { HasMod = true };
+        var tile = new ProjectTile { Project = project };
+        var window = new Window { Content = tile, Width = 300, Height = 320 };
+        window.Show();
+
+        var toggle = tile.FindControl<ToggleSwitch>("ModSwitch")!;
+        var plain = tile.FindControl<TextBlock>("ChangesText")!;
+
+        Assert.False(ProjectTile.OpensTheCard(toggle));
+        Assert.True(ProjectTile.OpensTheCard(plain));
+    }
 }

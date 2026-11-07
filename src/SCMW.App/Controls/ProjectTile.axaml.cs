@@ -192,16 +192,12 @@ public partial class ProjectTile : UserControl
     }
 
     /// <summary>Clicking the card itself picks that project (the screen stays where it is). A click
-    /// on one of the card's own controls (its buttons, or the version box) is left to that control.</summary>
+    /// on one of the card's own controls (its buttons, version box or mod switch) is left to that
+    /// control.</summary>
     private void OnCardPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (e.InitialPressMouseButton != MouseButton.Left) return;
-        if (e.Source is Control source
-            && (source.FindAncestorOfType<Button>(includeSelf: true) is not null
-                || source.FindAncestorOfType<TextBox>(includeSelf: true) is not null))
-        {
-            return;
-        }
+        if (e.Source is Control source && !OpensTheCard(source)) return;
 
         if (OpenCommand?.CanExecute(Project) == true)
         {
@@ -209,6 +205,13 @@ public partial class ProjectTile : UserControl
             e.Handled = true;
         }
     }
+
+    /// <summary>True when a click on this control counts as a click on the card itself — not one of
+    /// its own controls (buttons, the version box, the mod switch).</summary>
+    internal static bool OpensTheCard(Control source) =>
+        source.FindAncestorOfType<Button>(includeSelf: true) is null
+        && source.FindAncestorOfType<TextBox>(includeSelf: true) is null
+        && source.FindAncestorOfType<ToggleSwitch>(includeSelf: true) is null;
 
     /// <summary>The owner flipped the card's switch: ask that project to switch its mod.</summary>
     private void OnModSwitchChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
