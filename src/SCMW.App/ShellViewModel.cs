@@ -168,7 +168,7 @@ public partial class ShellViewModel : ObservableObject
         _selectedEntry = Sidebar[0];
         _nav.Changed += Sync;
 
-        // The page can change the list on its own (e.g. "Make something new" opens the recipe list),
+        // The page can change the list on its own (e.g. a MAKE row opens a different list),
         // so the rail's lit row follows whatever list is actually open.
         _workspaceVm.PropertyChanged += (_, e) =>
         {
@@ -449,6 +449,7 @@ public partial class ShellViewModel : ObservableObject
         }
 
         var isMake = value.Creates && value.Kind is not null;
+        var closeNewPanel = false;
 
         // A MAKE row owns the light while its panel is open, so it takes it straight away: the syncs
         // this click causes on the way (a list switch, the screen change) are held back, or the light
@@ -460,9 +461,11 @@ public partial class ShellViewModel : ObservableObject
         }
         else if (!_syncing)
         {
-            // A real pick of another row: the MAKE row gives up its claim.
+            // A real pick of another row: the MAKE row gives up its claim, and any New form left
+            // half-made goes with it, so the plain invitation is what the owner comes back to.
             _creatingRow = null;
             _startingCreation = false;
+            closeNewPanel = _workspaceVm.ShowNewRecipe;
         }
 
         _creating = isMake;
@@ -472,6 +475,10 @@ public partial class ShellViewModel : ObservableObject
             if (value.Kind is { } kind) _workspaceVm.SelectedKind = kind;
 
             _nav.GoTo(value.Key);
+
+            // The screen and list are right by now, so the rail's light lands in the right place
+            // when the panel closes.
+            if (closeNewPanel) _workspaceVm.CancelNewRecipeCommand.Execute(null);
 
             // A MAKE row goes one step further: it starts a brand-new asset of that list's kind.
             if (isMake) _ = StartCreatingAsync(value, value.Kind!);

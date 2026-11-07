@@ -509,8 +509,8 @@ public class NewRecipeTests
         finally { TestProjects.Cleanup(root); }
     }
 
-    [AvaloniaFact]
-    public async Task The_new_recipe_button_and_panel_appear_in_the_workspace()
+    [AvaloniaFact] // a MAKE row opens the list and the New panel; there is no separate button (owner, 2026-11-07)
+    public async Task A_make_row_opens_the_new_recipe_panel_in_the_workspace()
     {
         var (vm, _, _, _, root) = Ready(new RecipeSource());
         try
@@ -522,12 +522,9 @@ public class NewRecipeTests
             await vm.OpenKindAsync("Recipes");
             window.UpdateLayout();
 
-            var button = view.FindControl<Button>("StartMakeNew");
-            Assert.NotNull(button);
-            Assert.True(button!.IsVisible);
+            Assert.Null(view.FindControl<Button>("StartMakeNew"));
 
-            vm.StartMakeNewCommand.Execute(null);
-            await Task.Delay(100);   // the command switches list first when needed
+            await vm.StartCreatingAsync("Recipes");
             window.UpdateLayout();
 
             var card = view.FindControl<Border>("NewRecipeCard");

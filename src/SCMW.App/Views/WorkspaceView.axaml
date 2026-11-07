@@ -146,11 +146,7 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <!-- Make something new is an action, not a list, so it sits beside the chips. -->
-      <Button Grid.Row="3" Name="StartMakeNew" Classes="secondary" Content="Make something new"
-              HorizontalAlignment="Left" Margin="0,12,0,0"
-              ToolTip.Tip="Make a new item or a new recipe"
-              Command="{Binding StartMakeNewCommand}"/>
+      <!-- Making something new is an action, not a list, so it lives in the rail's MAKE rows. -->
 
       <ListBox Grid.Row="4" Name="AssetList" Classes="items" Margin="0,8,0,0" Padding="0,0,12,0"
                ItemsSource="{Binding VisibleAssets}"

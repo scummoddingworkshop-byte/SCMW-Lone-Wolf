@@ -49,16 +49,20 @@ public class NexusMediaTests : IDisposable
     [AvaloniaFact]
     public void Media_projects()
     {
-        var vm = Shell("Duct Tape Expanded", "Military Backpack+", "Ammo Stack Adjustments");
+        var vm = ConfiguredShell("Duct Tape Expanded", "Military Backpack+", "Ammo Stack Adjustments");
         vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
         Save(new MainWindow { DataContext = vm }, "nexus-projects");
     }
 
     [AvaloniaFact]
-    public void Media_workspace()
+    public async Task Media_workspace()
     {
         var vm = ConfiguredShell("Inventory Rebalance");
         vm.SelectedEntry = vm.Sidebar.First(i => i.Key == ScreenKey.Workspace);
+
+        // Show a real item's values, not the invitation — the picture should show the app at work.
+        await vm.Workspace.OpenKindAsync(vm.Workspace.SelectedKind);
+        await vm.Workspace.OpenAsync(vm.Workspace.VisibleAssets.First());
 
         Save(new MainWindow { DataContext = vm }, "nexus-workspace");
     }
@@ -66,7 +70,7 @@ public class NexusMediaTests : IDisposable
     [AvaloniaFact]
     public void Media_build()
     {
-        var vm = Shell("Duct Tape Expanded");
+        var vm = ConfiguredShell("Duct Tape Expanded");
         vm.ItemChanges.RecordEdit("Duct Tape", "Max stack", "10", "25", vm.ProjectStore.Current!.Id);
         vm.SelectedEntry = vm.Sidebar.Single(i => i.Key == ScreenKey.Projects);
         Save(new MainWindow { DataContext = vm }, "nexus-build");

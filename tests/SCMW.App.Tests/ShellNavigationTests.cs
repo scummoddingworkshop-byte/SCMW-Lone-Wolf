@@ -177,6 +177,27 @@ public class ShellNavigationTests
         Assert.Equal(new[] { "New item" }, LitLabels(window));
     }
 
+    [AvaloniaFact] // the owner's report: "Modify an item's value" must put the New form away again
+    public void Going_from_new_item_to_modify_closes_the_new_panel()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+        var window = new MainWindow { DataContext = vm, Width = 1400, Height = 900 };
+        window.Show();
+        window.UpdateLayout();
+
+        ClickRailRow(window, "New item");
+        window.UpdateLayout();
+        Assert.True(vm.Workspace.ShowNewRecipe);
+
+        ClickRailRow(window, "Modify an item's value");
+        window.UpdateLayout();
+
+        Assert.False(vm.Workspace.ShowNewRecipe);                       // the New form is gone
+        Assert.True(vm.Workspace.ShowEmptyPrompt);                      // the invitation is back
+        Assert.Equal(new[] { "Modify an item's value" }, LitLabels(window));
+    }
+
     /// <summary>The labels of the rail rows that look selected in the real window.</summary>
     private static string[] LitLabels(MainWindow window) =>
         window.GetVisualDescendants().OfType<ListBoxItem>()
@@ -320,8 +341,12 @@ public class ShellNavigationTests
 
         // A level must say what it is, not just its number.
         Assert.Contains(texts, t => t.Contains("Change item values") && t.Contains("Mod level 1"));
-        // "Coming up" starts on its own, after a blank line.
-        Assert.Contains(texts, t => t.Contains("\n\nComing up"));
+        Assert.Contains(texts, t => t.Contains("Create a new item") && t.Contains("Mod level 5"));
+        Assert.Contains(texts, t => t.Contains("new menu section") && t.Contains("Mod level 4"));
+
+        // The strip says only what ships today — no promises of later work (owner, 2026-11-07).
+        Assert.DoesNotContain(texts, t => t.Contains("Coming up"));
+        Assert.DoesNotContain(texts, t => t.Contains("moving parts"));
     }
 
     [AvaloniaFact]

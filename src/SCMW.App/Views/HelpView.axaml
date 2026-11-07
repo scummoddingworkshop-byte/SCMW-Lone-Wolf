@@ -64,7 +64,7 @@
       <Expander Header="The whole journey, in four steps" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <TextBlock Classes="step" Text="1.  Create a project.  In Projects, press New project and give it a name. That project becomes the one you're working in. It's just a container for your changes — nothing in the game is touched yet."/>
-          <TextBlock Classes="step" Text="2.  Edit your items.  In the Workspace, find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
+          <TextBlock Classes="step" Text="2.  Edit your items.  In the left bar, pick a job under MODIFY — for example Modify an item's value. Find something and change a value: click it, type the new value, press Enter. Changed values are marked 'changed', with the old value shown as 'was …'. Every change is saved to your project as you go."/>
           <TextBlock Classes="step" Text="3.  Build your mod.  Each project card in Projects has a version box and a Build button, and below them the list of what's in your mod. Press Build, and SCMW — Lone Wolf writes a finished .pak file and copies it into SCUM's mods folder — switched off, so nothing changes until you say so. It shows you where it landed."/>
           <TextBlock Classes="step" Text="4.  Switch it on and play.  Open Mods Management and switch your mod on. Then press Play with mods at the bottom of the left bar to start SCUM and try it."/>
           <TextBlock Classes="step" Text="Changed your mind later? Edit your items again and press Build again — the new copy replaces the old one, so there's no need to remove it first. To take it back out of SCUM, switch it off or press Remove on its row in Mods Management."/>
@@ -73,8 +73,9 @@
 
       <Expander Header="Make your first change" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
-          <TextBlock Classes="step" Text="1.  Open the Workspace and pick something (search, or use the category chips)."/>
+          <TextBlock Classes="step" Text="1.  In the left bar, pick a job under MODIFY — such as Modify an item's value — then pick something in the list (search, or use the category chips)."/>
           <TextBlock Classes="step" Text="2.  Click a value, type a new one, and press Enter. Changed values show a 'changed' tag and 'was …'."/>
+          <TextBlock Classes="step" Text="3.  To make something new instead, pick a row under MAKE — New item or New crafting recipe. Choose one to copy, give it a name, and press Create."/>
           <TextBlock Classes="step" Text="Nothing touches your game yet — changes are saved to the project you're working in."/>
         </StackPanel>
       </Expander>

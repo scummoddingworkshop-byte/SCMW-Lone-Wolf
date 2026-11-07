@@ -377,8 +377,8 @@ public class WorkspaceViewTests
         Assert.False(prompt.IsVisible);
     }
 
-    [AvaloniaFact]
-    public void The_workspace_keeps_make_something_new_and_the_simple_view()
+    [AvaloniaFact] // the rail's MAKE rows are the one road to making something new (owner, 2026-11-07)
+    public void The_workspace_has_no_make_something_new_button_and_keeps_the_simple_view()
     {
         var vm = new WorkspaceViewModel();
         var view = new WorkspaceView { DataContext = vm };
@@ -386,7 +386,7 @@ public class WorkspaceViewTests
         window.Show();
         window.UpdateLayout();
 
-        Assert.NotNull(view.FindControl<Button>("StartMakeNew"));
+        Assert.Null(view.FindControl<Button>("StartMakeNew"));
         Assert.False(vm.FullMode);
         Assert.NotNull(view.FindControl<CheckBox>("FullModeTick"));
     }

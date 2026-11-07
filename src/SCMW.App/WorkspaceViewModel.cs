@@ -805,20 +805,7 @@ public partial class WorkspaceViewModel : ObservableObject
 
     // --- The starting point (polish pass 4) ------------------------------------------------------
     // The chips say what the player wants to do (Modify an item's value, Modify a crafting recipe…). Making something
-    // new is an action, not a list, so it sits beside them as one button.
-
-    /// <summary>
-    /// Make something new: an item from the Items list, a recipe from a recipe list. Anywhere else the
-    /// new recipe is the useful thing, so it opens that list first.
-    /// </summary>
-    [RelayCommand]
-    private async System.Threading.Tasks.Task StartMakeNew()
-    {
-        if (!IsLoadedKind("Items") && !IsLoadedKind("Recipes"))
-            await OpenKindAsync("Recipes").ConfigureAwait(true);
-
-        OpenNewRecipe();
-    }
+    // new is an action, not a list, so the rail's MAKE rows are the one road to it.
 
     /// <summary>
     /// Open one list and start a brand-new asset of the kind that list creates. Used by the rail's

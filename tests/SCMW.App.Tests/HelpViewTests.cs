@@ -66,6 +66,10 @@ public class HelpViewTests
         Assert.DoesNotContain("Update the copy in SCUM", help);
         Assert.DoesNotContain("Remove from SCUM", help);
 
+        // "Make something new" left the Workspace in v2.31.0 — the rail's MAKE rows are the road.
+        Assert.DoesNotContain("Make something new", help);
+        Assert.Contains("New crafting recipe", help);
+
         // Loot & spawn is built but not offered, and a recipe's ingredients are shown but locked —
         // so Help must not promise either.
         Assert.DoesNotContain("loot and spawn", help);
