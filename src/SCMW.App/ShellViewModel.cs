@@ -172,7 +172,13 @@ public partial class ShellViewModel : ObservableObject
         // so the rail's lit row follows whatever list is actually open.
         _workspaceVm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(WorkspaceViewModel.SelectedKind)) SyncRailSelection();
+            // The panel opening ends "starting a new thing"; its shutting on the way there does not, so
+            // the light is held (see SyncRailSelection) instead of blinking back to the Modify row.
+            if (e.PropertyName == nameof(WorkspaceViewModel.ShowNewRecipe) && _workspaceVm.ShowNewRecipe)
+                _startingCreation = false;
+
+            if (e.PropertyName is nameof(WorkspaceViewModel.SelectedKind) or nameof(WorkspaceViewModel.ShowNewRecipe))
+                SyncRailSelection();
         };
 
         _projectStore.Changed += SyncActiveProject;
@@ -322,6 +328,25 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>Two-way bound to the rail selection.</summary>
     [ObservableProperty] private NavItem _selectedEntry;
 
+    /// <summary>
+    /// The MAKE row whose New panel is open ("New item", "New crafting recipe"), so that row can be the
+    /// lit one while the owner is making something. Null when no panel is open: a MAKE row is a command,
+    /// and never the lit row otherwise.
+    /// </summary>
+    private NavItem? _creatingRow;
+
+    /// <summary>True while a MAKE click is being carried out, so the syncs it causes on the way are held
+    /// back and the light lands on that row once, instead of stopping on the Modify row first.</summary>
+    private bool _creating;
+
+    /// <summary>True from a MAKE click until its panel opens: switching the list shuts the panel for a
+    /// moment, and the light must wait through that rather than blink back to the Modify row.</summary>
+    private bool _startingCreation;
+
+    /// <summary>True while the rail is moving its own light, so that move is not read as the owner
+    /// picking a row (which would drop the MAKE row's claim).</summary>
+    private bool _syncing;
+
     /// <summary>The area currently shown.</summary>
     [ObservableProperty] private ScreenKey _current = ScreenKey.Projects;
 
@@ -423,19 +448,67 @@ public partial class ShellViewModel : ObservableObject
             return;
         }
 
-        // A job row picks the Workspace list as well as opening the screen.
-        if (value.Kind is { } kind) _workspaceVm.SelectedKind = kind;
+        var isMake = value.Creates && value.Kind is not null;
 
-        _nav.GoTo(value.Key);
+        // A MAKE row owns the light while its panel is open, so it takes it straight away: the syncs
+        // this click causes on the way (a list switch, the screen change) are held back, or the light
+        // would stop on the Modify row for a moment first — a visible jump the owner would see.
+        if (isMake)
+        {
+            _creatingRow = value;
+            _startingCreation = true;
+        }
+        else if (!_syncing)
+        {
+            // A real pick of another row: the MAKE row gives up its claim.
+            _creatingRow = null;
+            _startingCreation = false;
+        }
 
-        // A MAKE row goes one step further: it starts a brand-new asset of that list's kind.
-        if (value is { Creates: true, Kind: { } creating })
-            _ = _workspaceVm.StartCreatingAsync(creating);
+        _creating = isMake;
+        try
+        {
+            // A job row picks the Workspace list as well as opening the screen.
+            if (value.Kind is { } kind) _workspaceVm.SelectedKind = kind;
 
-        // Always leave exactly one row lit. A MAKE row is a command, never the lit row, and a click
-        // on the row for the list that is ALREADY open changes no property and no screen — without
-        // this, that click would light it beside the Modify row and then do nothing on the next click.
+            _nav.GoTo(value.Key);
+
+            // A MAKE row goes one step further: it starts a brand-new asset of that list's kind.
+            if (isMake) _ = StartCreatingAsync(value, value.Kind!);
+        }
+        finally
+        {
+            _creating = false;
+        }
+
+        // Always leave exactly one row lit. A MAKE row with no panel open is a command, never the lit
+        // row, and a click on the row for the list that is ALREADY open changes no property and no
+        // screen — without this, that click would light it beside the Modify row and then do nothing.
         SyncRailSelection();
+    }
+
+    /// <summary>
+    /// Starts a brand-new asset from a MAKE row. If the panel never opens (no list to start from), the
+    /// claim on the light is dropped and the light goes back where it belongs.
+    /// </summary>
+    private async Task StartCreatingAsync(NavItem row, string kind)
+    {
+        _workspaceVm.KeepingNewPanel = true;
+        try
+        {
+            await _workspaceVm.StartCreatingAsync(kind).ConfigureAwait(true);
+        }
+        finally
+        {
+            _workspaceVm.KeepingNewPanel = false;
+
+            if (!_workspaceVm.ShowNewRecipe)
+            {
+                _startingCreation = false;
+                if (ReferenceEquals(_creatingRow, row)) _creatingRow = null;
+                SyncRailSelection();
+            }
+        }
     }
 
     /// <summary>A rail row was clicked in one of the bands: make it the current screen.</summary>
@@ -463,6 +536,9 @@ public partial class ShellViewModel : ObservableObject
     private void Sync()
     {
         Current = _nav.Current;
+
+        // Leaving the Workspace ends any MAKE row's turn: only its own screen has the panel.
+        if (Current != ScreenKey.Workspace) _creatingRow = null;
         ScreenTitle = Current == ScreenKey.Workspace
             ? "Workspace"
             : Sidebar.First(i => i.Key == Current).Label;
@@ -508,23 +584,43 @@ public partial class ShellViewModel : ObservableObject
     /// the list being browsed).</summary>
     private void SyncRailSelection()
     {
-        var entry = Sidebar.First(i => i.Key == Current && MatchesKind(i));
-        foreach (var band in Bands)
-        {
-            band.Selected = band.Items.FirstOrDefault(i => i.Key == Current && MatchesKind(i));
-        }
+        // A MAKE click is being carried out, or its panel is shut on the way to opening: that row
+        // decides the light, so nothing moves until the panel is open (no blink on the Modify row).
+        if (_creating || (_startingCreation && !_workspaceVm.ShowNewRecipe)) return;
 
-        if (!ReferenceEquals(entry, SelectedEntry))
+        var entry = Sidebar.First(i => i.Key == Current && MatchesKind(i));
+
+        // Everything below is the rail moving its own light — including the band rows, whose change
+        // travels back through OnBandSelectionChanged — so none of it counts as the owner picking
+        // another row (which would drop a MAKE row's claim on the light).
+        _syncing = true;
+        try
         {
-            SelectedEntry = entry;
+            foreach (var band in Bands)
+            {
+                band.Selected = band.Items.FirstOrDefault(i => i.Key == Current && MatchesKind(i));
+            }
+
+            if (!ReferenceEquals(entry, SelectedEntry))
+            {
+                SelectedEntry = entry;
+            }
+        }
+        finally
+        {
+            _syncing = false;
         }
     }
 
-    /// <summary>True for a row with no list of its own, or the modify row whose list is open. The MAKE
-    /// rows share the same list but are never the lit one.</summary>
+    /// <summary>True for the one row that should be lit: the MAKE row whose New panel is open for the
+    /// list being browsed (the owner just clicked it, so the light stays there), else the Modify row for
+    /// that list. A MAKE row is never the lit one otherwise — it is a command, not a place.</summary>
     private bool MatchesKind(NavItem item) =>
-        !item.Creates
-        && (item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal));
+        Current == ScreenKey.Workspace && _workspaceVm.ShowNewRecipe && _creatingRow is { } creating
+        && string.Equals(creating.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal)
+            ? ReferenceEquals(item, creating)
+            : !item.Creates
+              && (item.Kind is null || string.Equals(item.Kind, _workspaceVm.SelectedKind, StringComparison.Ordinal));
 
     /// <summary>Opens one of the chosen mod's items in the Workspace, ready to edit (the Projects
     /// screen's change cards call this).</summary>

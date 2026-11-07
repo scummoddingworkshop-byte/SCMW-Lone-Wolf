@@ -120,6 +120,31 @@ public class NewRecipeTests
         finally { TestProjects.Cleanup(root); }
     }
 
+    [AvaloniaFact] // starting a new asset keeps the panel through the list reload — it must not blink shut
+    public async Task Starting_a_new_asset_keeps_the_panel_open_while_a_file_is_shown()
+    {
+        var (vm, _, _, _, root) = Ready(new RecipeSource());
+        try
+        {
+            await vm.OpenKindAsync("Recipes");
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Wooden Arrow"));
+            vm.OpenNewRecipeCommand.Execute(null);
+            Assert.True(vm.ShowNewRecipe);
+
+            // The shell starting a new asset: the reload shows a file again, and the panel must stay.
+            vm.KeepingNewPanel = true;
+            try { await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Stone Axe")); }
+            finally { vm.KeepingNewPanel = false; }
+
+            Assert.True(vm.ShowNewRecipe);
+
+            // Once it is over, showing a file closes the panel as it always did.
+            await vm.OpenAsync(vm.VisibleAssets.Single(a => a.Name == "Wooden Arrow"));
+            Assert.False(vm.ShowNewRecipe);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact] // a new ITEM can be removed too — and its edits go with it, never left orphaned
     public async Task Removing_a_new_item_deletes_it_and_its_changes()
     {

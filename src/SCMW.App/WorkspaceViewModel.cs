@@ -712,6 +712,12 @@ public partial class WorkspaceViewModel : ObservableObject
     /// <summary>True while the "New" panel is showing in place of a file's values.</summary>
     [ObservableProperty] private bool _showNewRecipe;
 
+    /// <summary>
+    /// True while the shell is starting a brand-new asset. The list reloads on the way and shows a file
+    /// again, which would otherwise shut the New panel — and the rail's light with it — for a moment.
+    /// </summary>
+    public bool KeepingNewPanel { get; set; }
+
     /// <summary>The plain name the owner typed for the new asset (e.g. "Olive Press").</summary>
     [ObservableProperty] private string _newRecipeName = string.Empty;
 
@@ -2706,8 +2712,10 @@ public partial class WorkspaceViewModel : ObservableObject
     private async System.Threading.Tasks.Task LoadFieldsAsync(ItemSummary asset)
     {
         // A file is being shown, so the "New" panel's moment has passed: never leave it covering the
-        // file the player just picked.
-        if (ShowNewRecipe) ShowNewRecipe = false;
+        // file the player just picked. While the shell is STARTING a new asset, though, the list is
+        // reloaded and a file re-shown on the way — closing the panel then made it blink, and the rail
+        // with it, so that is left alone.
+        if (ShowNewRecipe && !KeepingNewPanel) ShowNewRecipe = false;
 
         IReadOnlyList<AssetField> fields = Array.Empty<AssetField>();
         if (_source is not null)

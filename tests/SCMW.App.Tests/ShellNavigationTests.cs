@@ -77,8 +77,8 @@ public class ShellNavigationTests
                      vm.Bands[4].Items.Select(i => i.Key));
     }
 
-    [AvaloniaFact] // a MAKE row is never lit beside the Modify row, and stays usable after a click
-    public void A_make_row_is_never_lit_beside_the_modify_row()
+    [AvaloniaFact] // a MAKE row lights alone while its panel is open — never beside the Modify row
+    public void A_make_row_is_the_only_lit_row_while_its_panel_is_open()
     {
         var nav = new NavigationHost();
         var vm = new ShellViewModel(nav);
@@ -92,9 +92,17 @@ public class ShellNavigationTests
         modifyBand.Selected = modifyItems;
         Assert.Equal(ScreenKey.Workspace, nav.Current);
 
-        // Click "New crafting recipe": the rail must still show one row, the Modify recipe row.
+        // Click "New crafting recipe": that row alone is lit while its panel is open.
         makeBand.Selected = makeRecipe;
 
+        Assert.True(vm.Workspace.ShowNewRecipe);
+        Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.Same(makeRecipe, vm.SelectedEntry);
+
+        // Closing the panel puts the light back on the Modify row for the open list.
+        vm.Workspace.CancelNewRecipeCommand.Execute(null);
+
+        Assert.False(vm.Workspace.ShowNewRecipe);
         Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
         Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
 
@@ -105,10 +113,11 @@ public class ShellNavigationTests
         makeBand.Selected = makeRecipe;
         Assert.Equal("Recipes", vm.Workspace.SelectedKind);
         Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
+        Assert.Same(makeRecipe, vm.SelectedEntry);
     }
 
     [AvaloniaFact] // the owner's case: the list is already open, then "New crafting recipe" is clicked
-    public void Clicking_a_make_row_for_the_list_already_open_still_lights_one_row()
+    public void Clicking_a_make_row_for_the_list_already_open_lights_that_row_alone()
     {
         var nav = new NavigationHost();
         var vm = new ShellViewModel(nav);
@@ -122,14 +131,15 @@ public class ShellNavigationTests
         makeBand.Selected = makeRow;             // the click the rail makes
 
         Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
-        Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
+        Assert.Same(makeRow, vm.SelectedEntry);
 
-        // A "coming soon" idea may be clicked too: it must not stay lit either.
+        // A "coming soon" idea may be clicked too: it lights nothing of its own, and the panel's row
+        // keeps the light.
         var soon = vm.Sidebar.First(i => i.ComingSoon);
         vm.Bands.Single(b => b.Band == NavBand.Make).Selected = soon;
 
         Assert.Equal(1, vm.Bands.Count(b => b.Selected is not null));
-        Assert.Same(vm.Sidebar.Single(i => i.Kind == "Recipes" && !i.Creates), vm.SelectedEntry);
+        Assert.Same(makeRow, vm.SelectedEntry);
     }
 
     [AvaloniaFact] // the owner's path with real clicks: Recipes was the list already open
@@ -149,6 +159,30 @@ public class ShellNavigationTests
         Assert.True(LitRows(window) == 1, Describe(window, vm));
         Assert.Equal("Recipes", vm.Workspace.SelectedKind);
     }
+
+    [AvaloniaFact] // the owner's report: a real click on "New item" must light THAT row, not Modify
+    public void Clicking_new_item_in_the_rail_lights_that_row()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+        var window = new MainWindow { DataContext = vm, Width = 1400, Height = 900 };
+        window.Show();
+        window.UpdateLayout();
+
+        ClickRailRow(window, "Modify an item's value");
+        ClickRailRow(window, "New item");
+        window.UpdateLayout();
+
+        Assert.True(vm.Workspace.ShowNewRecipe);          // the panel stays open
+        Assert.Equal(new[] { "New item" }, LitLabels(window));
+    }
+
+    /// <summary>The labels of the rail rows that look selected in the real window.</summary>
+    private static string[] LitLabels(MainWindow window) =>
+        window.GetVisualDescendants().OfType<ListBoxItem>()
+            .Where(i => i.IsSelected && i.FindAncestorOfType<ListBox>()?.DataContext is NavBandSection)
+            .Select(i => (i.DataContext as NavItem)?.Label ?? "?")
+            .ToArray();
 
     [AvaloniaFact] // a real click on a MAKE row must leave exactly one row lit, and stay usable
     public void Clicking_a_make_row_leaves_one_row_lit_and_it_still_works()

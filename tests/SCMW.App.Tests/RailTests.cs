@@ -79,6 +79,83 @@ public class RailTests
         Assert.Equal("Recipes", modify.Selected!.Kind);           // and its row is the lit one
     }
 
+    [AvaloniaFact] // the MAKE row that was clicked stays the lit one while its New panel is open
+    public void A_new_item_row_is_the_lit_one_while_its_panel_is_open()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+        var make = vm.Bands.Single(b => b.Band == NavBand.Make);
+        var modify = vm.Bands.Single(b => b.Band == NavBand.Modify);
+
+        vm.SelectedEntry = vm.Sidebar.First(i => i.Creates && i.Kind == "Items");
+        vm.Workspace.ShowNewRecipe = true;          // the panel that click opens
+
+        Assert.Equal("New item", make.Selected!.Label);
+        Assert.Null(modify.Selected);               // the Modify row must not take the light
+    }
+
+    [AvaloniaFact] // once the panel closes, the light goes back to the Modify row
+    public void The_modify_row_is_lit_again_after_the_new_panel_closes()
+    {
+        var vm = new ShellViewModel(new NavigationHost());
+        var make = vm.Bands.Single(b => b.Band == NavBand.Make);
+        var modify = vm.Bands.Single(b => b.Band == NavBand.Modify);
+
+        vm.SelectedEntry = vm.Sidebar.First(i => i.Creates && i.Kind == "Items");
+        vm.Workspace.ShowNewRecipe = true;
+        vm.Workspace.ShowNewRecipe = false;         // picked a file, made the thing, or pressed Cancel
+
+        Assert.Null(make.Selected);
+        Assert.Equal("Items", modify.Selected!.Kind);
+    }
+
+    [AvaloniaFact] // no detour: the light goes straight to the MAKE row, never pausing on the Modify row
+    public void Clicking_new_item_does_not_light_the_modify_row_on_the_way()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+
+        nav.GoTo(ScreenKey.Workspace);
+        vm.Workspace.SelectedKind = "Recipes";      // another list is open, so the click also switches list
+
+        var lit = new List<string?>();
+        void Watch(object? _, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(NavBandSection.Selected)) return;
+            foreach (var band in vm.Bands)
+                if (band.Selected is { } row && (lit.Count == 0 || lit[^1] != row.Label)) lit.Add(row.Label);
+        }
+        foreach (var band in vm.Bands) band.PropertyChanged += Watch;
+
+        vm.Bands.Single(b => b.Band == NavBand.Make).Selected =
+            vm.Sidebar.First(i => i.Creates && i.Kind == "Items");
+
+        Assert.True(vm.Workspace.ShowNewRecipe);
+        Assert.Equal(new[] { "New item" }, lit);    // one stop, and it is the row that was clicked
+    }
+
+    [AvaloniaFact] // the panel shuts and re-opens while the list switches: the MAKE row keeps the light
+    public void A_make_row_keeps_the_light_when_its_panel_reopens_during_the_click()
+    {
+        var nav = new NavigationHost();
+        var vm = new ShellViewModel(nav);
+        var make = vm.Bands.Single(b => b.Band == NavBand.Make);
+        var modify = vm.Bands.Single(b => b.Band == NavBand.Modify);
+        var newItem = vm.Sidebar.First(i => i.Creates && i.Kind == "Items");
+
+        make.Selected = newItem;
+        Assert.Same(newItem, make.Selected);
+
+        // A list switch shuts the panel on the way, exactly as the real workspace does while reloading…
+        vm.Workspace.ShowNewRecipe = false;
+        Assert.Null(make.Selected);                     // nothing to light while the panel is shut
+        Assert.Equal("Items", modify.Selected!.Kind);   // the Modify row holds it meanwhile
+
+        // …and it opens again: the light must go back to the row that was clicked, not to Modify.
+        vm.Workspace.ShowNewRecipe = true;
+        Assert.Same(newItem, make.Selected);
+        Assert.Null(modify.Selected);
+    }
+
     [AvaloniaFact]
     public void The_rail_is_wide_enough_for_the_longest_job_label()
     {
