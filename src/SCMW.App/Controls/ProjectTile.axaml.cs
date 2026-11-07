@@ -88,6 +88,7 @@ public partial class ProjectTile : UserControl
     }
 
     private bool _ready;
+    private bool _showingSwitch;
 
     public ProjectTile()
     {
@@ -131,6 +132,7 @@ public partial class ProjectTile : UserControl
         var buildBar = this.FindControl<Border>("BuildBar");
         var buildHint = this.FindControl<TextBlock>("BuildHintText");
         var buildButton = this.FindControl<Button>("BuildButton");
+        var modSwitch = this.FindControl<ToggleSwitch>("ModSwitch");
 
         if (nameText is null || picture is null || currentChip is null || actionsBar is null)
         {
@@ -165,6 +167,22 @@ public partial class ProjectTile : UserControl
             buildButton.IsEnabled = project?.CanBuild == true;
         }
 
+        // The mod's own switch: in sight always, usable only once that project has a mod.
+        if (modSwitch is not null)
+        {
+            _showingSwitch = true;
+            try
+            {
+                modSwitch.IsEnabled = project?.HasMod == true;
+                modSwitch.IsChecked = project?.ModOn == true;
+                ToolTip.SetTip(modSwitch, project?.ModToolTip ?? "Build this mod first");
+            }
+            finally
+            {
+                _showingSwitch = false;
+            }
+        }
+
         Wire("EditButton", RenameCommand);
         Wire("DuplicateButton", DuplicateCommand);
         Wire("DeleteButton", RequestDeleteCommand);
@@ -190,6 +208,15 @@ public partial class ProjectTile : UserControl
             OpenCommand.Execute(Project);
             e.Handled = true;
         }
+    }
+
+    /// <summary>The owner flipped the card's switch: ask that project to switch its mod.</summary>
+    private void OnModSwitchChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_showingSwitch || Project is not { } project || !project.HasMod) return;
+
+        if (sender is ToggleSwitch toggle)
+            project.ModOn = toggle.IsChecked == true;
     }
 
     private void Wire(string name, ICommand? command)

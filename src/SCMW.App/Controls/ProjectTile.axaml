@@ -58,9 +58,12 @@
                 BorderThickness="0,1,0,0" Padding="0,10,0,0">
           <StackPanel Spacing="6">
             <TextBlock Text="Mod version" Classes="dim" FontSize="11"/>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBox Name="VersionBox" Classes="field" Text="{Binding ModVersion, Mode=TwoWay}"/>
+            <!-- Mod version, Build, and the mod's own switch: on or off for SCUM, right here. -->
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <TextBox Grid.Column="0" Name="VersionBox" Classes="field" Text="{Binding ModVersion, Mode=TwoWay}"/>
               <Button Grid.Column="1" Name="BuildButton" Classes="primary" Content="Build"/>
+              <ToggleSwitch Grid.Column="2" Name="ModSwitch" VerticalAlignment="Center"
+                            IsCheckedChanged="OnModSwitchChanged"/>
             </Grid>
             <TextBlock Name="BuildHintText" Classes="dim" TextWrapping="Wrap"/>
           </StackPanel>

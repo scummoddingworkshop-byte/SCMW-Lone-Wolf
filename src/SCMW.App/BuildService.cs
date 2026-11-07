@@ -18,8 +18,8 @@ public interface IBuildService
         IReadOnlyList<BuildItem> items, IReadOnlyList<NewBuildAsset> newAssets,
         IReadOnlyList<NewBuildSection> sections, IProgress<int>? progress, CancellationToken ct);
 
-    /// <summary>Copies a built pak into SCUM's mods folder. <paramref name="enabled"/> false puts it
-    /// there switched off — which is how a build arrives; the player enables it in Mods Management.</summary>
+    /// <summary>Copies a built pak into SCUM's mods folder. <paramref name="enabled"/> true puts it
+    /// there switched on — how a build arrives, ready to use.</summary>
     Task<InstallOutcome> InstallAsync(string projectId, string projectName, string version,
         string pakPath, bool enabled, CancellationToken ct);
 

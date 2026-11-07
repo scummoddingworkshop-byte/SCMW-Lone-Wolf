@@ -61,6 +61,49 @@ public partial class ProjectSummary : ObservableObject
     /// <summary>True when this card's Build button can start a build right now.</summary>
     [ObservableProperty] private bool _canBuild;
 
+    /// <summary>True when this project has a mod in SCUM, so its switch can do something.</summary>
+    [ObservableProperty] private bool _hasMod;
+
+    /// <summary>Whether this project's mod is switched on in SCUM. Flipping it asks the app to
+    /// rename the mod's file (see <see cref="ModToggleRequested"/>).</summary>
+    [ObservableProperty] private bool _modOn;
+
+    /// <summary>Set by the screen: asks the app to switch this project's mod on or off. The card
+    /// itself never touches files.</summary>
+    public Action<ProjectSummary, bool>? ModToggleRequested { get; set; }
+
+    /// <summary>The plain words on the switch, so a greyed one explains itself.</summary>
+    public string ModToolTip => !HasMod ? "Build this mod first"
+        : ModOn ? "On — SCUM loads this mod" : "Off — SCUM skips this mod";
+
+    private bool _settingModState;
+
+    partial void OnHasModChanged(bool value) => OnPropertyChanged(nameof(ModToolTip));
+
+    partial void OnModOnChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ModToolTip));
+
+        // A state the screen sets is not the owner flipping the switch.
+        if (_settingModState) return;
+        ModToggleRequested?.Invoke(this, value);
+    }
+
+    /// <summary>Shows what the app says about this project's mod. Never asks for a switch.</summary>
+    internal void SetModState(bool hasMod, bool on)
+    {
+        _settingModState = true;
+        try
+        {
+            HasMod = hasMod;
+            ModOn = on;
+        }
+        finally
+        {
+            _settingModState = false;
+        }
+    }
+
     /// <summary>Plain reason the Build button is off ("Nothing to build yet").</summary>
     public string BuildHint => !ShowBuild ? ""
         : !HasChanges ? "Nothing to build yet"

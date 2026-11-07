@@ -43,6 +43,27 @@ public partial class ModsViewModel : ObservableObject
     /// <summary>Re-reads the folder and records. Called when the screen is opened.</summary>
     public void Refresh() => LoadFromService();
 
+    /// <summary>The row for a project's built mod, or null when that project has no mod in SCUM.</summary>
+    public InstalledMod? ForProject(string projectName) =>
+        string.IsNullOrEmpty(projectName)
+            ? null
+            : Mods.FirstOrDefault(m => m.IsOurs
+                && string.Equals(m.ProjectName, projectName, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Switches a project's mod on or off (the same rename this screen's switch does).
+    /// Returns a plain reason when it could not be done, or null when all is well.</summary>
+    public string? SetProjectOn(string projectName, bool on)
+    {
+        var mod = ForProject(projectName);
+        if (mod is null) return null;             // nothing built for this project yet
+
+        Message = "";
+        if (mod.IsOn != on) mod.IsOn = on;        // the same path as the screen's own switch
+
+        if (mod.IsOn == on) return null;
+        return Message.Length > 0 ? Message : "That mod could not be switched.";
+    }
+
     /// <summary>
     /// Swaps in the real mods service once the player has configured SCUM — which may happen after
     /// this screen was built. Re-reads the folder and clears any stale message.

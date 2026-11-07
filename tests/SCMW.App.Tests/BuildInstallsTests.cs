@@ -23,8 +23,8 @@ public class BuildInstallsTests : IDisposable
         return (new BuildViewModel(changes, mods: mods, projects: projects), mods);
     }
 
-    [AvaloniaFact]
-    public void A_successful_build_lands_in_mods_switched_off()
+    [AvaloniaFact] // the owner's call (2026-11-07): a build is ready to use, no trip to Mods Management
+    public void A_successful_build_lands_in_mods_switched_on()
     {
         var (build, mods) = NewBuild();
         build.ProjectName = "Tape mod";
@@ -35,7 +35,7 @@ public class BuildInstallsTests : IDisposable
         var mod = Assert.Single(mods.Mods);
         Assert.Equal("Tape mod", mod.Name);
         Assert.False(mod.IsExternal);
-        Assert.False(mod.IsOn);          // the player switches it on in Mods Management
+        Assert.True(mod.IsOn);           // it is ready in game as soon as the build finishes
     }
 
     [AvaloniaFact]

@@ -175,9 +175,9 @@ public partial class BuildViewModel : ObservableObject
     /// <summary>True only when there is technical detail to show, so an empty expander never appears.</summary>
     public bool HasFailureDetails => !string.IsNullOrWhiteSpace(FailureDetails);
 
-    /// <summary>What the success panel says: the mod is in SCUM, switched off, waiting to be enabled.</summary>
+    /// <summary>What the success panel says: the mod is in SCUM, switched on, ready to use.</summary>
     public string SuccessMessage =>
-        "Your mod is built and ready to be enabled in the Mods Management screen.";
+        "Your mod is built and switched on — it's ready in game.";
 
     /// <summary>A game swap asked for while a build was running, applied when it ends.</summary>
     private bool _hasPendingUseGame;
@@ -336,10 +336,10 @@ public partial class BuildViewModel : ObservableObject
             BuiltPakPath = outcome.PakPath;
             BuiltVersion = version;
 
-            // A build lands in SCUM switched off. Nothing new starts affecting the game until the
-            // player switches it on in Mods Management.
+            // A build is ready to use: it lands in SCUM switched on (owner, 2026-11-07). The player can
+            // switch it off again from its project card or Mods Management.
             var placed = await _service!.InstallAsync(project.Id, project.Name, version,
-                outcome.PakPath, enabled: false, CancellationToken.None);
+                outcome.PakPath, enabled: true, CancellationToken.None);
             if (!placed.Ok)
             {
                 var needsAdmin = placed.Failure == WriteFailureKind.PermissionDenied;
@@ -547,7 +547,7 @@ public partial class BuildViewModel : ObservableObject
         StopTimer();
         StatusText = "";
         BackUpSaveQuietly();
-        if (_service is null) _mods?.Place(ProjectName);
+        if (_service is null) _mods?.Install(ProjectName);
         State = BuildState.Succeeded;
         FlushPendingUseGame();
     }

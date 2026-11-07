@@ -9,7 +9,8 @@ namespace SCMW.App.Tests;
 public class ProjectsViewModelTests
 {
     private static (ProjectsViewModel vm, ProjectStore store, NavigationHost nav, string root) NewVm(
-        int projectCount = 0)
+        int projectCount = 0, Func<string, bool?>? modOn = null,
+        Func<string, bool, string?>? setModOn = null, Action? refreshMods = null)
     {
         var root = Path.Combine(Path.GetTempPath(), "scmw-pvm-" + Guid.NewGuid().ToString("N"));
         var workspace = WorkspaceService.Ensure(root);
@@ -21,7 +22,8 @@ public class ProjectsViewModelTests
         }
 
         var nav = new NavigationHost();
-        return (new ProjectsViewModel(store, nav), store, nav, root);
+        return (new ProjectsViewModel(store, nav, modOn: modOn, setModOn: setModOn,
+                                      refreshMods: refreshMods), store, nav, root);
     }
 
     private static void Cleanup(string root)
@@ -54,6 +56,120 @@ public class ProjectsViewModelTests
             Assert.False(vm.HasProjects);
             Assert.True(vm.ShowEmptyState);
             Assert.Empty(vm.VisibleProjects);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the Mods screen can change the file too; the card must not keep a stale light
+    public void Coming_back_to_projects_re_reads_each_cards_switch()
+    {
+        var on = true;
+        var (vm, _, _, root) = NewVm(1, modOn: _ => on);
+        try
+        {
+            var row = vm.VisibleProjects.Single();
+            Assert.True(row.ModOn);
+
+            on = false;                 // switched off on the Mods Management screen
+            vm.RefreshModStates();
+
+            Assert.False(vm.VisibleProjects.Single().ModOn);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // the owner's toggle: the card learns on/off from the mods screen
+    public void A_projects_card_knows_whether_its_mod_is_on()
+    {
+        var (vm, _, _, root) = NewVm(1, modOn: _ => true);
+        try
+        {
+            var row = vm.VisibleProjects.Single();
+            Assert.True(row.HasMod);
+            Assert.True(row.ModOn);
+            Assert.Equal("On — SCUM loads this mod", row.ModToolTip);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void An_unbuilt_project_has_no_mod_to_switch()
+    {
+        var (vm, _, _, root) = NewVm(1, modOn: _ => null);
+        try
+        {
+            var row = vm.VisibleProjects.Single();
+            Assert.False(row.HasMod);
+            Assert.False(row.ModOn);
+            Assert.Equal("Build this mod first", row.ModToolTip);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void Flipping_the_card_switch_asks_the_app_and_takes_the_answer()
+    {
+        var on = true;
+        var asked = new List<(string Name, bool Wanted)>();
+        var (vm, _, _, root) = NewVm(1,
+            modOn: _ => on,
+            setModOn: (name, wanted) => { asked.Add((name, wanted)); on = wanted; return null; });
+        try
+        {
+            var row = vm.VisibleProjects.Single();
+
+            row.ModOn = false;                      // the owner flips the card's switch
+
+            Assert.Equal(("Project 1", false), Assert.Single(asked));
+            Assert.False(row.ModOn);                // the card shows what the app now says
+            Assert.False(vm.ShowListMessage);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [AvaloniaFact] // a finished build is ready in game, and its card says so straight away
+    public void A_finished_build_leaves_the_cards_switch_on()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var changes = TestProjects.ChangeStore(projects);
+            changes.RecordEdit("Duct Tape", "Max stack", "10", "25", projects.Current!.Id);
+            var build = new BuildViewModel(changes, mods: new ModList(), projects: projects);
+
+            var modExists = false;   // the build is what puts the mod into SCUM
+            var vm = new ProjectsViewModel(projects, new NavigationHost(), changes, build: build,
+                modOn: _ => modExists ? true : null,
+                refreshMods: () => modExists = true);
+
+            Assert.False(vm.VisibleProjects.Single().ModOn);
+
+            vm.BuildProjectCommand.Execute(vm.VisibleProjects.Single());
+            for (var i = 0; i < 5; i++) build.Advance();
+
+            var row = vm.VisibleProjects.Single();
+            Assert.True(row.HasMod);
+            Assert.True(row.ModOn);
+            Assert.Equal("On — SCUM loads this mod", row.ModToolTip);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void A_refused_switch_springs_back_and_says_why()
+    {
+        var (vm, _, _, root) = NewVm(1,
+            modOn: _ => true,
+            setModOn: (_, _) => "That mod could not be switched.");
+        try
+        {
+            var row = vm.VisibleProjects.Single();
+
+            row.ModOn = false;
+
+            Assert.True(row.ModOn);                 // put back: the file never changed
+            Assert.True(vm.ShowListMessage);
+            Assert.Contains("could not be switched", vm.ListMessage);
         }
         finally { Cleanup(root); }
     }

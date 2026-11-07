@@ -27,13 +27,18 @@ public partial class ProjectsViewModel : ObservableObject
     private readonly Func<bool>? _gameReady;
     private readonly SCMW.Core.Content.IContentSource? _source;
     private readonly Action<string>? _openItem;
+    private readonly Func<string, bool?>? _modOn;
+    private readonly Func<string, bool, string?>? _setModOn;
+    private readonly Action? _refreshMods;
     private bool _welcomeDismissed;
     private ProjectSummary? _editing;
     private IReadOnlyList<ProjectSummary> _rows = Array.Empty<ProjectSummary>();
 
     public ProjectsViewModel(ProjectStore? store = null, INavigation? nav = null, ItemChangeStore? changes = null,
                              Func<bool>? gameReady = null, SCMW.Core.Content.IContentSource? source = null,
-                             Action<string>? openItem = null, BuildViewModel? build = null)
+                             Action<string>? openItem = null, BuildViewModel? build = null,
+                             Func<string, bool?>? modOn = null, Func<string, bool, string?>? setModOn = null,
+                             Action? refreshMods = null)
     {
         _store = store ?? ProjectStore.Default();
         _nav = nav ?? NavigationHost.Shared;
@@ -42,6 +47,9 @@ public partial class ProjectsViewModel : ObservableObject
         _gameReady = gameReady;
         _source = source;
         _openItem = openItem;
+        _modOn = modOn;
+        _setModOn = setModOn;
+        _refreshMods = refreshMods;
         _store.Changed += Refresh;
         if (_changes is not null) _changes.Changed += Refresh;
         if (_build is not null) _build.PropertyChanged += OnBuildChanged;
@@ -84,8 +92,47 @@ public partial class ProjectsViewModel : ObservableObject
 
     private void OnBuildChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(BuildViewModel.State) or nameof(BuildViewModel.HasChanges))
-            SyncBuildState();
+        if (e.PropertyName is not (nameof(BuildViewModel.State) or nameof(BuildViewModel.HasChanges)))
+            return;
+
+        // A finished build puts the mod into SCUM switched on, so the cards re-read the mods
+        // before the owner sees them (owner, 2026-11-07).
+        if (e.PropertyName == nameof(BuildViewModel.State) && _build?.State == BuildState.Succeeded)
+        {
+            _refreshMods?.Invoke();
+            Refresh();
+            return;
+        }
+
+        SyncBuildState();
+    }
+
+    /// <summary>Shows a card what the app says about that project's mod: on, off, or none yet.</summary>
+    private void ApplyModState(ProjectSummary row)
+    {
+        var on = _modOn?.Invoke(row.Name);
+        row.SetModState(on is not null, on ?? false);
+    }
+
+    /// <summary>Re-reads every card's mod state — the Mods screen may have changed it.</summary>
+    public void RefreshModStates()
+    {
+        foreach (var row in _rows) ApplyModState(row);
+    }
+
+    /// <summary>The owner flipped a card's switch: ask the app, then show whatever it answers.</summary>
+    private void SetMod(ProjectSummary row, bool on)
+    {
+        if (_setModOn is null)
+        {
+            ApplyModState(row);
+            return;
+        }
+
+        ListMessage = _setModOn(row.Name, on) ?? "";
+
+        // A refusal puts the file back, so the switch must follow the app, not the click.
+        ApplyModState(row);
     }
 
     /// <summary>Keeps every card's Build button honest: on when it has something to build and nothing
@@ -174,7 +221,13 @@ public partial class ProjectsViewModel : ObservableObject
         var chosen = _store.Chosen;
 
         _rows = _store.All()
-            .Select(record => ProjectSummary.From(record, record.Id == chosen?.Id, ChangeCountFor(record)))
+            .Select(record =>
+            {
+                var row = ProjectSummary.From(record, record.Id == chosen?.Id, ChangeCountFor(record));
+                row.ModToggleRequested = SetMod;
+                ApplyModState(row);
+                return row;
+            })
             .ToList();
         SyncBuildState();
 

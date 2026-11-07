@@ -117,13 +117,13 @@
             <TextBlock Name="StatusText" Text="{Binding StatusText}" Classes="dim"/>
           </StackPanel>
 
-          <!-- Built and ready. Installing and switching it on live in Mods Management. -->
+          <!-- Built, switched on and ready. Mods Management is still where mods are removed. -->
           <StackPanel Name="SuccessPanel" Spacing="8" IsVisible="{Binding IsSucceeded}">
             <TextBlock Text="{Binding SuccessMessage}" Classes="dim good" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding BuiltPakPath}" Classes="dim" TextWrapping="Wrap"/>
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="primary" Content="Mods Management" Command="{Binding GoToModsCommand}"/>
-              <TextBlock Text="Install, switch off or remove it there." Classes="dim"
+              <TextBlock Text="Switch it off or remove it there." Classes="dim"
                          VerticalAlignment="Center" TextWrapping="Wrap"/>
             </StackPanel>
           </StackPanel>

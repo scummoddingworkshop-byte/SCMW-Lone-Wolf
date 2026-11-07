@@ -91,4 +91,36 @@ public class ProjectTileTests
             Assert.Empty(button.GetLogicalDescendants().OfType<Button>());
         }
     }
+
+    [AvaloniaFact] // the owner's toggle: switch a project's mod on or off from its own card
+    public void The_card_has_a_switch_for_its_mod_once_it_has_been_built()
+    {
+        var project = new ProjectSummary("n", "d", "w") { HasMod = true, ModOn = true };
+        var tile = new ProjectTile { Project = project };
+        var window = new Window { Content = tile, Width = 300, Height = 320 };
+        window.Show();
+
+        var toggle = tile.FindControl<ToggleSwitch>("ModSwitch");
+        Assert.NotNull(toggle);
+        Assert.True(toggle!.IsVisible);
+        Assert.True(toggle.IsEnabled);
+        Assert.True(toggle.IsChecked);
+        Assert.Equal("On — SCUM loads this mod", ToolTip.GetTip(toggle));
+    }
+
+    [AvaloniaFact] // a card with no mod yet keeps the switch in sight, greyed, and says why
+    public void An_unbuilt_project_shows_a_greyed_switch()
+    {
+        var project = new ProjectSummary("n", "d", "w") { HasMod = false };
+        var tile = new ProjectTile { Project = project };
+        var window = new Window { Content = tile, Width = 300, Height = 320 };
+        window.Show();
+
+        var toggle = tile.FindControl<ToggleSwitch>("ModSwitch");
+        Assert.NotNull(toggle);
+        Assert.True(toggle!.IsVisible);
+        Assert.False(toggle.IsEnabled);
+        Assert.False(toggle.IsChecked);
+        Assert.Equal("Build this mod first", ToolTip.GetTip(toggle));
+    }
 }

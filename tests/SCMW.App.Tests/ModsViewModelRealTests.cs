@@ -168,6 +168,45 @@ public class ModsViewModelRealTests
         Assert.Contains("Close the game", vm.Message);
     }
 
+    [AvaloniaFact] // the project card's toggle uses this, so both switches share one behaviour
+    public void The_screen_finds_a_projects_mod_and_switches_it_by_name()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var svc = new FakeMods();
+            svc.Entries.Add(new ModsEntry("SCMW_My-first-mod_v1.0.0_P.pak",
+                "SCMW_My-first-mod_v1.0.0_P", true, false));
+            var vm = new ModsViewModel(service: svc, projects: projects);
+
+            var row = vm.ForProject("My first mod");
+            Assert.NotNull(row);
+            Assert.True(row!.IsOn);
+
+            var error = vm.SetProjectOn("My first mod", false);
+
+            Assert.Null(error);
+            Assert.Equal(("SCMW_My-first-mod_v1.0.0_P.pak", false), svc.Toggles.Single());
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
+    [AvaloniaFact]
+    public void A_project_without_a_mod_has_nothing_to_switch()
+    {
+        var (projects, root) = TestProjects.With("My first mod");
+        try
+        {
+            var svc = new FakeMods();
+            var vm = new ModsViewModel(service: svc, projects: projects);
+
+            Assert.Null(vm.ForProject("My first mod"));
+            Assert.Null(vm.SetProjectOn("My first mod", true));
+            Assert.Empty(svc.Toggles);
+        }
+        finally { TestProjects.Cleanup(root); }
+    }
+
     [AvaloniaFact]
     public void Confirm_remove_asks_the_service_to_remove_that_file()
     {

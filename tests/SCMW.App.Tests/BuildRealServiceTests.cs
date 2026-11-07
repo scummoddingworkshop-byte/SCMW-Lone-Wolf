@@ -109,7 +109,7 @@ public class BuildRealServiceTests : IDisposable
     }
 
     [AvaloniaFact]
-    public async Task A_build_puts_the_mod_into_scum_switched_off()
+    public async Task A_build_puts_the_mod_into_scum_switched_on()
     {
         var (vm, projects, service) = New();
 
@@ -117,13 +117,13 @@ public class BuildRealServiceTests : IDisposable
 
         Assert.Equal(projects.Current!.Id, service.Arg.Id);
         Assert.Equal(vm.BuiltPakPath, service.Arg.Pak);
-        Assert.False(service.SentEnabled);            // it arrives switched off...
-        Assert.Equal("Your mod is built and ready to be enabled in the Mods Management screen.",
-                     vm.SuccessMessage);              // ...and the screen says what to do about it
+        Assert.True(service.SentEnabled);             // it is ready in game straight away
+        Assert.Equal("Your mod is built and switched on — it's ready in game.",
+                     vm.SuccessMessage);
     }
 
     [AvaloniaFact]
-    public async Task Rebuilding_still_arrives_switched_off()
+    public async Task Rebuilding_arrives_switched_on_too()
     {
         var (vm, _, service) = New();
 
@@ -131,7 +131,7 @@ public class BuildRealServiceTests : IDisposable
         await vm.BuildCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsSucceeded);
-        Assert.False(service.SentEnabled);            // a rebuild lands switched off too
+        Assert.True(service.SentEnabled);             // a rebuild is ready in game too
     }
 
     [AvaloniaFact]

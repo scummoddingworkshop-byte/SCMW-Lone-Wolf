@@ -96,6 +96,8 @@ public partial class ShellViewModel : ObservableObject
         _bulkView = new BulkTableView { DataContext = _bulk };
         _modList = new ModList();
         _saves = saves ?? new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root);
+        _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default,
+                                  projects: _projectStore);
         _build = new BuildViewModel(_itemChanges, _nav, TimeSpan.FromMilliseconds(450), _modList,
                                     _projectStore, _buildService, source: ContentSource,
                                     elevation: WindowsElevation.Default, saves: _saves,
@@ -103,14 +105,16 @@ public partial class ShellViewModel : ObservableObject
         _build.Preview.OpenItemRequested += OpenItemInWorkspace;
 
         // Build's brain is hosted by Projects: each project card builds its own mod there.
+        // The card's own switch reads and asks the Mods screen, so both switches share one behaviour.
         _projects = new ProjectsViewModel(_projectStore, _nav, _itemChanges,
                                           gameReady: () => IsScumConfigured(store),
                                           source: ContentSource,
                                           openItem: OpenItemInWorkspace,
-                                          build: _build);
+                                          build: _build,
+                                          modOn: name => _mods.ForProject(name) is { } mod ? mod.IsOn : null,
+                                          setModOn: (name, on) => _mods.SetProjectOn(name, on),
+                                          refreshMods: () => _mods.Refresh());
         _projectsView = new ProjectsView { DataContext = _projects };
-        _mods = new ModsViewModel(_modList, _nav, _modsService, WindowsElevation.Default,
-                                  projects: _projectStore);
         _modsView = new ModsView { DataContext = _mods };
         _backups = new BackupsViewModel(new BackupsService(settings.GamePath, workspace.Root), _projectStore,
                                          saves: new SaveBackupsService(SaveBackupsService.DefaultSaveFolder, workspace.Root));
@@ -562,7 +566,8 @@ public partial class ShellViewModel : ObservableObject
         if (Current == ScreenKey.Backups) { _backups.Refresh(); _backups.RefreshSaves(); }
 
         // Projects' first-run card depends on whether SCUM is set up, which may have just changed.
-        if (Current == ScreenKey.Projects) _projects.RefreshWelcome();
+        // The cards' mod switches also follow the mods folder, which the Mods screen may have changed.
+        if (Current == ScreenKey.Projects) { _projects.RefreshWelcome(); _projects.RefreshModStates(); }
 
         // Build re-reads the chosen project's changes (its "What's in this mod" preview) when opened.
         if (Current == ScreenKey.Projects) _build.Preview.Refresh();
